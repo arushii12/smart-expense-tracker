@@ -1,0 +1,10 @@
+node_modules/
+.env
+
+# Windows system files
+ntuser.*
+Thumbs.db
+Desktop.ini
+
+# Ignore parent directories accidentally picked up
+../*

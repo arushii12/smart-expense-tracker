@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Smart Expense Tracker</title>
+
+  <!-- Google Font -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- App CSS -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div class="app">
+
+    <!-- HEADER -->
+    <div class="hero">
+      <h1>Smart Expense Tracker</h1>
+      <p>Track • Analyze • Save smarter</p>
+    </div>
+
+    <!-- ADD EXPENSE -->
+    <div class="card white-card">
+      <h2>Add Expense</h2>
+      <div class="form">
+        <input type="number" id="amount" placeholder="Amount (₹)" />
+        <input type="text" id="category" placeholder="Category (Food, Travel…)" />
+        <input type="date" id="date" />
+        <button onclick="addExpense()">Add</button>
+      </div>
+    </div>
+
+    <!-- TOTAL + TOP CATEGORY -->
+    <div class="stats-row">
+      <div class="card total-card">
+        <h3>Total Spent</h3>
+        <div id="total">₹0</div>
+      </div>
+
+      <div class="card insight-card">
+        <h3>Top Spending Category</h3>
+        <p id="topCategory">No data yet</p>
+      </div>
+    </div>
+
+    <!-- MONTHLY BUDGET -->
+    <div class="card white-card" id="budgetCard">
+      <h2>Monthly Budget</h2>
+
+      <div class="budget-info">
+        <div>
+          <strong>Budget:</strong> ₹<span id="budgetAmount">0</span>
+        </div>
+        <div>
+          <strong>Spent:</strong> ₹<span id="budgetSpent">0</span>
+        </div>
+        <div>
+          <strong>Remaining:</strong> ₹<span id="budgetRemaining">0</span>
+        </div>
+      </div>
+
+      <div class="budget-bar">
+        <div class="budget-bar-fill" id="budgetBarFill"></div>
+      </div>
+
+      <p id="budgetStatus" style="margin-top:10px; font-weight:600;"></p>
+
+      <button class="budget-btn" onclick="setBudget()">Update Budget</button>
+    </div>
+
+    <!-- SMART INSIGHTS -->
+    <div class="card white-card">
+      <h2>Smart Insights</h2>
+
+      <div class="insights-column">
+
+        <div class="insight-box">
+          <div class="insight-title">Monthly Comparison</div>
+          <p id="insightComparison">No data</p>
+        </div>
+
+        <div class="insight-box">
+          <div class="insight-title">Avg Daily Spend</div>
+          <p id="insightAverage">No data</p>
+        </div>
+
+        <div class="insight-box">
+          <div class="insight-title">Most Expensive Day</div>
+          <p id="insightExpensiveDay">No data</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- EXPENSE HISTORY -->
+    <div class="card white-card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2 style="margin:0;">Expense History</h2>
+
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span id="historyLabel" style="font-weight:600;">Showing: Today</span>
+          <input type="date" id="viewDate" />
+        </div>
+      </div>
+
+      <ul id="expenseList" style="margin-top:16px;"></ul>
+    </div>
+
+    <!-- PIE CHART -->
+    <div class="card white-card">
+      <h2>Expense Breakdown (Pie)</h2>
+      <canvas id="expenseChart"></canvas>
+    </div>
+
+    <!-- BAR CHART -->
+    <div class="card white-card">
+      <h2>Expense Breakdown (Bar)</h2>
+      <canvas id="barChart"></canvas>
+    </div>
+
+    <!-- MONTHLY TREND -->
+    <div class="card white-card">
+      <h2>Monthly Spending Trend</h2>
+      <canvas id="monthlyChart"></canvas>
+    </div>
+
+  </div>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="script.js"></script>
+
+</body>
+</html>
