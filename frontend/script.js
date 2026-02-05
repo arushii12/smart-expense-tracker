@@ -38,6 +38,14 @@ const insightComparisonEl = document.getElementById("insightComparison");
 const insightAverageEl = document.getElementById("insightAverage");
 const insightExpensiveDayEl = document.getElementById("insightExpensiveDay");
 
+// ==============================
+// FORECAST DOM ELEMENTS
+// ==============================
+
+const forecastAmountEl = document.getElementById("forecastAmount");
+const forecastMessageEl = document.getElementById("forecastMessage");
+
+
 
 // ==============================
 // FETCH TODAY'S EXPENSES ON LOAD
@@ -159,6 +167,7 @@ function refreshUI() {
   loadMonthlyTrend();
   loadCurrentBudget();
   updateSmartInsights(); 
+  loadForecast();
 }
 
 // ==============================
@@ -202,7 +211,7 @@ function updateTotal() {
 }
 
 // ==============================
-// PIE CHART (IMPROVED + PERCENTAGE)
+// PIE CHART 
 // ==============================
 
 function updatePieChart() {
@@ -288,15 +297,16 @@ function updatePieChart() {
 }
 
 // ==============================
-// BAR CHART (UNCHANGED)
+// BAR CHART 
 // ==============================
 
-function updateBarChart() {
+ function updateBarChart() {
   const canvas = document.getElementById("barChart");
   if (!canvas) return;
 
   const ctx = canvas.getContext("2d");
 
+  // Group totals by category
   const categoryTotals = {};
   expenses.forEach(exp => {
     categoryTotals[exp.category] =
@@ -306,9 +316,15 @@ function updateBarChart() {
   const labels = Object.keys(categoryTotals);
   const data = Object.values(categoryTotals);
 
-  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-  gradient.addColorStop(0, "#A9DEF9");
-  gradient.addColorStop(1, "#FF99C8");
+  if (labels.length === 0) {
+    if (barChart) barChart.destroy();
+    return;
+  }
+
+  // Beautiful fintech gradient
+  const gradient = ctx.createLinearGradient(0, 0, 0, 350);
+  gradient.addColorStop(0, "#7FB3D5");
+  gradient.addColorStop(1, "#2E86C1");
 
   if (barChart) barChart.destroy();
 
@@ -320,22 +336,44 @@ function updateBarChart() {
         label: "Spending (₹)",
         data,
         backgroundColor: gradient,
-        borderRadius: 16,
-        barThickness: 40
+        borderRadius: 18,
+        barThickness: 42
       }]
     },
     options: {
       responsive: true,
-      plugins: { legend: { display: false } },
+      maintainAspectRatio:false,
+      animation: {
+        duration: 900,
+        easing: "easeOutQuart"
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "#1b3a4b",
+          padding: 12,
+          cornerRadius: 12,
+          callbacks: {
+            label: ctx => `₹${ctx.raw}`
+          }
+        }
+      },
       scales: {
+        x: {
+          grid: { display: false }
+        },
         y: {
           beginAtZero: true,
-          ticks: { callback: v => `₹${v}` }
+          grid: { color: "#e3e3e3" },
+          ticks: {
+            callback: v => `₹${v}`
+          }
         }
       }
     }
   });
 }
+
 
 // ==============================
 // TOP CATEGORY
@@ -368,7 +406,10 @@ async function loadMonthlyTrend() {
     const res = await fetch("http://localhost:5000/expenses/monthly");
     const data = await res.json();
 
-    if (!data || data.length === 0) return;
+    if (!data || data.length === 0) {
+      if (monthlyChart) monthlyChart.destroy();
+      return;
+    }
 
     const labels = data.map(d => formatMonth(d.month));
     const totals = data.map(d => d.totalSpent);
@@ -377,6 +418,12 @@ async function loadMonthlyTrend() {
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
+
+    // Soft blue gradient fill
+    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, "rgba(125, 185, 232, 0.6)");
+    gradient.addColorStop(1, "rgba(125, 185, 232, 0.05)");
+
     if (monthlyChart) monthlyChart.destroy();
 
     monthlyChart = new Chart(ctx, {
@@ -384,27 +431,52 @@ async function loadMonthlyTrend() {
       data: {
         labels,
         datasets: [{
-          label: "Monthly Spending (₹)",
+          label: "Monthly Spending",
           data: totals,
-          borderWidth: 3,
+          borderColor: "#2E86C1",
+          backgroundColor: gradient,
           fill: true,
-          tension: 0.4
+          tension: 0.45,
+          borderWidth: 3,
+          pointRadius: 5,
+          pointBackgroundColor: "#2E86C1"
         }]
       },
       options: {
         responsive: true,
+        animation: {
+          duration: 1000,
+          easing: "easeOutQuart"
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "#1b3a4b",
+            padding: 12,
+            cornerRadius: 12,
+            callbacks: {
+              label: ctx => `₹${ctx.raw}`
+            }
+          }
+        },
         scales: {
           y: {
             beginAtZero: true,
+            grid: { color: "#e3e3e3" },
             ticks: { callback: v => `₹${v}` }
+          },
+          x: {
+            grid: { display: false }
           }
         }
       }
     });
+
   } catch (err) {
     console.error("Monthly trend error:", err);
   }
 }
+
 
 // ==============================
 // BUDGET LOGIC (ENHANCED)
@@ -441,7 +513,7 @@ budgetBarFill.style.width = Math.min(percent, 100) + "%";
 budgetBarFill.style.background =
   "linear-gradient(90deg, #9AE6B4, #68D391)";
 
-    // ✅ CORRECT STATUS LOGIC
+    //  CORRECT STATUS LOGIC
     if (percent < 70) {
       budgetBarFill.style.background =
         "linear-gradient(90deg, #B7E4C7, #95D5B2)";
@@ -593,7 +665,7 @@ function setEmptyInsights() {
 
 
 // ==============================
-// HELPERS
+// HELPER
 // ==============================
 
 function formatMonth(monthStr) {
@@ -611,3 +683,37 @@ function formatFullDate(dateStr) {
     year: "numeric"
   });
 }
+
+// ==============================
+// MONTHLY FORECAST (AI-LIKE LOGIC)
+// ==============================
+
+async function loadForecast() {
+  try {
+    const res = await fetch("http://localhost:5000/forecast");
+    const data = await res.json();
+
+    const amountEl = document.getElementById("forecastAmount");
+    const messageEl = document.getElementById("forecastMessage");
+
+    if (!amountEl || !messageEl) return;
+
+    amountEl.textContent = `₹${data.forecast}`;
+    messageEl.textContent = data.message;
+
+  } catch (err) {
+    console.error("Forecast fetch error:", err);
+  }
+}
+
+// ================= DARK MODE TOGGLE =================
+
+// Get the button
+const toggleBtn = document.getElementById("darkModeToggle");
+
+// When button is clicked
+toggleBtn.addEventListener("click", () => {
+  document.body.classList.toggle("dark-mode");
+});
+
+

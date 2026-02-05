@@ -2,64 +2,124 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Smart Expense Tracker</title>
 
-  <!-- Google Font -->
-  <link
-    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap"
-    rel="stylesheet"
-  />
-
-  <!-- App CSS -->
-  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css"/>
 </head>
 
 <body>
   <div class="app">
+    <!-- ================= NAVBAR ================= -->
+<nav class="navbar">
+  <div class="nav-left">
+    <span class="logo">💰 Smart Expense Tracker</span>
+  </div>
 
-    <!-- HEADER -->
+  <div class="nav-center">
+    <a href="#">Dashboard</a>
+    <a href="#">History</a>
+    <a href="#">Budget</a>
+    <a href="#">Insights</a>
+  </div>
+
+  <div class="nav-right">
+    <button id="darkModeToggle">🌙</button>
+    <div class="profile-icon">👤</div>
+  </div>
+</nav>
+
+
+    <!-- HERO -->
     <div class="hero">
       <h1>Smart Expense Tracker</h1>
       <p>Track • Analyze • Save smarter</p>
     </div>
 
+    <!-- DASHBOARD TOP -->
+    <div class="dashboard-top section">
+
+      <div class="dashboard-left">
+        <div class="stat-card">
+          <h3>Total Spent</h3>
+          <div id="total" class="stat-value">₹0</div>
+        </div>
+
+        <div class="stat-card">
+          <h3>Top Spending Category</h3>
+          <div id="topCategory" class="stat-value">No data</div>
+        </div>
+      </div>
+
+      <div class="dashboard-right">
+        <h2 style="text-align:center;margin-bottom:20px;color:#1b3a4b;">Monthly Spending Trend</h2>
+        <canvas id="monthlyChart"></canvas>
+      </div>
+
+    </div>
+
     <!-- ADD EXPENSE -->
-    <div class="card white-card">
+    <div class="expense-card section">
       <h2>Add Expense</h2>
-      <div class="form">
+
+      <div class="expense-form">
         <input type="number" id="amount" placeholder="Amount (₹)" />
         <input type="text" id="category" placeholder="Category (Food, Travel…)" />
         <input type="date" id="date" />
-        <button onclick="addExpense()">Add</button>
+      </div>
+
+      <button class="add-btn" onclick="addExpense()">Add Expense</button>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="history-card section">
+      <div class="history-header">
+        <h2>Expense History</h2>
+        <div class="history-controls">
+          <span id="historyLabel">Showing: Today</span>
+          <input type="date" id="viewDate" />
+        </div>
+      </div>
+
+      <ul id="expenseList" class="expense-list"></ul>
+    </div>
+
+    <!-- SPENDING OVERVIEW -->
+    <div class="overview-card">
+      <h2>Spending Overview</h2>
+
+      <div class="charts-grid">
+        <div class="chart-panel">
+          <h3>Expense Breakdown (Pie)</h3>
+          <canvas id="expenseChart"></canvas>
+        </div>
+
+        <div class="chart-panel">
+          <h3>Expense Breakdown (Bar)</h3>
+          <div class="chart-container">
+          <canvas id="barChart"></canvas>
+        </div>
+        </div>
       </div>
     </div>
 
-    <!-- TOTAL + TOP CATEGORY -->
-    <div class="stats-row">
-      <div class="card total-card">
-        <h3>Total Spent</h3>
-        <div id="total">₹0</div>
-      </div>
-
-      <div class="card insight-card">
-        <h3>Top Spending Category</h3>
-        <p id="topCategory">No data yet</p>
-      </div>
-    </div>
-
-    <!-- MONTHLY BUDGET -->
-    <div class="card white-card" id="budgetCard">
+    <!-- BUDGET -->
+    <div class="budget-card section">
       <h2>Monthly Budget</h2>
 
-      <div class="budget-info">
-        <div>
-          <strong>Budget:</strong> ₹<span id="budgetAmount">0</span>
+      <div class="budget-stats">
+        <div class="budget-box">
+          <span>Budget</span>
+          <span>₹<span id="budgetAmount">0</span></span>
         </div>
-        <div>
-          <strong>Spent:</strong> ₹<span id="budgetSpent">0</span>
+        <div class="budget-box">
+          <span>Spent</span>
+          <span>₹<span id="budgetSpent">0</span></span>
         </div>
-        <div>
-          <strong>Remaining:</strong> ₹<span id="budgetRemaining">0</span>
+        <div class="budget-box">
+          <span>Remaining</span>
+          <span>₹<span id="budgetRemaining">0</span></span>
         </div>
       </div>
 
@@ -67,72 +127,44 @@
         <div class="budget-bar-fill" id="budgetBarFill"></div>
       </div>
 
-      <p id="budgetStatus" style="margin-top:10px; font-weight:600;"></p>
+      <div class="budget-status" id="budgetStatus"></div>
 
       <button class="budget-btn" onclick="setBudget()">Update Budget</button>
     </div>
 
-    <!-- SMART INSIGHTS -->
-    <div class="card white-card">
-      <h2>Smart Insights</h2>
+    <!-- INSIGHTS -->
+    <div class="insights-section">
+      <div class="insights-title">Smart Insights</div>
 
-      <div class="insights-column">
-
-        <div class="insight-box">
-          <div class="insight-title">Monthly Comparison</div>
+      <div class="insights-grid">
+        <div class="insight-card-pro">
+          <h4>Monthly Comparison</h4>
           <p id="insightComparison">No data</p>
         </div>
 
-        <div class="insight-box">
-          <div class="insight-title">Avg Daily Spend</div>
+        <div class="insight-card-pro">
+          <h4>Avg Daily Spend</h4>
           <p id="insightAverage">No data</p>
         </div>
 
-        <div class="insight-box">
-          <div class="insight-title">Most Expensive Day</div>
+        <div class="insight-card-pro">
+          <h4>Most Expensive Day</h4>
           <p id="insightExpensiveDay">No data</p>
         </div>
-
       </div>
     </div>
 
-    <!-- EXPENSE HISTORY -->
-    <div class="card white-card">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h2 style="margin:0;">Expense History</h2>
-
-        <div style="display:flex; align-items:center; gap:12px;">
-          <span id="historyLabel" style="font-weight:600;">Showing: Today</span>
-          <input type="date" id="viewDate" />
-        </div>
-      </div>
-
-      <ul id="expenseList" style="margin-top:16px;"></ul>
-    </div>
-
-    <!-- PIE CHART -->
-    <div class="card white-card">
-      <h2>Expense Breakdown (Pie)</h2>
-      <canvas id="expenseChart"></canvas>
-    </div>
-
-    <!-- BAR CHART -->
-    <div class="card white-card">
-      <h2>Expense Breakdown (Bar)</h2>
-      <canvas id="barChart"></canvas>
-    </div>
-
-    <!-- MONTHLY TREND -->
-    <div class="card white-card">
-      <h2>Monthly Spending Trend</h2>
-      <canvas id="monthlyChart"></canvas>
+    <!-- FORECAST -->
+    <div class="forecast-card-pro section">
+      <h2>AI Monthly Forecast</h2>
+      <div class="forecast-amount" id="forecastAmount">₹0</div>
+      <div class="forecast-label">Estimated spending this month</div>
+      <div class="forecast-message" id="forecastMessage">Loading forecast insights…</div>
     </div>
 
   </div>
 
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="script.js"></script>
-
 </body>
 </html>

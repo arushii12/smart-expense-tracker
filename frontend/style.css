@@ -1,345 +1,963 @@
-/* =========================
-   RESET
-   ========================= */
+/* =====================================================
+   🌟 GLOBAL DESIGN SYSTEM
+===================================================== */
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  transition: background-color 0.25s ease,
-              transform 0.2s ease,
-              box-shadow 0.25s ease;
 }
 
-/* =========================
-   BODY
-   ========================= */
 body {
   font-family: 'Montserrat', sans-serif;
-  background: #fcf6bd; /* Lemon Chiffon */
-  color: #2b2b2b;
+  background: #FAEDCD;
+  color: #2d2d2d;
+  line-height: 1.6;
 }
 
-/* =========================
-   APP WRAPPER
-   ========================= */
+/* Main app container */
 .app {
-  max-width: 780px;
-  margin: auto;
-  padding: 30px 20px 60px;
+  max-width: 985px;
+  margin: 0 auto;
+  padding: 50px 28px 120px;
 }
 
-/* =========================
-   HERO
-   ========================= */
+/* Section spacing */
+.section {
+  margin-bottom: 70px;
+}
+/* =====================================================
+   🏆 HERO HEADER (TOP BANNER)
+===================================================== */
+
 .hero {
-  background: #D0F4DE; /* Frosted Mint */
-  border: 3px solid #9fdcc0;
-  border-radius: 22px;
-  padding: 36px 26px;
+ 
+  background: linear-gradient(
+    120deg,
+    #F3D585 0%,
+    #F0C78F 35%,
+    #E9B87E 65%,
+    #E6B980 100%,
+  );
+  background-color: #E9C79A;
+  border-radius: 24px;
+  padding: 55px 30px;
   text-align: center;
-  margin-bottom: 40px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-}
+  margin-bottom: 55px;
 
-.hero:hover {
-  transform: translateY(-3px);
+  border: 3px solid #1f1f1f;
+
+  /* Premium layered border */
+  box-shadow:
+    0 14px 0 #1f1f1f,
+    0 20px 35px rgba(0,0,0,0.12);
 }
 
 .hero h1 {
-  font-size: 34px;
+  font-size: 40px;
   font-weight: 700;
-  color: #14532d;
+  color: #6F4518;
+  letter-spacing: 1px;
 }
 
 .hero p {
-  margin-top: 10px;
-  font-size: 14px;
+  margin-top: 12px;
+  font-size: 15px;
   font-weight: 500;
-  color: #166534;
+  color: #8B5E34;
 }
+/* =====================================================
+   🧩 DASHBOARD TOP GRID LAYOUT
+===================================================== */
 
-/* =========================
-   CARD BASE
-   ========================= */
-.card {
-  border-radius: 20px;
-  padding: 24px;
-  margin-bottom: 26px;
-  border: 3px solid #e2d9a7;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-}
-
-.card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 14px 35px rgba(0,0,0,0.12);
-}
-
-/* =========================
-   WHITE CARDS
-   ========================= */
-.white-card {
-  background: #ffffff;
-}
-
-.white-card h2 {
-  margin-bottom: 18px;
-  font-size: 20px;
-  font-weight: 600;
-  color: #1f2933;
-  border-left: 6px solid #FF99C8;
-  padding-left: 12px;
-}
-
-/* =========================
-   ADD EXPENSE FORM
-   ========================= */
-.form {
+.dashboard-top {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 14px;
+  grid-template-columns: 320px 1fr;
+  gap: 35px;
+  align-items: stretch;
 }
 
-input {
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 2px solid #d6cfa0;
-  font-size: 14px;
-  background: #fffdf2;
+/* Left column stacks cards */
+.dashboard-left {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
 }
 
-input:hover,
-input:focus {
-  outline: none;
-  border-color: #facc15;
+/* Right column big chart container */
+.dashboard-right {
+  background: linear-gradient(135deg, #cfe8f6, #b8dff2);
+  border-radius: 24px;
+  padding: 30px;
+  border: 3px solid #1f1f1f;
+  box-shadow:
+    0 0 0 6px #e8dfd6,
+    0 14px 0 #1f1f1f,
+    0 20px 30px rgba(0,0,0,0.12);
+}
+/* =====================================================
+   📊 STATS CARDS — PREMIUM COZY WIDGETS
+===================================================== */
+
+.stat-card {
+  background: linear-gradient(135deg, #bde0fe, #cfe8ff);
+  border-radius: 22px;
+  padding: 30px 20px;
+  text-align: center;
+  border: 3px solid #1f1f1f;
+
+  box-shadow:
+    0 0 0 6px #e8dfd6,
+    0 10px 20px rgba(0,0,0,0.08);
+
+  transition: all 0.35s ease;
 }
 
-/* =========================
-   BUTTON
-   ========================= */
-button {
-  background: #FF99C8; /* Baby Pink */
-  border: 2px solid #e879b1;
-  color: #5b102f;
+.stat-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow:
+    0 0 0 6px #e8dfd6,
+    0 18px 35px rgba(0,0,0,0.18);
+}
+
+/* Title (Total Spent / Top Category) */
+.stat-card h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1d3557;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+/* Main Value */
+.stat-card .stat-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: #0d1b2a;
+}
+
+/* Small glow animation */
+.stat-card:hover .stat-value {
+  color: #415a77;
+}
+/* =====================================================
+   ➕ ADD EXPENSE CARD — SOFT FINTECH FORM
+===================================================== */
+
+.expense-card {
+  background: #FEFAE0;
+  border-radius: 26px;
+  padding: 38px 45px;
+  border: 3px solid #1f1f1f;
+
+  box-shadow:
+    0 0 0 6px #e8dfd6,
+    0 12px 0 #1f1f1f,
+    0 18px 30px rgba(0,0,0,0.10);
+
+  position: relative;
+}
+
+/* inner dotted frame */
+.expense-card::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  border: 2px dotted #d7b899;
+  border-radius: 22px;
+  pointer-events: none;
+}
+
+.expense-card h2 {
+  text-align: center;
+  font-size: 26px;
+  font-weight: 700;
+  color: #6F4518;
+  margin-bottom: 30px;
+}
+
+/* grid layout */
+.expense-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 18px;
+}
+
+/* inputs */
+.expense-form input {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 2px solid #d7b899;
+  background: #fff9f2;
+  font-size: 15px;
   font-weight: 600;
-  padding: 12px 22px;
-  border-radius: 12px;
+  color: #4b2e2e;
+}
+
+.expense-form input:focus {
+  outline: none;
+  border-color: #c58f77;
+}
+
+/* Add button */
+.add-btn {
+  display: block;
+  margin: 28px auto 0;
+  background: #d77a8b;
+  color: white;
+  padding: 14px 30px;
+  border-radius: 16px;
+  border: none;
+  font-weight: 700;
+  font-size: 15px;
+  box-shadow: 0 5px 0 #a85a69;
   cursor: pointer;
 }
 
-button:hover {
-  background: #f472b6;
-  transform: translateY(-1px);
+.add-btn:hover {
+  transform: translateY(-2px);
+}
+/* =====================================================
+   📜 EXPENSE HISTORY — PASTEL LIST UI
+===================================================== */
+
+.history-card {
+  background: #C6AC8F;
+  border-radius: 26px;
+  padding: 38px 45px;
+  border: 3px solid #1f1f1f;
+
+  box-shadow:
+    0 0 0 6px #e8dfd6,
+    0 12px 0 #1f1f1f,
+    0 18px 30px rgba(0,0,0,0.10);
+
+  position: relative;
 }
 
-button:active {
-  transform: scale(0.96);
+/* dotted inner frame */
+.history-card::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  border: 2px dotted #d7b899;
+  border-radius: 22px;
+  pointer-events: none;
 }
 
-/* =========================
-   STATS ROW (TOTAL + TOP)
-   ========================= */
-.stats-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin: 30px 0;
-}
-
-/* =========================
-   SHARED STAT CARDS
-   ========================= */
-.total-card,
-.insight-card {
-  background: #E4C1F9; /* Mauve */
-  height: 160px;
-  width: 100%;
-  border-radius: 18px;
-  border: 2px solid #c9a6e8;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
-
-.total-card h3,
-.insight-card h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: #2f2f6e;
-  margin-bottom: 6px;
-}
-
-.total-card div,
-.insight-card p {
-  font-size: 34px;
-  font-weight: 700;
-  color: #2f2f6e;
-}
-
-/* =========================
-   EXPENSE LIST
-   ========================= */
-ul {
-  list-style: none;
-}
-
-li {
+.history-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 16px;
-  margin-bottom: 10px;
-  border-radius: 12px;
-  background: #fffef5;
-  border-bottom: 2px dashed #f0e68c;
-  font-size: 14px;
+  margin-bottom: 25px;
 }
 
-li:hover {
-  background: #fff9db;
+.history-header h2 {
+  font-size: 24px;
+  color: #5E503F;
 }
 
-li:last-child {
-  border-bottom: none;
+.history-controls input {
+  background: #D4A373;
+  border: 2px dotted #4b2e2e;
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-weight: 600;
+  color: #4b2e2e;
 }
 
-/* =========================
-   DELETE BUTTON
-   ========================= */
-.delete-btn {
-  background: #ff6b6b;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 6px 10px;
-  cursor: pointer;
-  font-size: 14px;
+/* list */
+.expense-list {
+  list-style: none;
+  margin-top: 15px;
 }
 
-.delete-btn:hover {
-  background: #e63946;
-  transform: scale(1.05);
-}
-
-/* =========================
-   MONTHLY BUDGET
-   ========================= */
-
-#budgetCard {
-  border-left: 6px solid #A9DEF9;
-}
-
-.budget-info {
+.expense-list li {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 18px;
-  font-size: 14px;
-  color: #1f2933;
-  margin-bottom: 22px;
+  grid-template-columns: 120px 1fr 140px 60px;
+  align-items: center;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  border-radius: 18px;
+  background: #EAE0D5;
+  border: 2px solid #ead2b8;
+  font-size: 16px;
+  color: #5c4033;
 }
 
-.budget-info div {
-  background: #f8fafc;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 12px;
-  text-align: center;
+.expense-list li span:first-child {
+  font-weight: 700;
+}
+
+.expense-list li span:nth-child(3) {
+  color: #4b2e2e;
   font-weight: 600;
 }
 
+.expense-list button {
+  background: #BB3E03;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.expense-list button:hover {
+  transform: scale(1.05);
+}
+/* =====================================================
+   📊 SPENDING OVERVIEW — ANALYTICS DASHBOARD
+===================================================== */
+
+.overview-card {
+  background: #B3DEE2; /* darker outer */
+  border-radius: 28px;
+  padding: 45px 50px;
+  border: 3px solid #1f1f1f;
+
+  box-shadow:
+    0 0 0 6px #e8dfd6,
+    0 14px 0 #1f1f1f,
+    0 22px 38px rgba(0,0,0,0.12);
+
+  margin-bottom: 90px;
+}
+
+.overview-card h2 {
+  text-align: center;
+  font-size: 30px;
+  font-weight: 800;
+  color: #1b3a4b;
+  text-decoration: underline;
+  margin-bottom: 35px;
+}
+
+/* chart grid */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 35px;
+}
+
+/* inner chart panels */
+.chart-panel {
+  background: #EAF2D7; /* lighter inner */
+  border-radius: 20px;
+  padding: 25px 25px 30px;
+  border: 2px solid #1f1f1f;
+
+  box-shadow: 0 0 0 5px #d9e4c6;
+}
+
+.chart-panel h3 {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: #344e41;
+  margin-bottom: 12px;
+}
+
+.chart-panel canvas {
+  margin-top: 10px;
+}
+/* =====================================================
+   💰 MONTHLY BUDGET — FINANCIAL STATUS SYSTEM
+===================================================== */
+
+.budget-card {
+  background: #B3DEE2;
+  border-radius: 30px;
+  padding: 45px 55px;
+  border: 3px solid #1f1f1f;
+
+  box-shadow:
+    0 0 0 6px #e8dfd6,
+    0 14px 0 #1f1f1f,
+    0 22px 38px rgba(0,0,0,0.12);
+
+  margin-bottom: 90px;
+}
+
+.budget-card h2 {
+  text-align: center;
+  font-size: 32px;
+  font-weight: 800;
+  color: #1b3a4b;
+  margin-bottom: 35px;
+}
+
+/* 3 stacked stat boxes */
+.budget-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 90%;
+  margin: 0 auto 30px;
+}
+
+.budget-box {
+  background: #EAF2D7;
+  padding: 18px 20px;
+  border-radius: 16px;
+  border: 2px solid #1f1f1f;
+
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: 17px;
+}
+
+.budget-box span:last-child {
+  font-size: 19px;
+}
+
+/* progress bar */
 .budget-bar {
-  width: 100%;
-  height: 18px;
-  background: #e5e7eb;
-  border-radius: 999px;
+  width: 90%;
+  margin: 0 auto 18px;
+  height: 22px;
+  background: #ffffff;
+  border-radius: 50px;
   overflow: hidden;
-  margin-bottom: 14px;
+  border: 2px solid #1f1f1f;
 }
 
 .budget-bar-fill {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, #B7E4C7, #95D5B2);
-  border-radius: 999px;
+  background: linear-gradient(90deg, #52b788, #ffb703, #e63946);
   transition: width 0.6s ease;
 }
 
+/* status text */
+.budget-status {
+  text-align: center;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+/* update button */
 .budget-btn {
-  background: #A9DEF9;
-  border: 2px solid #7cc4eb;
-  color: #0f3d5e;
-  font-weight: 600;
-  padding: 10px 18px;
-  border-radius: 12px;
+  display: block;
+  margin: 0 auto;
+  background: #EA9AB2;
+  color: white;
+  padding: 14px 30px;
+  border-radius: 16px;
+  border: none;
+  font-weight: 700;
+  font-size: 15px;
+  box-shadow: 0 5px 0 #c56c8b;
   cursor: pointer;
-  margin-top: 8px;
 }
-
-/* Status text under bar */
-#budgetStatus {
-  margin: 12px 0 18px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
 
 .budget-btn:hover {
-  background: #7dd3fc;
+  transform: translateY(-2px);
+}
+/* =====================================================
+   💡 SMART INSIGHTS — FINANCIAL ANALYSIS CARDS
+===================================================== */
+
+.insights-section {
+  margin-bottom: 90px;
 }
 
-/* =========================
-   SMART INSIGHTS
-   ========================= */
-
-.insights-column {
-  display: flex;
-  flex-direction: column;   /* ✅ forces next line */
-  gap: 16px;
-  margin-top: 18px;
+.insights-title {
+  text-align: center;
+  font-size: 30px;
+  font-weight: 800;
+  color: #1b3a4b;
+  margin-bottom: 35px;
 }
 
-/* Individual insight box */
-.insight-box {
-  width: 100%;
-  background: #CAF0F8;     /* requested */
-  border-radius: 16px;
-  padding: 18px 22px;
-  border: 2px solid #90DBF4;
-  box-shadow: 0 6px 14px rgba(0, 180, 216, 0.15);
-  cursor: default;
-  transition: 
-    transform 0.25s ease,
-    box-shadow 0.25s ease;
+/* grid layout */
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 30px;
 }
 
-/* Hover animation */
-.insight-box:hover {
-  transform: translateY(-3px) scale(1.01);
-  box-shadow: 0 10px 24px rgba(0, 180, 216, 0.25);
+/* individual insight cards */
+.insight-card-pro {
+  background: #EAF2D7;
+  border-radius: 22px;
+  padding: 26px 24px 28px;
+  border: 2px solid #1f1f1f;
+
+  box-shadow:
+    0 0 0 5px #d9e4c6,
+    0 10px 18px rgba(0,0,0,0.08);
+
+  transition: all 0.35s ease;
 }
 
-/* Insight heading */
-.insight-title {
-  font-size: 18px;          /* bigger heading */
+.insight-card-pro:hover {
+  transform: translateY(-8px);
+  box-shadow:
+    0 16px 30px rgba(0,0,0,0.15),
+    0 0 0 5px #d9e4c6;
+}
+
+.insight-card-pro h4 {
+  font-size: 16px;
   font-weight: 700;
-  color: #023E8A;           /* darker for contrast */
-  margin-bottom: 6px;
+  color: #344e41;
+  margin-bottom: 10px;
 }
 
-/* Insight content */
-.insight-box p {
-  font-size: 14px;          /* smaller text */
+.insight-card-pro p {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1b3a4b;
+}
+/* =====================================================
+   🔮 AI MONTHLY FORECAST — SMART PREDICTION PANEL
+===================================================== */
+
+.forecast-card-pro {
+  background: linear-gradient(135deg, #B3DEE2, #c9f1f5);
+  border-radius: 28px;
+  padding: 40px 45px;
+  border: 3px solid #1f1f1f;
+
+  box-shadow:
+    0 0 0 6px #e8dfd6,
+    0 14px 0 #1f1f1f,
+    0 22px 38px rgba(0,0,0,0.12);
+
+  text-align: center;
+}
+
+.forecast-card-pro h2 {
+  font-size: 28px;
+  font-weight: 800;
+  color: #1b3a4b;
+  margin-bottom: 20px;
+}
+
+.forecast-amount {
+  font-size: 40px;
+  font-weight: 800;
+  color: #0d3b66;
+  margin-bottom: 10px;
+}
+
+.forecast-label {
+  font-size: 16px;
+  color: #344e41;
+  margin-bottom: 15px;
+}
+
+.forecast-message {
+  font-size: 17px;
   font-weight: 600;
-  color: #00B4D8;           /* requested */
-  margin: 0;
+  color: #344e41;
+  background: #EAF2D7;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 2px solid #1f1f1f;
 }
 
-/* Optional: subtle animated glow on hover */
-.insight-box:hover .insight-title {
-  color: #0077B6;
+
+
+/* Smooth transitions everywhere */
+* {
+  transition: all 0.25s ease;
 }
 
-.insight-box:hover p {
-  color: #0096C7;
+/* Card hover lift */
+.stat-card:hover,
+.expense-card:hover,
+.history-card:hover,
+.chart-panel:hover,
+.budget-card:hover,
+.insight-card-pro:hover,
+.forecast-card-pro:hover {
+  transform: translateY(-6px);
 }
+
+/* Button press effect */
+button:active {
+  transform: scale(0.97);
+}
+.stat-card,
+.chart-panel,
+.budget-box,
+.insight-card-pro {
+  backdrop-filter: blur(6px);
+}
+.dashboard-right {
+  background: linear-gradient(145deg, #d8f3ff, #bde0fe);
+  position: relative;
+}
+
+.dashboard-right::after {
+  content: "";
+  position: absolute;
+  top: 20px;
+  right: 30px;
+  width: 140px;
+  height: 140px;
+  background: radial-gradient(circle, rgba(255,255,255,0.5), transparent);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.budget-bar-fill {
+  background: linear-gradient(
+    90deg,
+    #52b788 0%,
+    #52b788 40%,
+    #ffb703 65%,
+    #e63946 100%
+  );
+  box-shadow: 0 0 12px rgba(0,0,0,0.2) inset;
+}
+.hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, rgba(255,255,255,0.35), transparent);
+  top: -60px;
+  left: -60px;
+}
+body {
+  background: radial-gradient(circle at top left, #fff6e9, #f1e3d3);
+}
+.overview-card h2,
+.insights-title,
+.budget-card h2 {
+  letter-spacing: 1px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+/* =========================================
+   ✨ PREMIUM DEPTH & GLASS POLISH
+========================================= */
+
+/* Make main cards float */
+.hero,
+.dashboard-right,
+.expense-card,
+.history-card,
+.overview-card,
+.budget-card,
+.forecast-card-pro {
+  backdrop-filter: blur(6px);
+  transition: all 0.4s ease;
+}
+
+.hero:hover,
+.dashboard-right:hover,
+.expense-card:hover,
+.history-card:hover,
+.overview-card:hover,
+.budget-card:hover,
+.forecast-card-pro:hover {
+  transform: translateY(-6px);
+  box-shadow:
+    0 0 0 6px #f3e8dc,
+    0 18px 0 #1f1f1f,
+    0 28px 45px rgba(0,0,0,0.18);
+}
+
+/* Make important numbers glow subtly */
+.stat-value,
+.forecast-amount,
+.budget-box span:last-child {
+  text-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* Softer section titles */
+h2 {
+  letter-spacing: 1px;
+}
+
+/* Chart panels feel lifted */
+.chart-panel {
+  transition: all 0.35s ease;
+}
+.chart-panel:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+}
+
+/* Buttons feel more modern */
+.add-btn,
+.budget-btn {
+  transition: all 0.3s ease;
+}
+.add-btn:hover,
+.budget-btn:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+}
+
+.insight-card-pro p {
+  margin-top: 6px;
+}
+.forecast-card-pro {
+  margin-top: 30px;
+}
+body {
+  background: linear-gradient(180deg, #f8fbff 0%, #eef5fb 100%);
+}
+.hero,
+.stat-card,
+.dashboard-right,
+.add-expense,
+.expense-history,
+.charts-section,
+.budget-card-pro,
+.insight-card-pro,
+.forecast-card-pro {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.hero:hover,
+.stat-card:hover,
+.dashboard-right:hover,
+.add-expense:hover,
+.expense-history:hover,
+.charts-section:hover,
+.budget-card-pro:hover,
+.insight-card-pro:hover,
+.forecast-card-pro:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.08);
+}
+.hero,
+.add-expense,
+.budget-card-pro,
+.forecast-card-pro {
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before,
+.add-expense::before,
+.budget-card-pro::before,
+.forecast-card-pro::before {
+  content: "";
+  position: absolute;
+  top: -40%;
+  left: -40%;
+  width: 180%;
+  height: 180%;
+  background: radial-gradient(circle, rgba(255,255,255,0.35), transparent 60%);
+  pointer-events: none;
+}
+button {
+  background: linear-gradient(135deg, #d48ca3, #b06ab3);
+  border: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.2);
+}
+.charts-section {
+  background: linear-gradient(180deg, #d7eefc, #c3e3f6);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+section {
+  margin-bottom: 45px;
+}
+h2 {
+  letter-spacing: 1px;
+  font-weight: 700;
+}
+
+/* Make charts taller and fill card space */
+.chart-container {
+  height: 320px;      /* increase height */
+  position: relative;
+}
+
+.chart-container canvas {
+  height: 100% !important;
+  width: 100% !important;
+}
+/* ================= NAVBAR ================= */
+.navbar {
+  display: flex; /* puts items in one row */
+  justify-content: space-between; /* space between left, center, right */
+  align-items: center; /* vertical center */
+  padding: 15px 40px;
+  background: white;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  position: sticky; /* stays on top while scrolling */
+  top: 0;
+  z-index: 1000;
+  border-bottom: 2px solid #eee;
+}
+
+/* Logo text */
+.logo {
+  font-size: 20px;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+/* Center navigation links */
+.nav-center a {
+  margin: 0 15px;
+  text-decoration: none;
+  color: #34495e;
+  font-weight: 500;
+  transition: 0.3s;
+}
+
+/* Hover effect */
+.nav-center a:hover {
+  color: #f36d85;
+}
+
+/* Right side */
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+/* Profile icon circle */
+.profile-icon {
+  background: #f3d585;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+/* Dark mode button */
+#darkModeToggle {
+  border: none;
+  background: #e6f2ff;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: 0.3s;
+}
+
+#darkModeToggle:hover {
+  background: #d4e7ff;
+}
+/* ================= MODE ================= */
+.dark-mode {
+  background: #1e1e2f;
+  color: white;
+}
+.dark-mode .profile-icon {
+  background: #444;
+}
+
+
+.dark-mode .navbar {
+  background: #2a2a40;
+}
+
+.dark-mode .nav-center a {
+  color: #ddd;
+}
+
+.dark-mode .profile-icon {
+  background: #444;
+}
+/* ============================= */
+/* 🌟 NAVBAR PROFESSIONAL LOOK */
+/* ============================= */
+
+.navbar {
+    background: linear-gradient(to right, #ffffff, #f5f9fc);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+    border-bottom: 1px solid #e6edf3;
+}
+
+/* Navbar links hover animation */
+.nav-links a {
+    position: relative;
+    text-decoration: none;
+    color: #2d3a4a;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.nav-links a:hover {
+    color: #1f4e79;
+}
+
+.hero{
+  background: rgb(243, 213, 133);
+}
+.nav-links a::after {
+    content: "";
+    position: absolute;
+    width: 0%;
+    height: 2px;
+    bottom: -6px;
+    left: 0;
+    background: #1f4e79;
+    transition: 0.3s;
+}
+
+.nav-links a:hover::after {
+    width: 100%;
+}
+
+body{
+  background:#d8e2dc;
+}
+
+/* ============================= */
+/* 📊 STAT CARDS (Total Spent, Category) */
+/* ============================= */
+
+.stat-card {
+    transition: 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+}
+
+
+/* ============================= */
+/* 📈 CHART SECTION POLISH */
+/* ============================= */
+
+.chart-card {
+    background: linear-gradient(to bottom, #fafdff, #f1f7fb);
+}
+
+
+/* ============================= */
+/* 💎 SMOOTH PROFESSIONAL FEEL */
+/* ============================= */
+
+* {
+    scroll-behavior: smooth;
+}
+
+
