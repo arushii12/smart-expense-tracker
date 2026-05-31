@@ -15,6 +15,108 @@ body {
   line-height: 1.6;
 }
 
+.hidden {
+  display: none !important;
+}
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 42px 24px;
+  background: linear-gradient(180deg, #f8fbff 0%, #d8e2dc 100%);
+}
+
+.auth-card {
+  width: min(440px, 100%);
+  background: #FEFAE0;
+  border: 3px solid #1f1f1f;
+  border-radius: 26px;
+  padding: 34px 36px;
+  box-shadow:
+    0 0 0 6px #e8dfd6,
+    0 12px 0 #1f1f1f,
+    0 22px 38px rgba(0,0,0,0.14);
+}
+
+.auth-brand {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.auth-brand p {
+  color: #8B5E34;
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.auth-view h1 {
+  color: #6F4518;
+  font-size: 30px;
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.auth-form {
+  display: grid;
+  gap: 16px;
+}
+
+.auth-form input {
+  background: #fff9f2;
+  border: 2px solid #d7b899;
+  border-radius: 14px;
+  color: #4b2e2e;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 14px 16px;
+}
+
+.auth-form input:focus {
+  border-color: #c58f77;
+  outline: none;
+}
+
+.auth-btn,
+.logout-btn {
+  background: #d77a8b;
+  border: none;
+  border-radius: 14px;
+  box-shadow: 0 5px 0 #a85a69;
+  color: white;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 13px 22px;
+}
+
+.auth-message {
+  min-height: 24px;
+  color: #991b1b;
+  font-weight: 700;
+  margin-top: 14px;
+  text-align: center;
+}
+
+.auth-switch {
+  color: #5E503F;
+  font-weight: 600;
+  margin-top: 16px;
+  text-align: center;
+}
+
+.auth-switch button {
+  background: transparent;
+  box-shadow: none;
+  color: #1f4e79;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  padding: 0;
+}
+
 /* Main app container */
 .app {
   max-width: 985px;
@@ -281,8 +383,9 @@ body {
 
 .expense-list li {
   display: grid;
-  grid-template-columns: 120px 1fr 140px 60px;
+  grid-template-columns: 120px 1fr 140px 120px;
   align-items: center;
+  gap: 10px;
   padding: 14px 16px;
   margin-bottom: 14px;
   border-radius: 18px;
@@ -302,10 +405,9 @@ body {
 }
 
 .expense-list button {
-  background: #BB3E03;
   color: white;
   border: none;
-  padding: 8px 12px;
+  padding: 8px 10px;
   border-radius: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -313,6 +415,39 @@ body {
 
 .expense-list button:hover {
   transform: scale(1.05);
+}
+
+.expense-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.expense-list .edit-btn {
+  background: #2E86C1;
+}
+
+.expense-list .delete-btn,
+.expense-list .cancel-btn {
+  background: #BB3E03;
+}
+
+.expense-list .save-btn {
+  background: #40916C;
+}
+
+.expense-list li.editing-expense {
+  grid-template-columns: 110px 1fr 145px 140px;
+}
+
+.expense-list li input {
+  background: #fff9f2;
+  border: 2px solid #d7b899;
+  border-radius: 12px;
+  color: #4b2e2e;
+  font-weight: 600;
+  min-width: 0;
+  padding: 9px 10px;
 }
 /* =====================================================
    📊 SPENDING OVERVIEW — ANALYTICS DASHBOARD
@@ -958,6 +1093,23 @@ body{
 
 * {
     scroll-behavior: smooth;
+}
+
+.auth-switch button {
+  background: transparent;
+  box-shadow: none;
+  color: #1f4e79;
+}
+
+.auth-switch button:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+.logout-btn {
+  padding: 9px 16px;
+  border-radius: 12px;
+  box-shadow: 0 4px 0 #a85a69;
 }
 
 

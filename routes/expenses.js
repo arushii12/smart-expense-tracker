@@ -2,7 +2,9 @@ const express = require("express");
 const router = express.Router();
 
 const Expense = require("../models/Expense");
-const MonthlySummary = require("../models/MonthlySummary");
+const auth = require("../middleware/auth");
+
+router.use(auth);
 
 // =====================================================
 // POST /expenses
@@ -25,38 +27,13 @@ router.post("/", async (req, res) => {
 
     // Save expense (date-safe)
     const expense = new Expense({
+      userId: req.user.id,
       amount,
       category,
       date: date ? new Date(date) : new Date()
     });
 
     const savedExpense = await expense.save();
-
-    // Determine month (YYYY-MM)
-    const expenseDate = expense.date;
-
-const month = `${expenseDate.getFullYear()}-${String(
-  expenseDate.getMonth() + 1
-).padStart(2, "0")}`;
-
-    // Update monthly summary
-    let monthly = await MonthlySummary.findOne({ month });
-
-    if (monthly) {
-      monthly.totalSpent += amount;
-      monthly.byCategory[category] =
-        (monthly.byCategory[category] || 0) + amount;
-
-      await monthly.save();
-    } else {
-      await MonthlySummary.create({
-        month,
-        totalSpent: amount,
-        byCategory: {
-          [category]: amount
-        }
-      });
-    }
 
     res.json({
       message: "Expense added successfully",
@@ -76,7 +53,9 @@ const month = `${expenseDate.getFullYear()}-${String(
 // =====================================================
 router.get("/", async (req, res) => {
   try {
-    const expenses = await Expense.find().sort({ date: -1 });
+    const expenses = await Expense.find({ userId: req.user.id }).sort({
+      date: -1
+    });
     res.json(expenses);
   } catch (error) {
     res.status(500).json({
@@ -91,7 +70,7 @@ router.get("/", async (req, res) => {
 // =====================================================
 router.get("/summary", async (req, res) => {
   try {
-    const expenses = await Expense.find();
+    const expenses = await Expense.find({ userId: req.user.id });
 
     let totalSpent = 0;
     let byCategory = {};
@@ -116,7 +95,31 @@ router.get("/summary", async (req, res) => {
 // =====================================================
 router.get("/monthly", async (req, res) => {
   try {
-    const summaries = await MonthlySummary.find().sort({ month: 1 });
+    const expenses = await Expense.find({ userId: req.user.id }).sort({
+      date: 1
+    });
+    const summariesByMonth = {};
+
+    expenses.forEach(exp => {
+      const expenseDate = new Date(exp.date);
+      const month = `${expenseDate.getFullYear()}-${String(
+        expenseDate.getMonth() + 1
+      ).padStart(2, "0")}`;
+
+      if (!summariesByMonth[month]) {
+        summariesByMonth[month] = {
+          month,
+          totalSpent: 0,
+          byCategory: {}
+        };
+      }
+
+      summariesByMonth[month].totalSpent += exp.amount;
+      summariesByMonth[month].byCategory[exp.category] =
+        (summariesByMonth[month].byCategory[exp.category] || 0) + exp.amount;
+    });
+
+    const summaries = Object.values(summariesByMonth);
     res.json(summaries);
   } catch (error) {
     res.status(500).json({
@@ -138,6 +141,7 @@ router.get("/today", async (req, res) => {
     end.setHours(23, 59, 59, 999);
 
     const expenses = await Expense.find({
+      userId: req.user.id,
       date: { $gte: start, $lte: end }
     }).sort({ date: -1 });
 
@@ -170,6 +174,7 @@ router.get("/by-date", async (req, res) => {
     end.setHours(23, 59, 59, 999);
 
     const expenses = await Expense.find({
+      userId: req.user.id,
       date: { $gte: start, $lte: end }
     }).sort({ date: -1 });
 
@@ -183,12 +188,36 @@ router.get("/by-date", async (req, res) => {
 });
 
 // =====================================================
-// DELETE /expenses/:id  
+// PUT /expenses/:id
 // =====================================================
-router.delete("/:id", async (req, res) => {
+router.put("/:id", async (req, res) => {
   try {
-    // 1. Find expense first
-    const expense = await Expense.findById(req.params.id);
+    const { amount, category, date } = req.body;
+
+    if (!amount || !category) {
+      return res.status(400).json({
+        message: "Amount and category are required"
+      });
+    }
+
+    if (typeof amount !== "number" || amount <= 0) {
+      return res.status(400).json({
+        message: "Amount must be a positive number"
+      });
+    }
+
+    const expense = await Expense.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        userId: req.user.id
+      },
+      {
+        amount,
+        category,
+        date: date ? new Date(date) : new Date()
+      },
+      { new: true }
+    );
 
     if (!expense) {
       return res.status(404).json({
@@ -196,42 +225,42 @@ router.delete("/:id", async (req, res) => {
       });
     }
 
-    const { amount, category, date } = expense;
+    res.json({
+      message: "Expense updated successfully",
+      expense
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to update expense",
+      error: error.message
+    });
+  }
+});
 
-    // 2. Determine month from expense date
-    const expenseDate = new Date(date);
-    const month = `${expenseDate.getFullYear()}-${String(
-      expenseDate.getMonth() + 1
-    ).padStart(2, "0")}`;
+// =====================================================
+// DELETE /expenses/:id
+// =====================================================
+router.delete("/:id", async (req, res) => {
+  try {
+    // 1. Find expense first
+    const expense = await Expense.findOne({
+      _id: req.params.id,
+      userId: req.user.id
+    });
 
-    // 3. Update MonthlySummary
-    const monthly = await MonthlySummary.findOne({ month });
-
-    if (monthly) {
-      monthly.totalSpent -= amount;
-
-      if (monthly.byCategory[category]) {
-        monthly.byCategory[category] -= amount;
-
-        // Remove empty categories
-        if (monthly.byCategory[category] <= 0) {
-          delete monthly.byCategory[category];
-        }
-      }
-
-      // Safety check
-      if (monthly.totalSpent < 0) {
-        monthly.totalSpent = 0;
-      }
-
-      await monthly.save();
+    if (!expense) {
+      return res.status(404).json({
+        message: "Expense not found"
+      });
     }
 
-    // 4. Delete expense
-    await Expense.findByIdAndDelete(req.params.id);
+    await Expense.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user.id
+    });
 
     res.json({
-      message: "Expense deleted and monthly summary updated"
+      message: "Expense deleted successfully"
     });
 
   } catch (error) {

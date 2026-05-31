@@ -12,6 +12,7 @@ require("./db");
 // Routes
 // ==============================
 const expenseRoutes = require("./routes/expenses");
+const authRoutes = require("./routes/auth");
 const budgetRoutes = require("./routes/budget");
 const forecastRoutes = require("./routes/forecast");
 
@@ -30,6 +31,7 @@ app.use(express.json());
 // ==============================
 // Route usage
 // ==============================
+app.use("/auth", authRoutes);
 app.use("/expenses", expenseRoutes);
 app.use("/budget", budgetRoutes);
 app.use("/forecast", forecastRoutes);

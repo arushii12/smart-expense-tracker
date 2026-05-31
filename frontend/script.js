@@ -6,6 +6,10 @@ let expenses = [];
 let expenseChart = null;
 let barChart = null;
 let monthlyChart = null;
+let editingExpenseId = null;
+
+const API_BASE_URL = "http://localhost:5000";
+const TOKEN_KEY = "expenseTrackerToken";
 
 // ==============================
 // DOM ELEMENTS
@@ -19,6 +23,23 @@ const totalEl = document.getElementById("total");
 
 const viewDateInput = document.getElementById("viewDate");
 const historyLabel = document.getElementById("historyLabel");
+
+const authPage = document.getElementById("authPage");
+const dashboardPage = document.getElementById("dashboardPage");
+const loginView = document.getElementById("loginView");
+const signupView = document.getElementById("signupView");
+const loginEmailInput = document.getElementById("loginEmail");
+const loginPasswordInput = document.getElementById("loginPassword");
+const signupNameInput = document.getElementById("signupName");
+const signupEmailInput = document.getElementById("signupEmail");
+const signupPasswordInput = document.getElementById("signupPassword");
+const loginBtn = document.getElementById("loginBtn");
+const signupBtn = document.getElementById("signupBtn");
+const showSignupBtn = document.getElementById("showSignupBtn");
+const showLoginBtn = document.getElementById("showLoginBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const loginMessage = document.getElementById("loginMessage");
+const signupMessage = document.getElementById("signupMessage");
 
 // ==============================
 // BUDGET DOM ELEMENTS
@@ -46,6 +67,148 @@ const forecastAmountEl = document.getElementById("forecastAmount");
 const forecastMessageEl = document.getElementById("forecastMessage");
 
 
+// ==============================
+// AUTH HELPERS
+// ==============================
+
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+function setToken(token) {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+function clearToken() {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+function showAuth(view = "login") {
+  authPage.classList.remove("hidden");
+  dashboardPage.classList.add("hidden");
+
+  if (view === "signup") {
+    signupView.classList.remove("hidden");
+    loginView.classList.add("hidden");
+  } else {
+    loginView.classList.remove("hidden");
+    signupView.classList.add("hidden");
+  }
+}
+
+function showDashboard() {
+  authPage.classList.add("hidden");
+  dashboardPage.classList.remove("hidden");
+  fetchTodayExpenses();
+}
+
+async function authFetch(path, options = {}) {
+  const token = getToken();
+  const headers = {
+    ...(options.headers || {})
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers
+  });
+
+  if (res.status === 401) {
+    clearToken();
+    showAuth("login");
+    throw new Error("Session expired");
+  }
+
+  return res;
+}
+
+async function login() {
+  const email = loginEmailInput.value.trim();
+  const password = loginPasswordInput.value;
+
+  if (!email || !password) {
+    loginMessage.textContent = "Email and password are required";
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      loginMessage.textContent = data.message || "Login failed";
+      return;
+    }
+
+    setToken(data.token);
+    loginMessage.textContent = "";
+    loginPasswordInput.value = "";
+    showDashboard();
+  } catch (error) {
+    loginMessage.textContent = "Unable to login right now";
+    console.error("Login error:", error);
+  }
+}
+
+async function signup() {
+  const name = signupNameInput.value.trim();
+  const email = signupEmailInput.value.trim();
+  const password = signupPasswordInput.value;
+
+  if (!name || !email || !password) {
+    signupMessage.textContent = "Name, email and password are required";
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/signup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      signupMessage.textContent = data.message || "Signup failed";
+      return;
+    }
+
+    signupMessage.textContent = "Account created. Please login.";
+    signupNameInput.value = "";
+    signupEmailInput.value = "";
+    signupPasswordInput.value = "";
+    showAuth("login");
+  } catch (error) {
+    signupMessage.textContent = "Unable to signup right now";
+    console.error("Signup error:", error);
+  }
+}
+
+function logout() {
+  clearToken();
+  expenses = [];
+  showAuth("login");
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 
 // ==============================
 // FETCH TODAY'S EXPENSES ON LOAD
@@ -53,7 +216,7 @@ const forecastMessageEl = document.getElementById("forecastMessage");
 
 async function fetchTodayExpenses() {
   try {
-    const res = await fetch("http://localhost:5000/expenses/today");
+    const res = await authFetch("/expenses/today");
     expenses = await res.json();
 
     historyLabel.textContent = "Showing: Today";
@@ -63,17 +226,13 @@ async function fetchTodayExpenses() {
   }
 }
 
-fetchTodayExpenses();
-
 // ==============================
 // FETCH EXPENSES BY DATE
 // ==============================
 
 async function fetchExpensesByDate(date) {
   try {
-    const res = await fetch(
-      `http://localhost:5000/expenses/by-date?date=${date}`
-    );
+    const res = await authFetch(`/expenses/by-date?date=${date}`);
     expenses = await res.json();
 
     historyLabel.textContent = "Showing: " + formatFullDate(date);
@@ -112,7 +271,7 @@ async function addExpense() {
   }
 
   try {
-    await fetch("http://localhost:5000/expenses", {
+    await authFetch("/expenses", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -143,7 +302,7 @@ async function addExpense() {
 
 async function deleteExpense(id) {
   try {
-    await fetch(`http://localhost:5000/expenses/${id}`, {
+    await authFetch(`/expenses/${id}`, {
       method: "DELETE"
     });
 
@@ -151,6 +310,60 @@ async function deleteExpense(id) {
     refreshUI();
   } catch (error) {
     console.error("Error deleting expense:", error);
+  }
+}
+
+// ==============================
+// EDIT EXPENSE
+// ==============================
+
+function startEditExpense(id) {
+  editingExpenseId = id;
+  renderExpenses();
+}
+
+function cancelEditExpense() {
+  editingExpenseId = null;
+  renderExpenses();
+}
+
+async function updateExpense(id) {
+  const amount = document.getElementById(`editAmount-${id}`).value;
+  const category = document.getElementById(`editCategory-${id}`).value;
+  const date = document.getElementById(`editDate-${id}`).value;
+
+  if (!amount || !category) {
+    alert("Please enter amount and category");
+    return;
+  }
+
+  try {
+    const res = await authFetch(`/expenses/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount: Number(amount),
+        category,
+        date
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.message || "Failed to update expense");
+      return;
+    }
+
+    editingExpenseId = null;
+
+    if (viewDateInput.value) {
+      fetchExpensesByDate(viewDateInput.value);
+    } else {
+      fetchTodayExpenses();
+    }
+  } catch (error) {
+    console.error("Error updating expense:", error);
   }
 }
 
@@ -179,6 +392,31 @@ function renderExpenses() {
 
   expenses.forEach(exp => {
     const li = document.createElement("li");
+    const inputDate = new Date(exp.date).toISOString().split("T")[0];
+
+    if (editingExpenseId === exp._id) {
+      li.classList.add("editing-expense");
+      li.innerHTML = `
+        <input type="number" id="editAmount-${exp._id}" value="${exp.amount}" />
+        <input type="text" id="editCategory-${exp._id}" value="${escapeHtml(exp.category)}" />
+        <input type="date" id="editDate-${exp._id}" value="${inputDate}" />
+        <div class="expense-actions">
+          <button class="save-btn">Save</button>
+          <button class="cancel-btn">Cancel</button>
+        </div>
+      `;
+
+      li.querySelector(".save-btn").addEventListener("click", () => {
+        updateExpense(exp._id);
+      });
+
+      li.querySelector(".cancel-btn").addEventListener("click", () => {
+        cancelEditExpense();
+      });
+
+      expenseList.appendChild(li);
+      return;
+    }
 
     const dateText = new Date(exp.date).toLocaleDateString("default", {
       day: "numeric",
@@ -188,10 +426,17 @@ function renderExpenses() {
 
     li.innerHTML = `
       <span>₹${exp.amount}</span>
-      <span class="tag">${exp.category}</span>
+      <span class="tag">${escapeHtml(exp.category)}</span>
       <span style="font-size:12px; opacity:0.6;">${dateText}</span>
-      <button class="delete-btn">✕</button>
+      <div class="expense-actions">
+        <button class="edit-btn">Edit</button>
+        <button class="delete-btn">✕</button>
+      </div>
     `;
+
+    li.querySelector(".edit-btn").addEventListener("click", () => {
+      startEditExpense(exp._id);
+    });
 
     li.querySelector(".delete-btn").addEventListener("click", () => {
       deleteExpense(exp._id);
@@ -403,7 +648,7 @@ function updateTopCategory() {
 
 async function loadMonthlyTrend() {
   try {
-    const res = await fetch("http://localhost:5000/expenses/monthly");
+    const res = await authFetch("/expenses/monthly");
     const data = await res.json();
 
     if (!data || data.length === 0) {
@@ -489,7 +734,7 @@ function getCurrentMonthLabel() {
 
  async function loadCurrentBudget() {
   try {
-    const res = await fetch("http://localhost:5000/budget/current");
+    const res = await authFetch("/budget/current");
     const data = await res.json();
 
     const budget = data.budget || 0;
@@ -556,7 +801,7 @@ async function setBudget() {
   }
 
   try {
-    await fetch("http://localhost:5000/budget", {
+    await authFetch("/budget", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ amount })
@@ -574,7 +819,7 @@ async function setBudget() {
 
 async function updateSmartInsights() {
   try {
-    const res = await fetch("http://localhost:5000/expenses/monthly");
+    const res = await authFetch("/expenses/monthly");
     const data = await res.json();
 
     if (!data || data.length === 0) {
@@ -690,7 +935,7 @@ function formatFullDate(dateStr) {
 
 async function loadForecast() {
   try {
-    const res = await fetch("http://localhost:5000/forecast");
+    const res = await authFetch("/forecast");
     const data = await res.json();
 
     const amountEl = document.getElementById("forecastAmount");
@@ -712,8 +957,46 @@ async function loadForecast() {
 const toggleBtn = document.getElementById("darkModeToggle");
 
 // When button is clicked
-toggleBtn.addEventListener("click", () => {
-  document.body.classList.toggle("dark-mode");
-});
+if (toggleBtn) {
+  toggleBtn.addEventListener("click", () => {
+    document.body.classList.toggle("dark-mode");
+  });
+}
+
+if (loginBtn) loginBtn.addEventListener("click", login);
+if (signupBtn) signupBtn.addEventListener("click", signup);
+if (logoutBtn) logoutBtn.addEventListener("click", logout);
+
+if (showSignupBtn) {
+  showSignupBtn.addEventListener("click", () => {
+    loginMessage.textContent = "";
+    showAuth("signup");
+  });
+}
+
+if (showLoginBtn) {
+  showLoginBtn.addEventListener("click", () => {
+    signupMessage.textContent = "";
+    showAuth("login");
+  });
+}
+
+if (loginPasswordInput) {
+  loginPasswordInput.addEventListener("keydown", event => {
+    if (event.key === "Enter") login();
+  });
+}
+
+if (signupPasswordInput) {
+  signupPasswordInput.addEventListener("keydown", event => {
+    if (event.key === "Enter") signup();
+  });
+}
+
+if (getToken()) {
+  showDashboard();
+} else {
+  showAuth("login");
+}
 
 

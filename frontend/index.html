@@ -10,7 +10,45 @@
 </head>
 
 <body>
-  <div class="app">
+  <div id="authPage" class="auth-page">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <span class="logo"> Smart Expense Tracker</span>
+        <p>Track â€¢ Analyze â€¢ Save smarter</p>
+      </div>
+
+      <div id="loginView" class="auth-view">
+        <h1>Login</h1>
+        <div class="auth-form">
+          <input type="email" id="loginEmail" placeholder="Email" />
+          <input type="password" id="loginPassword" placeholder="Password" />
+          <button id="loginBtn" class="auth-btn">Login</button>
+        </div>
+        <p id="loginMessage" class="auth-message"></p>
+        <p class="auth-switch">
+          New here?
+          <button id="showSignupBtn" type="button">Create an account</button>
+        </p>
+      </div>
+
+      <div id="signupView" class="auth-view hidden">
+        <h1>Signup</h1>
+        <div class="auth-form">
+          <input type="text" id="signupName" placeholder="Name" />
+          <input type="email" id="signupEmail" placeholder="Email" />
+          <input type="password" id="signupPassword" placeholder="Password" />
+          <button id="signupBtn" class="auth-btn">Signup</button>
+        </div>
+        <p id="signupMessage" class="auth-message"></p>
+        <p class="auth-switch">
+          Already registered?
+          <button id="showLoginBtn" type="button">Login</button>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="app hidden" id="dashboardPage">
     <!-- ================= NAVBAR ================= -->
 <nav class="navbar">
   <div class="nav-left">
@@ -27,6 +65,7 @@
   <div class="nav-right">
     <button id="darkModeToggle">🌙</button>
     <div class="profile-icon">👤</div>
+    <button id="logoutBtn" class="logout-btn">Logout</button>
   </div>
 </nav>
 
