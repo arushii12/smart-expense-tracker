@@ -582,7 +582,8 @@ body {
 }
 
 /* update button */
-.budget-btn {
+.budget-btn,
+.report-btn {
   display: block;
   margin: 0 auto;
   background: #EA9AB2;
@@ -597,6 +598,16 @@ body {
 }
 
 .budget-btn:hover {
+  transform: translateY(-2px);
+}
+
+.report-btn {
+  background: #2E86C1;
+  box-shadow: 0 5px 0 #1b5f8a;
+  margin-top: 18px;
+}
+
+.report-btn:hover {
   transform: translateY(-2px);
 }
 /* =====================================================
@@ -618,7 +629,7 @@ body {
 /* grid layout */
 .insights-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 30px;
 }
 
@@ -693,6 +704,35 @@ body {
   margin-bottom: 15px;
 }
 
+.forecast-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 18px auto;
+  max-width: 620px;
+}
+
+.forecast-stat-box {
+  background: #EAF2D7;
+  border: 2px solid #1f1f1f;
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.forecast-stat-box span {
+  color: #344e41;
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.forecast-stat-box strong {
+  color: #0d3b66;
+  font-size: 22px;
+}
+
 .forecast-message {
   font-size: 17px;
   font-weight: 600;
@@ -701,6 +741,14 @@ body {
   padding: 14px 18px;
   border-radius: 14px;
   border: 2px solid #1f1f1f;
+}
+
+.forecast-explanation {
+  color: #344e41;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 14px auto 0;
+  max-width: 680px;
 }
 
 

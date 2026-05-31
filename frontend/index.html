@@ -14,7 +14,7 @@
     <div class="auth-card">
       <div class="auth-brand">
         <span class="logo"> Smart Expense Tracker</span>
-        <p>Track â€¢ Analyze â€¢ Save smarter</p>
+        <p>Track • Analyze • Save smarter</p>
       </div>
 
       <div id="loginView" class="auth-view">
@@ -169,6 +169,7 @@
       <div class="budget-status" id="budgetStatus"></div>
 
       <button class="budget-btn" onclick="setBudget()">Update Budget</button>
+      <button class="report-btn" onclick="exportMonthlyReport()">Export Report</button>
     </div>
 
     <!-- INSIGHTS -->
@@ -177,18 +178,28 @@
 
       <div class="insights-grid">
         <div class="insight-card-pro">
-          <h4>Monthly Comparison</h4>
-          <p id="insightComparison">No data</p>
+          <h4>Highest Spending Category</h4>
+          <p id="insightTopCategory">No data</p>
         </div>
 
         <div class="insight-card-pro">
-          <h4>Avg Daily Spend</h4>
-          <p id="insightAverage">No data</p>
+          <h4>Monthly Spending Trend</h4>
+          <p id="insightMonthlyTrend">No data</p>
         </div>
 
         <div class="insight-card-pro">
-          <h4>Most Expensive Day</h4>
-          <p id="insightExpensiveDay">No data</p>
+          <h4>Budget Warning</h4>
+          <p id="insightBudgetWarning">No data</p>
+        </div>
+
+        <div class="insight-card-pro">
+          <h4>Savings Recommendation</h4>
+          <p id="insightSavings">No data</p>
+        </div>
+
+        <div class="insight-card-pro">
+          <h4>Spending Pattern</h4>
+          <p id="insightPattern">No data</p>
         </div>
       </div>
     </div>
@@ -197,8 +208,19 @@
     <div class="forecast-card-pro section">
       <h2>AI Monthly Forecast</h2>
       <div class="forecast-amount" id="forecastAmount">₹0</div>
-      <div class="forecast-label">Estimated spending this month</div>
+      <div class="forecast-label">Projected month-end spending</div>
+      <div class="forecast-stats">
+        <div class="forecast-stat-box">
+          <span>Average Daily</span>
+          <strong id="forecastAverageDaily">₹0</strong>
+        </div>
+        <div class="forecast-stat-box">
+          <span>Remaining Budget</span>
+          <strong id="forecastRemainingBudget">₹0</strong>
+        </div>
+      </div>
       <div class="forecast-message" id="forecastMessage">Loading forecast insights…</div>
+      <div class="forecast-explanation" id="forecastExplanation"></div>
     </div>
 
   </div>

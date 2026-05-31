@@ -55,9 +55,11 @@ const budgetStatusEl = document.getElementById("budgetStatus");
 // SMART INSIGHTS DOM ELEMENTS
 // ==============================
 
-const insightComparisonEl = document.getElementById("insightComparison");
-const insightAverageEl = document.getElementById("insightAverage");
-const insightExpensiveDayEl = document.getElementById("insightExpensiveDay");
+const insightTopCategoryEl = document.getElementById("insightTopCategory");
+const insightMonthlyTrendEl = document.getElementById("insightMonthlyTrend");
+const insightBudgetWarningEl = document.getElementById("insightBudgetWarning");
+const insightSavingsEl = document.getElementById("insightSavings");
+const insightPatternEl = document.getElementById("insightPattern");
 
 // ==============================
 // FORECAST DOM ELEMENTS
@@ -65,6 +67,9 @@ const insightExpensiveDayEl = document.getElementById("insightExpensiveDay");
 
 const forecastAmountEl = document.getElementById("forecastAmount");
 const forecastMessageEl = document.getElementById("forecastMessage");
+const forecastAverageDailyEl = document.getElementById("forecastAverageDaily");
+const forecastRemainingBudgetEl = document.getElementById("forecastRemainingBudget");
+const forecastExplanationEl = document.getElementById("forecastExplanation");
 
 
 // ==============================
@@ -379,7 +384,7 @@ function refreshUI() {
   updateTopCategory();
   loadMonthlyTrend();
   loadCurrentBudget();
-  updateSmartInsights(); 
+  updateAiInsights();
   loadForecast();
 }
 
@@ -814,6 +819,38 @@ async function setBudget() {
 }
 
 // ==============================
+// EXPORT MONTHLY REPORT
+// ==============================
+
+async function exportMonthlyReport() {
+  try {
+    const res = await authFetch("/report/monthly");
+
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.message || "Failed to export report");
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const now = new Date();
+    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+    link.href = url;
+    link.download = `monthly-finance-report-${month}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Report export error:", error);
+    alert("Unable to export report right now");
+  }
+}
+
+// ==============================
 // SMART INSIGHTS LOGIC
 // ==============================
 
@@ -908,6 +945,166 @@ function setEmptyInsights() {
   if (insightExpensiveDayEl) insightExpensiveDayEl.textContent = "No data";
 }
 
+async function updateAiInsights() {
+  try {
+    const [expensesRes, monthlyRes, budgetRes] = await Promise.all([
+      authFetch("/expenses"),
+      authFetch("/expenses/monthly"),
+      authFetch("/budget/current")
+    ]);
+    const allExpenses = await expensesRes.json();
+    const monthlyData = await monthlyRes.json();
+    const budgetData = await budgetRes.json();
+
+    if (!allExpenses || allExpenses.length === 0) {
+      setEmptyAiInsights();
+      return;
+    }
+
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(
+      now.getMonth() + 1
+    ).padStart(2, "0")}`;
+    const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonthKey = `${prevMonthDate.getFullYear()}-${String(
+      prevMonthDate.getMonth() + 1
+    ).padStart(2, "0")}`;
+    const currentMonth = monthlyData.find(d => d.month === currentMonthKey);
+    const prevMonth = monthlyData.find(d => d.month === prevMonthKey);
+    const currentTotal = currentMonth ? currentMonth.totalSpent : 0;
+    const prevTotal = prevMonth ? prevMonth.totalSpent : 0;
+    const currentMonthExpenses = allExpenses.filter(exp => {
+      const expDate = new Date(exp.date);
+      return (
+        expDate.getFullYear() === now.getFullYear() &&
+        expDate.getMonth() === now.getMonth()
+      );
+    });
+
+    updateHighestCategoryInsight(currentMonthExpenses, currentTotal);
+    updateMonthlyTrendInsight(currentTotal, prevTotal);
+    updateBudgetWarningInsight(currentTotal, budgetData.budget || 0);
+    updateSavingsInsight(currentMonthExpenses);
+    updatePatternInsight(allExpenses);
+  } catch (error) {
+    console.error("AI insights error:", error);
+    setEmptyAiInsights();
+  }
+}
+
+function updateHighestCategoryInsight(currentMonthExpenses, currentTotal) {
+  if (!currentMonthExpenses.length || currentTotal === 0) {
+    insightTopCategoryEl.textContent = "No spending data for this month yet.";
+    return;
+  }
+
+  const totals = getCategoryTotals(currentMonthExpenses);
+  const [category, amount] = Object.entries(totals).sort((a, b) => b[1] - a[1])[0];
+  const percent = Math.round((amount / currentTotal) * 100);
+  insightTopCategoryEl.textContent =
+    `${category} accounts for ${percent}% of your spending this month.`;
+}
+
+function updateMonthlyTrendInsight(currentTotal, prevTotal) {
+  if (prevTotal === 0 && currentTotal === 0) {
+    insightMonthlyTrendEl.textContent = "No monthly spending trend is available yet.";
+    return;
+  }
+
+  if (prevTotal === 0) {
+    insightMonthlyTrendEl.textContent =
+      "This is your first month with spending data to compare.";
+    return;
+  }
+
+  const percent = Math.round(((currentTotal - prevTotal) / prevTotal) * 100);
+
+  if (percent > 0) {
+    insightMonthlyTrendEl.textContent =
+      `Spending increased by ${percent}% compared to last month.`;
+  } else if (percent < 0) {
+    insightMonthlyTrendEl.textContent =
+      `Spending decreased by ${Math.abs(percent)}% compared to last month.`;
+  } else {
+    insightMonthlyTrendEl.textContent =
+      "Spending is unchanged compared to last month.";
+  }
+}
+
+function updateBudgetWarningInsight(currentTotal, budget) {
+  if (!budget) {
+    insightBudgetWarningEl.textContent =
+      "Set a monthly budget to unlock budget warnings.";
+    return;
+  }
+
+  const now = new Date();
+  const daysPassed = now.getDate();
+  const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const forecast = Math.round((currentTotal / daysPassed) * totalDays);
+  const projectedDifference = forecast - budget;
+
+  if (projectedDifference > 0) {
+    insightBudgetWarningEl.textContent =
+      `At the current pace, you may exceed your budget by ₹${projectedDifference}.`;
+  } else {
+    insightBudgetWarningEl.textContent =
+      `At the current pace, you may stay ₹${Math.abs(projectedDifference)} under budget.`;
+  }
+}
+
+function updateSavingsInsight(currentMonthExpenses) {
+  if (!currentMonthExpenses.length) {
+    insightSavingsEl.textContent = "Add expenses to see savings recommendations.";
+    return;
+  }
+
+  const totals = getCategoryTotals(currentMonthExpenses);
+  const [category, amount] = Object.entries(totals).sort((a, b) => b[1] - a[1])[0];
+  const categoryExpenses = currentMonthExpenses.filter(exp => exp.category === category);
+  const averageSpend = Math.round(amount / categoryExpenses.length);
+
+  insightSavingsEl.textContent =
+    `Skipping one average ${category} expense could save approximately ₹${averageSpend} this month.`;
+}
+
+function updatePatternInsight(allExpenses) {
+  const dayTypeSpend = {
+    weekday: 0,
+    weekend: 0
+  };
+
+  allExpenses.forEach(exp => {
+    const day = new Date(exp.date).getDay();
+    const type = day === 0 || day === 6 ? "weekend" : "weekday";
+    dayTypeSpend[type] += Number(exp.amount);
+  });
+
+  if (dayTypeSpend.weekend > dayTypeSpend.weekday) {
+    insightPatternEl.textContent = "Most spending occurs during weekends.";
+  } else if (dayTypeSpend.weekday > dayTypeSpend.weekend) {
+    insightPatternEl.textContent = "Most spending occurs during weekdays.";
+  } else {
+    insightPatternEl.textContent =
+      "Spending is evenly split between weekdays and weekends.";
+  }
+}
+
+function getCategoryTotals(expenseItems) {
+  return expenseItems.reduce((totals, exp) => {
+    totals[exp.category] = (totals[exp.category] || 0) + Number(exp.amount);
+    return totals;
+  }, {});
+}
+
+function setEmptyAiInsights() {
+  if (insightTopCategoryEl) insightTopCategoryEl.textContent = "No spending data yet.";
+  if (insightMonthlyTrendEl) insightMonthlyTrendEl.textContent = "No monthly trend yet.";
+  if (insightBudgetWarningEl) insightBudgetWarningEl.textContent = "No budget warning yet.";
+  if (insightSavingsEl) insightSavingsEl.textContent = "No savings recommendation yet.";
+  if (insightPatternEl) insightPatternEl.textContent = "No spending pattern yet.";
+}
+
 
 // ==============================
 // HELPER
@@ -943,8 +1140,20 @@ async function loadForecast() {
 
     if (!amountEl || !messageEl) return;
 
-    amountEl.textContent = `₹${data.forecast}`;
+    amountEl.textContent = `₹${data.projectedMonthEndSpending || 0}`;
     messageEl.textContent = data.message;
+
+    if (forecastAverageDailyEl) {
+      forecastAverageDailyEl.textContent = `₹${data.averageDailySpending || 0}`;
+    }
+
+    if (forecastRemainingBudgetEl) {
+      forecastRemainingBudgetEl.textContent = `₹${data.remainingBudget || 0}`;
+    }
+
+    if (forecastExplanationEl) {
+      forecastExplanationEl.textContent = data.explanation || "";
+    }
 
   } catch (err) {
     console.error("Forecast fetch error:", err);

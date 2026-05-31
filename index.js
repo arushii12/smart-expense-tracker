@@ -15,6 +15,7 @@ const expenseRoutes = require("./routes/expenses");
 const authRoutes = require("./routes/auth");
 const budgetRoutes = require("./routes/budget");
 const forecastRoutes = require("./routes/forecast");
+const reportRoutes = require("./routes/report");
 
 // ==============================
 // App setup
@@ -35,6 +36,7 @@ app.use("/auth", authRoutes);
 app.use("/expenses", expenseRoutes);
 app.use("/budget", budgetRoutes);
 app.use("/forecast", forecastRoutes);
+app.use("/report", reportRoutes);
 
 // ==============================
 // Server start

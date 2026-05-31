@@ -2,7 +2,10 @@ const express = require("express");
 const router = express.Router();
 
 const Budget = require("../models/Budget");
-const MonthlySummary = require("../models/MonthlySummary");
+const Expense = require("../models/Expense");
+const auth = require("../middleware/auth");
+
+router.use(auth);
 
 // Helper to get current month (YYYY-MM)
 function getCurrentMonth() {
@@ -16,14 +19,32 @@ function getCurrentMonth() {
 router.get("/current", async (req, res) => {
   try {
     const month = getCurrentMonth();
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999
+    );
 
-    const budget = await Budget.findOne({ month });
-    const summary = await MonthlySummary.findOne({ month });
+    const budget = await Budget.findOne({
+      userId: req.user.id,
+      month
+    });
+    const expenses = await Expense.find({
+      userId: req.user.id,
+      date: { $gte: startOfMonth, $lte: endOfMonth }
+    });
+    const spent = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
 
     res.json({
       month,
       budget: budget ? budget.amount : 0,
-      spent: summary ? summary.totalSpent : 0
+      spent
     });
   } catch (error) {
     res.status(500).json({
@@ -49,8 +70,14 @@ router.post("/", async (req, res) => {
     const month = getCurrentMonth();
 
     const budget = await Budget.findOneAndUpdate(
-      { month },
-      { amount },
+      {
+        userId: req.user.id,
+        month
+      },
+      {
+        userId: req.user.id,
+        amount
+      },
       { upsert: true, new: true }
     );
 
