@@ -233,6 +233,85 @@
               </label>
             </div>
             <button class="primary-btn add-btn" type="button" onclick="addExpense()"><i data-lucide="plus"></i>Add Expense</button>
+
+            <div class="receipt-scan-panel">
+              <div class="receipt-scan-header">
+                <div>
+                  <p class="eyebrow">Scan Receipt</p>
+                  <h3>Upload Receipt</h3>
+                </div>
+                <span id="receiptQuality" class="receipt-quality hidden">Ready</span>
+              </div>
+
+              <label class="receipt-upload-box" for="receiptImage">
+                <i data-lucide="scan-line"></i>
+                <span>Choose receipt image</span>
+                <small>JPG, PNG, or WebP up to 5MB</small>
+                <input type="file" id="receiptImage" accept="image/*" />
+              </label>
+
+              <div id="receiptPreviewWrapper" class="receipt-preview-wrapper hidden">
+                <img id="receiptPreview" alt="Receipt preview" />
+              </div>
+
+              <div class="receipt-actions">
+                <button id="scanReceiptBtn" class="primary-btn compact" type="button" disabled><i data-lucide="sparkles"></i>Extract from Receipt</button>
+                <button id="retryReceiptBtn" class="ghost-btn compact hidden" type="button"><i data-lucide="rotate-ccw"></i>Retry</button>
+              </div>
+
+              <div id="receiptScanStatus" class="receipt-status hidden" role="status"></div>
+
+              <div id="receiptReviewPanel" class="receipt-review-panel hidden">
+                <div class="receipt-review-header">
+                  <div>
+                    <p class="eyebrow">Review</p>
+                    <h3>Extracted Details</h3>
+                  </div>
+                </div>
+
+                <div class="receipt-review-grid">
+                  <label>
+                    <span>Amount</span>
+                    <input type="number" id="receiptAmount" />
+                  </label>
+                  <label>
+                    <span>Category</span>
+                    <select id="receiptCategory">
+                      <option value="Home">Home</option>
+                      <option value="Food & Groceries">Food & Groceries</option>
+                      <option value="Utilities & Bills">Utilities & Bills</option>
+                      <option value="Transport">Transport</option>
+                      <option value="Healthcare">Healthcare</option>
+                      <option value="Education">Education</option>
+                      <option value="Entertainment">Entertainment</option>
+                      <option value="Personal Care">Personal Care</option>
+                      <option value="Shopping">Shopping</option>
+                      <option value="Miscellaneous">Miscellaneous</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Date</span>
+                    <input type="date" id="receiptDate" />
+                  </label>
+                  <label>
+                    <span>Merchant</span>
+                    <input type="text" id="receiptMerchant" placeholder="Store name" />
+                  </label>
+                </div>
+
+                <div id="receiptWarnings" class="receipt-warnings hidden"></div>
+
+                <details class="receipt-raw-text">
+                  <summary>Raw OCR Text</summary>
+                  <pre id="receiptRawText"></pre>
+                </details>
+
+                <div class="receipt-actions">
+                  <button id="autofillReceiptBtn" class="ghost-btn compact" type="button"><i data-lucide="wand-sparkles"></i>Autofill Form</button>
+                  <button id="saveReceiptExpenseBtn" class="primary-btn compact" type="button"><i data-lucide="check"></i>Save Expense</button>
+                </div>
+              </div>
+            </div>
           </article>
 
           <article class="card history-card">

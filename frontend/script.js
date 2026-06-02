@@ -4,6 +4,8 @@
 
 let expenses = [];
 let analysisExpenses = [];
+let currentReceiptScan = null;
+let selectedReceiptFile = null;
 let expenseChart = null;
 let barChart = null;
 let monthlyChart = null;
@@ -40,6 +42,22 @@ const subcategoryInput = document.getElementById("subcategory");
 const essentialCheck = document.getElementById("essentialCheck");
 const nonEssentialCheck = document.getElementById("nonEssentialCheck");
 const dateInput = document.getElementById("date");
+const receiptImageInput = document.getElementById("receiptImage");
+const receiptPreviewWrapper = document.getElementById("receiptPreviewWrapper");
+const receiptPreview = document.getElementById("receiptPreview");
+const scanReceiptBtn = document.getElementById("scanReceiptBtn");
+const retryReceiptBtn = document.getElementById("retryReceiptBtn");
+const receiptScanStatus = document.getElementById("receiptScanStatus");
+const receiptReviewPanel = document.getElementById("receiptReviewPanel");
+const receiptAmountInput = document.getElementById("receiptAmount");
+const receiptCategoryInput = document.getElementById("receiptCategory");
+const receiptDateInput = document.getElementById("receiptDate");
+const receiptMerchantInput = document.getElementById("receiptMerchant");
+const receiptWarningsEl = document.getElementById("receiptWarnings");
+const receiptRawTextEl = document.getElementById("receiptRawText");
+const receiptQualityEl = document.getElementById("receiptQuality");
+const autofillReceiptBtn = document.getElementById("autofillReceiptBtn");
+const saveReceiptExpenseBtn = document.getElementById("saveReceiptExpenseBtn");
 const expenseList = document.getElementById("expenseList");
 const totalEl = document.getElementById("total");
 
@@ -377,6 +395,22 @@ function getSelectedExpenseType() {
   return nonEssentialCheck?.checked ? false : true;
 }
 
+function getReceiptMetadataFromScan() {
+  if (!currentReceiptScan) return {};
+
+  return {
+    receiptImageUrl: currentReceiptScan.receiptImageUrl || "",
+    rawReceiptText: currentReceiptScan.rawText || "",
+    ocrConfidence: currentReceiptScan.confidence || 0,
+    extractedMerchant: receiptMerchantInput?.value.trim() || currentReceiptScan.merchant || "",
+    extractedDate: receiptDateInput?.value || currentReceiptScan.date || ""
+  };
+}
+
+function getReceiptMetadataForExpense() {
+  return currentReceiptScan ? getReceiptMetadataFromScan() : {};
+}
+
 
 // ==============================
 // FETCH TODAY'S EXPENSES ON LOAD
@@ -562,6 +596,7 @@ async function addExpense() {
         category,
         subcategory,
         isEssential,
+        ...getReceiptMetadataForExpense(),
         date
       })
     });
@@ -580,6 +615,7 @@ async function addExpense() {
     if (essentialCheck) essentialCheck.checked = true;
     if (nonEssentialCheck) nonEssentialCheck.checked = false;
     dateInput.value = "";
+    clearReceiptScan(false);
     showStatus("Expense added successfully.", "success");
 
   } catch (error) {
@@ -851,6 +887,194 @@ function bindExclusiveChecks(essentialEl, nonEssentialEl) {
       essentialEl.checked = true;
     }
   });
+}
+
+function handleReceiptFileChange() {
+  const file = receiptImageInput?.files?.[0];
+  selectedReceiptFile = file || null;
+  currentReceiptScan = null;
+
+  if (!file) {
+    clearReceiptScan();
+    return;
+  }
+
+  if (!file.type.startsWith("image/")) {
+    showReceiptStatus("Please choose a valid image file.", "error");
+    if (scanReceiptBtn) scanReceiptBtn.disabled = true;
+    return;
+  }
+
+  if (receiptPreview && receiptPreviewWrapper) {
+    receiptPreview.src = URL.createObjectURL(file);
+    receiptPreviewWrapper.classList.remove("hidden");
+  }
+
+  if (scanReceiptBtn) scanReceiptBtn.disabled = false;
+  retryReceiptBtn?.classList.add("hidden");
+  receiptReviewPanel?.classList.add("hidden");
+  showReceiptStatus("Receipt ready to scan.", "info");
+  setReceiptQuality("");
+  renderIcons();
+}
+
+async function scanReceipt() {
+  if (!selectedReceiptFile) {
+    showReceiptStatus("Choose a receipt image first.", "error");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("receipt", selectedReceiptFile);
+
+  try {
+    setReceiptScanning(true);
+    showReceiptStatus("Scanning receipt and extracting expense details...", "info");
+
+    const res = await authFetch("/api/receipts/scan", {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || "Receipt scan failed");
+    }
+
+    currentReceiptScan = data;
+    populateReceiptReview(data);
+    showReceiptStatus("Receipt scanned. Review the extracted details before saving.", "success");
+  } catch (error) {
+    console.error("Receipt scan error:", error);
+    showReceiptStatus(error.message || "Unable to scan receipt. Please retry or enter details manually.", "error");
+    retryReceiptBtn?.classList.remove("hidden");
+  } finally {
+    setReceiptScanning(false);
+  }
+}
+
+function populateReceiptReview(data) {
+  if (receiptAmountInput) receiptAmountInput.value = data.amount || "";
+  if (receiptCategoryInput) receiptCategoryInput.value = data.categorySuggestion || "Miscellaneous";
+  if (receiptDateInput) receiptDateInput.value = data.date || "";
+  if (receiptMerchantInput) receiptMerchantInput.value = data.merchant || "";
+  if (receiptRawTextEl) receiptRawTextEl.textContent = data.rawText || "No OCR text available.";
+
+  renderReceiptWarnings(data.warnings || []);
+  receiptAmountInput?.classList.toggle("input-warning", data.amountConfidence === "low" || !data.amount);
+  setReceiptQuality(getReceiptQualityText(data.confidence));
+  receiptReviewPanel?.classList.remove("hidden");
+  retryReceiptBtn?.classList.remove("hidden");
+  renderIcons();
+}
+
+function renderReceiptWarnings(warnings) {
+  if (!receiptWarningsEl) return;
+
+  if (!warnings.length) {
+    receiptWarningsEl.classList.add("hidden");
+    receiptWarningsEl.innerHTML = "";
+    return;
+  }
+
+  receiptWarningsEl.innerHTML = warnings
+    .map(warning => `<p>${escapeHtml(warning)}</p>`)
+    .join("");
+  receiptWarningsEl.classList.remove("hidden");
+}
+
+function applyReceiptToExpenseForm() {
+  if (!currentReceiptScan) return;
+
+  if (amountInput) amountInput.value = receiptAmountInput?.value || "";
+  if (categoryInput) categoryInput.value = receiptCategoryInput?.value || "Miscellaneous";
+  if (subcategoryInput) subcategoryInput.value = "Not specified";
+  if (dateInput) dateInput.value = receiptDateInput?.value || "";
+  if (essentialCheck) essentialCheck.checked = true;
+  if (nonEssentialCheck) nonEssentialCheck.checked = false;
+
+  showReceiptStatus("Extracted details copied into the expense form.", "success");
+}
+
+async function saveReceiptExpense() {
+  if (!currentReceiptScan) {
+    showReceiptStatus("Scan a receipt before saving.", "error");
+    return;
+  }
+
+  const amount = Number(receiptAmountInput?.value || 0);
+  if (!amount || amount <= 0) {
+    receiptAmountInput?.classList.add("input-warning");
+    showReceiptStatus("Please confirm a valid bill total before saving.", "error");
+    return;
+  }
+
+  if (!receiptDateInput?.value) {
+    receiptDateInput?.classList.add("input-warning");
+    showReceiptStatus("Please enter the receipt date before saving.", "error");
+    return;
+  }
+
+  applyReceiptToExpenseForm();
+  await addExpense();
+}
+
+function setReceiptScanning(isScanning) {
+  if (scanReceiptBtn) {
+    scanReceiptBtn.disabled = isScanning || !selectedReceiptFile;
+    scanReceiptBtn.innerHTML = isScanning
+      ? `<span class="button-spinner"></span>Scanning...`
+      : `<i data-lucide="sparkles"></i>Extract from Receipt`;
+  }
+  renderIcons();
+}
+
+function showReceiptStatus(message, type = "info") {
+  if (!receiptScanStatus) return;
+
+  if (!message) {
+    receiptScanStatus.className = "receipt-status hidden";
+    receiptScanStatus.textContent = "";
+    return;
+  }
+
+  receiptScanStatus.className = `receipt-status ${type}`;
+  receiptScanStatus.textContent = message;
+}
+
+function setReceiptQuality(text) {
+  if (!receiptQualityEl) return;
+
+  if (!text) {
+    receiptQualityEl.classList.add("hidden");
+    receiptQualityEl.textContent = "";
+    return;
+  }
+
+  receiptQualityEl.textContent = text;
+  receiptQualityEl.classList.remove("hidden");
+}
+
+function getReceiptQualityText(confidence) {
+  const value = Math.round(Number(confidence) || 0);
+  if (value >= 75) return `High confidence (${value}%)`;
+  if (value >= 50) return `Medium confidence (${value}%)`;
+  if (value > 0) return `Low confidence (${value}%)`;
+  return "Manual review needed";
+}
+
+function clearReceiptScan(clearFile = true) {
+  currentReceiptScan = null;
+  selectedReceiptFile = clearFile ? null : selectedReceiptFile;
+  if (clearFile && receiptImageInput) receiptImageInput.value = "";
+  if (clearFile && receiptPreview) receiptPreview.src = "";
+  if (clearFile) receiptPreviewWrapper?.classList.add("hidden");
+  receiptReviewPanel?.classList.add("hidden");
+  retryReceiptBtn?.classList.add("hidden");
+  if (scanReceiptBtn) scanReceiptBtn.disabled = !selectedReceiptFile;
+  showReceiptStatus("");
+  setReceiptQuality("");
 }
 
 // ==============================
@@ -1786,6 +2010,29 @@ if (signupPasswordInput) {
   signupPasswordInput.addEventListener("keydown", event => {
     if (event.key === "Enter") signup();
   });
+}
+
+if (receiptImageInput) {
+  receiptImageInput.addEventListener("change", handleReceiptFileChange);
+}
+
+if (scanReceiptBtn) {
+  scanReceiptBtn.addEventListener("click", scanReceipt);
+}
+
+if (retryReceiptBtn) {
+  retryReceiptBtn.addEventListener("click", () => {
+    receiptReviewPanel?.classList.add("hidden");
+    scanReceipt();
+  });
+}
+
+if (autofillReceiptBtn) {
+  autofillReceiptBtn.addEventListener("click", applyReceiptToExpenseForm);
+}
+
+if (saveReceiptExpenseBtn) {
+  saveReceiptExpenseBtn.addEventListener("click", saveReceiptExpense);
 }
 
 if (getToken()) {

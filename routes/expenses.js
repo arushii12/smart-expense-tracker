@@ -11,7 +11,18 @@ router.use(auth);
 // =====================================================
 router.post("/", async (req, res) => {
   try {
-    const { amount, category, subcategory, isEssential, date } = req.body;
+    const {
+      amount,
+      category,
+      subcategory,
+      isEssential,
+      receiptImageUrl,
+      rawReceiptText,
+      ocrConfidence,
+      extractedMerchant,
+      extractedDate,
+      date
+    } = req.body;
 
     if (!amount || !category) {
       return res.status(400).json({
@@ -32,6 +43,11 @@ router.post("/", async (req, res) => {
       category,
       subcategory: sanitizeOptionalText(subcategory),
       isEssential: isEssential !== false,
+      receiptImageUrl: sanitizeOptionalText(receiptImageUrl),
+      rawReceiptText: sanitizeOptionalText(rawReceiptText),
+      ocrConfidence: normalizeConfidence(ocrConfidence),
+      extractedMerchant: sanitizeOptionalText(extractedMerchant),
+      extractedDate: sanitizeOptionalText(extractedDate),
       date: date ? new Date(date) : new Date()
     });
 
@@ -228,7 +244,18 @@ router.get("/range", async (req, res) => {
 // =====================================================
 router.put("/:id", async (req, res) => {
   try {
-    const { amount, category, subcategory, isEssential, date } = req.body;
+    const {
+      amount,
+      category,
+      subcategory,
+      isEssential,
+      receiptImageUrl,
+      rawReceiptText,
+      ocrConfidence,
+      extractedMerchant,
+      extractedDate,
+      date
+    } = req.body;
 
     if (!amount || !category) {
       return res.status(400).json({
@@ -242,18 +269,36 @@ router.put("/:id", async (req, res) => {
       });
     }
 
+    const updateFields = {
+      amount,
+      category,
+      subcategory: sanitizeOptionalText(subcategory),
+      isEssential: isEssential !== false,
+      date: date ? new Date(date) : new Date()
+    };
+
+    if (receiptImageUrl !== undefined) {
+      updateFields.receiptImageUrl = sanitizeOptionalText(receiptImageUrl);
+    }
+    if (rawReceiptText !== undefined) {
+      updateFields.rawReceiptText = sanitizeOptionalText(rawReceiptText);
+    }
+    if (ocrConfidence !== undefined) {
+      updateFields.ocrConfidence = normalizeConfidence(ocrConfidence);
+    }
+    if (extractedMerchant !== undefined) {
+      updateFields.extractedMerchant = sanitizeOptionalText(extractedMerchant);
+    }
+    if (extractedDate !== undefined) {
+      updateFields.extractedDate = sanitizeOptionalText(extractedDate);
+    }
+
     const expense = await Expense.findOneAndUpdate(
       {
         _id: req.params.id,
         userId: req.user.id
       },
-      {
-        amount,
-        category,
-        subcategory: sanitizeOptionalText(subcategory),
-        isEssential: isEssential !== false,
-        date: date ? new Date(date) : new Date()
-      },
+      updateFields,
       { new: true }
     );
 
@@ -312,4 +357,10 @@ module.exports = router;
 
 function sanitizeOptionalText(value) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeConfidence(value) {
+  const confidence = Number(value);
+  if (Number.isNaN(confidence) || confidence < 0) return 0;
+  return Math.min(confidence, 100);
 }

@@ -20,6 +20,7 @@ const authRoutes = require("./routes/auth");
 const budgetRoutes = require("./routes/budget");
 const forecastRoutes = require("./routes/forecast");
 const reportRoutes = require("./routes/report");
+const receiptRoutes = require("./routes/receipts");
 
 // ==============================
 // App setup
@@ -27,6 +28,7 @@ const reportRoutes = require("./routes/report");
 const app = express();
 const PORT = process.env.PORT || 5000;
 const frontendPath = path.join(__dirname, "frontend");
+const uploadsPath = path.join(__dirname, "uploads");
 const shouldServeFrontend = process.env.SERVE_FRONTEND !== "false";
 
 // ==============================
@@ -54,6 +56,8 @@ app.use("/expenses", expenseRoutes);
 app.use("/budget", budgetRoutes);
 app.use("/forecast", forecastRoutes);
 app.use("/report", reportRoutes);
+app.use("/api/receipts", receiptRoutes);
+app.use("/uploads", express.static(uploadsPath));
 
 // ==============================
 // Production frontend

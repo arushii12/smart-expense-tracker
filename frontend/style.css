@@ -223,6 +223,11 @@ select:focus {
   box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
 }
 
+.input-warning {
+  border-color: var(--warning) !important;
+  box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.12) !important;
+}
+
 .auth-btn,
 .primary-btn,
 .logout-btn,
@@ -928,6 +933,193 @@ select:focus {
   padding: 10px;
 }
 
+.receipt-scan-panel {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 18px;
+}
+
+.receipt-scan-header,
+.receipt-review-header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.receipt-scan-header h3,
+.receipt-review-header h3 {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.receipt-quality {
+  background: var(--success-soft);
+  border-radius: 999px;
+  color: #15803d;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 10px;
+}
+
+.receipt-upload-box {
+  align-items: center;
+  background: var(--surface-soft);
+  border: 1px dashed #cbd5e1;
+  border-radius: var(--radius);
+  color: var(--muted-strong);
+  cursor: pointer;
+  display: grid;
+  gap: 7px;
+  justify-items: center;
+  min-height: 128px;
+  padding: 18px;
+  text-align: center;
+}
+
+.receipt-upload-box svg {
+  color: var(--accent);
+  height: 26px;
+  width: 26px;
+}
+
+.receipt-upload-box span {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.receipt-upload-box small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.receipt-upload-box input {
+  display: none;
+}
+
+.receipt-preview-wrapper {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.receipt-preview-wrapper img {
+  display: block;
+  max-height: 220px;
+  object-fit: contain;
+  width: 100%;
+}
+
+.receipt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.receipt-status {
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 11px 12px;
+}
+
+.receipt-status.info {
+  background: var(--accent-soft);
+  color: #1d4ed8;
+}
+
+.receipt-status.success {
+  background: var(--success-soft);
+  color: #15803d;
+}
+
+.receipt-status.error {
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+.receipt-review-panel {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+}
+
+.receipt-review-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.receipt-review-grid label {
+  display: grid;
+  gap: 8px;
+}
+
+.receipt-review-grid label > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.receipt-warnings {
+  background: var(--warning-soft);
+  border-radius: var(--radius);
+  color: #92400e;
+  display: grid;
+  gap: 7px;
+  padding: 11px 12px;
+}
+
+.receipt-warnings p {
+  color: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.receipt-raw-text {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+
+.receipt-raw-text summary {
+  color: var(--muted-strong);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.receipt-raw-text pre {
+  color: var(--muted);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  margin-top: 10px;
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.button-spinner {
+  animation: spin 0.9s linear infinite;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-radius: 50%;
+  border-top-color: #ffffff;
+  height: 15px;
+  width: 15px;
+}
+
 .edit-type-controls {
   margin-top: 0;
 }
@@ -1225,6 +1417,18 @@ body.dark-mode .forecast-message {
   color: #fde68a;
 }
 
+body.dark-mode .receipt-upload-box {
+  border-color: var(--border);
+}
+
+body.dark-mode .receipt-status.info {
+  color: #bfdbfe;
+}
+
+body.dark-mode .receipt-warnings {
+  color: #fde68a;
+}
+
 @media (max-width: 1120px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -1293,6 +1497,7 @@ body.dark-mode .forecast-message {
   }
 
   .hero-summary-grid,
+  .receipt-review-grid,
   .charts-grid,
   .budget-stats,
   .forecast-stats {

@@ -220,5 +220,21 @@
     "subcategory": "rftdtrdtrd",
     "isEssential": true,
     "date": "2026-06-01T17:25:41.827Z"
+  },
+  {
+    "_id": "b84057bb-d1af-4239-9a63-c2c3a937e729",
+    "createdAt": "2026-06-02T07:38:08.534Z",
+    "updatedAt": "2026-06-02T07:38:08.534Z",
+    "userId": "5e465fdc-cf10-4a4e-bb7e-2c8ceb382da2",
+    "amount": 1942.5,
+    "category": "Food & Groceries",
+    "subcategory": "Not specified",
+    "isEssential": true,
+    "receiptImageUrl": "/uploads/receipts/1780385853195-158029334.png",
+    "rawReceiptText": "Indian Restaurant\n23, Hudson Lane, GTB Nagar,\nDelhi - 110009\nPhone: 011-45678900\n\nBill No.: PG/24-25/1837 Date : 02-06-2026\nTable No.: 14 Time : 08:42 PM\nCashier : Rajesh Guests : 4\nItem Qty Rate Amount\n1. Paneer Tikka 1 320.00 320.00\n2. Veg Manchow Soup 2 120.00 240.00\n3. Hakka Noodles 1 260.00 260.00\n4. Veg Biryani 1 280.00 280.00\n5. Dal Makhani 1 210.00 210.00\n6. Butter Naan 2 60.00 120.00\n7. Garlic Naan il 70.00 70.00\n8. Jeera Rice 1 180.00 180.00\n9. Masala Papad 1 50.00 50.00\n10. Soft Drink (Coke) 2 60.00 120.00\n\nSub Total 1,850.00\n\nCGST (2.5%) 46.25\n\nSGST (2.5%) 46.25\n\nGRAND TOTAL 1,942.50\n\n(Rupees One Thousand Nine Hundred Forty Two\n\nand Fifty Paise Only)\nThank you! Visit again.\nWe look forward to serving you.",
+    "ocrConfidence": 93,
+    "extractedMerchant": "Indian Restaurant",
+    "extractedDate": "2026-06-02",
+    "date": "2026-06-02T00:00:00.000Z"
   }
 ]

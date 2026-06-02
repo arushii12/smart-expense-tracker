@@ -23,6 +23,26 @@ const ExpenseSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  receiptImageUrl: {
+    type: String,
+    default: ""
+  },
+  rawReceiptText: {
+    type: String,
+    default: ""
+  },
+  ocrConfidence: {
+    type: Number,
+    default: 0
+  },
+  extractedMerchant: {
+    type: String,
+    default: ""
+  },
+  extractedDate: {
+    type: String,
+    default: ""
+  },
   date: {
     type: Date,
     default: Date.now
