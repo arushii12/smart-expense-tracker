@@ -1,0 +1,130 @@
+[
+  {
+    "_id": "fc795ea0-55d8-4539-ab75-1a769975d8b1",
+    "createdAt": "2026-06-01T11:42:55.374Z",
+    "updatedAt": "2026-06-01T11:42:55.374Z",
+    "name": "Local User",
+    "email": "localuser@example.com",
+    "password": "pass"
+  },
+  {
+    "_id": "267340ee-7c2e-4e95-8b0d-655f4e69448a",
+    "createdAt": "2026-06-01T11:53:04.737Z",
+    "updatedAt": "2026-06-01T11:53:04.737Z",
+    "name": "New Test User",
+    "email": "newuser@example.com",
+    "password": "$2b$10$iGMReCHTTXKfX7.Pn16rAOOJY7sX3rp7kg1ORK1eygKL.VEOcyKsy"
+  },
+  {
+    "_id": "a9c05f61-b8ac-4dd0-a1f6-22e302a65aa3",
+    "createdAt": "2026-06-01T11:53:57.397Z",
+    "updatedAt": "2026-06-01T11:53:57.397Z",
+    "name": "Test User Final",
+    "email": "finaltest@example.com",
+    "password": "$2b$10$GeSJVlhNtUm.Wrg0UKnRs.GuO/Th762qBygOgnLEtybRXGRGMeop2"
+  },
+  {
+    "_id": "f4caa3dc-2abd-4aac-a6cf-24e7c2fe3087",
+    "createdAt": "2026-06-01T11:54:32.815Z",
+    "updatedAt": "2026-06-01T11:54:32.815Z",
+    "name": "Test User Final",
+    "email": "user1780314872712@example.com",
+    "password": "$2b$10$2299bXmoD3hSkn6rHQB43.ME0EiNGYg0ZUrcKe98s9SmHApwvziqm"
+  },
+  {
+    "_id": "4119565d-0117-41d5-abb5-0becd9831ac4",
+    "createdAt": "2026-06-01T11:54:49.918Z",
+    "updatedAt": "2026-06-01T11:54:49.918Z",
+    "name": "Test User Final",
+    "email": "user1780314889808@example.com",
+    "password": "$2b$10$CTidCRz34RplHKSKpVKI2.hjuYqOiAvUbF.bgfgp0Ueu8.dQ3m4i6"
+  },
+  {
+    "_id": "5e465fdc-cf10-4a4e-bb7e-2c8ceb382da2",
+    "createdAt": "2026-06-01T12:04:24.517Z",
+    "updatedAt": "2026-06-01T12:04:24.517Z",
+    "name": "a",
+    "email": "animeloverr819@gmail.com",
+    "password": "$2b$10$bBC/S.DfIVUSZSx7j/gn9.zpWuAkFgcR9cZtwHgEM1a5RWvpH60oG"
+  },
+  {
+    "_id": "45172102-c654-42c8-8d70-288287256a72",
+    "createdAt": "2026-06-01T12:06:34.184Z",
+    "updatedAt": "2026-06-01T12:06:34.184Z",
+    "name": "Debug User",
+    "email": "debug1780315594059@example.com",
+    "password": "$2b$10$1HmwJGP5aktAM14A0rNzsOWjCXinmJrvCVmD9Y4D6bXcAn7Q/Mg22"
+  },
+  {
+    "_id": "e393d2a7-90ae-4a91-ab36-548a7fcab5f0",
+    "createdAt": "2026-06-01T12:10:39.322Z",
+    "updatedAt": "2026-06-01T12:10:39.322Z",
+    "name": "Test User",
+    "email": "test1780315839202@example.com",
+    "password": "$2b$10$joK2l9Mk4IVZZ0PLnSsBMu4N4op7g2VmJ6XbJTmdhievP0oB7LVji"
+  },
+  {
+    "_id": "903afb64-9f09-4e2b-8168-29572c29a55a",
+    "createdAt": "2026-06-01T12:11:25.030Z",
+    "updatedAt": "2026-06-01T12:11:25.030Z",
+    "name": "Test User",
+    "email": "test1780315884883@example.com",
+    "password": "$2b$10$92LGaUmo4yACA60M4ZbVlOAToBfPhzADSy6Xogkh0XHFo9Kdyl1cG"
+  },
+  {
+    "_id": "d3546138-b151-44b0-b6de-91c4c3152b5b",
+    "createdAt": "2026-06-01T12:11:52.842Z",
+    "updatedAt": "2026-06-01T12:11:52.842Z",
+    "name": "Test User",
+    "email": "test1780315912699@example.com",
+    "password": "$2b$10$.B13W9I.T8KCj207Cd3TxetU72KnT2TCN3oFrLb8t1VjiNC35f7Oi"
+  },
+  {
+    "_id": "e0bc6d46-67db-4e3c-a9c2-e9c3c72b6c39",
+    "createdAt": "2026-06-01T12:12:42.932Z",
+    "updatedAt": "2026-06-01T12:12:42.932Z",
+    "name": "Test User",
+    "email": "test1780315962786@example.com",
+    "password": "$2b$10$.jNQfbZ..WBf5gPeE.UPmeNLyrDez03h7JaAJ/1AJQ7QlAd5t4bbS"
+  },
+  {
+    "_id": "f1f56246-ac21-464b-a0de-63e2116145d9",
+    "createdAt": "2026-06-01T12:16:34.266Z",
+    "updatedAt": "2026-06-01T12:16:34.266Z",
+    "name": "Delete Debug",
+    "email": "deletedebug1780316194096@example.com",
+    "password": "$2b$10$C/R/l82hBWoYBYN.bd/lKu3tz4aY4haPgpGI.4cTBGY0BzyaludKi"
+  },
+  {
+    "_id": "9c134e94-e600-478a-aa02-29f248998af5",
+    "createdAt": "2026-06-01T12:17:19.414Z",
+    "updatedAt": "2026-06-01T12:17:19.414Z",
+    "name": "Delete Debug",
+    "email": "deletedebug1780316239250@example.com",
+    "password": "$2b$10$T7r9EcDYL9YdsMdMjQExcuN3FT101jitR2v2uG0amhSr.GWheaQHC"
+  },
+  {
+    "_id": "6cbf6d80-7381-4cae-93ea-d6a8f1e50b63",
+    "createdAt": "2026-06-01T12:17:46.832Z",
+    "updatedAt": "2026-06-01T12:17:46.832Z",
+    "name": "Delete Debug",
+    "email": "deletedebug1780316266684@example.com",
+    "password": "$2b$10$KDAHJ61bdq3qcc9S.y5z7OKeH1zel3BEV0kaMTriPCa1PLRWoMKiC"
+  },
+  {
+    "_id": "53280213-453f-44df-9d98-0ebf3b399792",
+    "createdAt": "2026-06-01T12:18:07.750Z",
+    "updatedAt": "2026-06-01T12:18:07.750Z",
+    "name": "Flow Test",
+    "email": "fullflow1780316287619@example.com",
+    "password": "$2b$10$yJ9t2tsZXf9TDEU22oEuhebz3dAak8qmUfjPuEECd0OkW6dhH.eoC"
+  },
+  {
+    "_id": "96d839d9-ee6a-4e8c-a5e1-1758a5c76213",
+    "createdAt": "2026-06-01T13:22:01.490Z",
+    "updatedAt": "2026-06-01T13:22:01.490Z",
+    "name": "test export",
+    "email": "reporttest@example.com",
+    "password": "$2b$10$j6d6K9E6tADb9hEi7Sns4.RE8/A7X0KQbvjYXROvPJETuI0s2plW."
+  }
+]

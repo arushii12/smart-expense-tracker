@@ -1,0 +1,224 @@
+[
+  {
+    "_id": "b1c1c697-bcba-4a45-a933-2a32656ca35b",
+    "createdAt": "2026-06-01T11:54:50.036Z",
+    "updatedAt": "2026-06-01T11:54:50.036Z",
+    "userId": "4119565d-0117-41d5-abb5-0becd9831ac4",
+    "amount": 100,
+    "category": "Food",
+    "date": "2026-06-01T00:00:00.000Z"
+  },
+  {
+    "_id": "fc295542-b4b6-439b-ab75-b75748b39810",
+    "createdAt": "2026-06-01T12:05:44.046Z",
+    "updatedAt": "2026-06-01T12:05:44.046Z",
+    "userId": "5e465fdc-cf10-4a4e-bb7e-2c8ceb382da2",
+    "amount": 122,
+    "category": "food",
+    "date": "2026-06-01T12:05:44.046Z"
+  },
+  {
+    "_id": "40456b0a-112e-4206-aaa7-5c1c8d2cb824",
+    "createdAt": "2026-06-01T12:06:00.026Z",
+    "updatedAt": "2026-06-01T12:06:00.026Z",
+    "userId": "5e465fdc-cf10-4a4e-bb7e-2c8ceb382da2",
+    "amount": 1222,
+    "category": "travel",
+    "date": "2026-06-01T12:06:00.026Z"
+  },
+  {
+    "_id": "c4c7a5e4-4efe-4877-bc3b-8f6c7daf3514",
+    "createdAt": "2026-06-01T12:06:34.307Z",
+    "updatedAt": "2026-06-01T12:06:34.307Z",
+    "userId": "45172102-c654-42c8-8d70-288287256a72",
+    "amount": 100,
+    "category": "Food",
+    "date": "2026-06-01T12:06:34.307Z"
+  },
+  {
+    "_id": "5598e99f-e733-4158-89c2-117481315164",
+    "createdAt": "2026-06-01T12:09:11.760Z",
+    "updatedAt": "2026-06-01T12:23:55.171Z",
+    "userId": "5e465fdc-cf10-4a4e-bb7e-2c8ceb382da2",
+    "amount": 12,
+    "category": "food",
+    "date": "2026-06-01T00:00:00.000Z"
+  },
+  {
+    "_id": "b88f2738-4afe-455e-8e33-0d2491b86f3a",
+    "createdAt": "2026-06-01T12:10:39.440Z",
+    "updatedAt": "2026-06-01T12:10:39.440Z",
+    "userId": "e393d2a7-90ae-4a91-ab36-548a7fcab5f0",
+    "amount": 50,
+    "category": "Lunch",
+    "date": "2026-06-01T12:10:39.447Z"
+  },
+  {
+    "_id": "0a734c81-cda3-465d-9b4f-c3e13a38e152",
+    "createdAt": "2026-06-01T12:11:25.153Z",
+    "updatedAt": "2026-06-01T12:11:25.153Z",
+    "userId": "903afb64-9f09-4e2b-8168-29572c29a55a",
+    "amount": 50,
+    "category": "Lunch",
+    "date": "2026-06-01T12:11:25.147Z"
+  },
+  {
+    "_id": "5036dd95-cfc9-422c-8212-52918c4a6597",
+    "createdAt": "2026-06-01T12:11:52.969Z",
+    "updatedAt": "2026-06-01T12:11:52.969Z",
+    "userId": "d3546138-b151-44b0-b6de-91c4c3152b5b",
+    "amount": 50,
+    "category": "Lunch",
+    "date": "2026-06-01T12:11:52.968Z"
+  },
+  {
+    "_id": "b1361740-e37d-4c53-b7af-3d855a6628cf",
+    "createdAt": "2026-06-01T12:12:04.681Z",
+    "updatedAt": "2026-06-01T12:12:04.681Z",
+    "userId": "test-user-id",
+    "amount": 100,
+    "category": "Test",
+    "date": "2026-06-01T12:12:04.681Z"
+  },
+  {
+    "_id": "9ffb64e3-851f-43d7-86f1-522611c3baaf",
+    "createdAt": "2026-06-01T12:12:22.360Z",
+    "updatedAt": "2026-06-01T12:12:22.360Z",
+    "userId": "test-user-id",
+    "amount": 100,
+    "category": "Test",
+    "date": "2026-06-01T12:12:22.360Z"
+  },
+  {
+    "_id": "0d56b0fd-6685-4f66-90af-b33d6b7a3051",
+    "createdAt": "2026-06-01T12:12:43.060Z",
+    "updatedAt": "2026-06-01T12:12:43.060Z",
+    "userId": "e0bc6d46-67db-4e3c-a9c2-e9c3c72b6c39",
+    "amount": 50,
+    "category": "Lunch",
+    "date": "2026-06-01T12:12:43.058Z"
+  },
+  {
+    "_id": "42380771-2706-4c88-b94c-4556066b8053",
+    "createdAt": "2026-06-01T12:14:57.447Z",
+    "updatedAt": "2026-06-01T12:15:12.907Z",
+    "userId": "5e465fdc-cf10-4a4e-bb7e-2c8ceb382da2",
+    "amount": 1213,
+    "category": "food",
+    "date": "2026-06-01T00:00:00.000Z"
+  },
+  {
+    "_id": "fca95448-ef41-46fb-ae36-cf71a34285ee",
+    "createdAt": "2026-06-01T12:16:34.453Z",
+    "updatedAt": "2026-06-01T12:16:34.453Z",
+    "userId": "f1f56246-ac21-464b-a0de-63e2116145d9",
+    "amount": 20,
+    "category": "Debug",
+    "date": "2026-06-01T12:16:34.443Z"
+  },
+  {
+    "_id": "7b28239d-02d1-47a6-a9ad-d6fdf175ad43",
+    "createdAt": "2026-06-01T12:17:19.567Z",
+    "updatedAt": "2026-06-01T12:17:19.567Z",
+    "userId": "9c134e94-e600-478a-aa02-29f248998af5",
+    "amount": 20,
+    "category": "Debug",
+    "date": "2026-06-01T12:17:19.565Z"
+  },
+  {
+    "_id": "1fd96e7f-df6d-4c27-861d-6efa0a7c358e",
+    "createdAt": "2026-06-01T15:41:30.514Z",
+    "updatedAt": "2026-06-01T15:58:21.826Z",
+    "userId": "5e465fdc-cf10-4a4e-bb7e-2c8ceb382da2",
+    "amount": 1223,
+    "category": "ticket",
+    "date": "2026-06-01T00:00:00.000Z"
+  },
+  {
+    "_id": "6261e91d-359a-4130-9e3d-be7b639d3a2b",
+    "createdAt": "2026-06-01T15:58:15.988Z",
+    "updatedAt": "2026-06-01T15:58:15.988Z",
+    "userId": "5e465fdc-cf10-4a4e-bb7e-2c8ceb382da2",
+    "amount": 122,
+    "category": "food",
+    "date": "2026-05-29T00:00:00.000Z"
+  },
+  {
+    "_id": "553979a2-241c-41d3-9e81-c86b89ca132b",
+    "createdAt": "2026-06-01T16:05:05.545Z",
+    "updatedAt": "2026-06-01T16:05:05.545Z",
+    "userId": "5e465fdc-cf10-4a4e-bb7e-2c8ceb382da2",
+    "amount": 1222,
+    "category": "Travel",
+    "date": "2026-05-26T00:00:00.000Z"
+  },
+  {
+    "_id": "7b40c46d-39f9-414b-8842-e17302c7f3c2",
+    "createdAt": "2026-06-01T16:05:29.499Z",
+    "updatedAt": "2026-06-01T16:05:29.499Z",
+    "userId": "5e465fdc-cf10-4a4e-bb7e-2c8ceb382da2",
+    "amount": 122,
+    "category": "Dahi",
+    "date": "2026-05-24T00:00:00.000Z"
+  },
+  {
+    "_id": "fa833c33-cee8-42f6-b79e-b8fbd8a73823",
+    "createdAt": "2026-06-01T16:05:49.836Z",
+    "updatedAt": "2026-06-01T16:05:49.836Z",
+    "userId": "5e465fdc-cf10-4a4e-bb7e-2c8ceb382da2",
+    "amount": 122,
+    "category": "Food",
+    "date": "2026-04-12T00:00:00.000Z"
+  },
+  {
+    "_id": "56747437-9e33-4c24-b364-891b6d075492",
+    "createdAt": "2026-06-01T17:03:44.966Z",
+    "updatedAt": "2026-06-01T17:03:44.966Z",
+    "userId": "5e465fdc-cf10-4a4e-bb7e-2c8ceb382da2",
+    "amount": 122,
+    "category": "Home",
+    "date": "2026-06-01T17:03:44.966Z"
+  },
+  {
+    "_id": "bf6c8941-cfde-4d1e-b892-08161f62c33e",
+    "createdAt": "2026-06-01T17:04:34.603Z",
+    "updatedAt": "2026-06-01T17:04:34.603Z",
+    "userId": "5e465fdc-cf10-4a4e-bb7e-2c8ceb382da2",
+    "amount": 1221,
+    "category": "Food & Groceries",
+    "date": "2026-06-01T00:00:00.000Z"
+  },
+  {
+    "_id": "71f5d912-698a-4262-ae71-a97ce7644d39",
+    "createdAt": "2026-06-01T17:25:18.260Z",
+    "updatedAt": "2026-06-01T17:25:18.260Z",
+    "userId": "5e465fdc-cf10-4a4e-bb7e-2c8ceb382da2",
+    "amount": 324,
+    "category": "Home",
+    "subcategory": "add",
+    "isEssential": true,
+    "date": "2026-06-01T00:00:00.000Z"
+  },
+  {
+    "_id": "d0520da2-be56-45c2-9861-be498d767e92",
+    "createdAt": "2026-06-01T17:25:29.647Z",
+    "updatedAt": "2026-06-01T17:25:29.647Z",
+    "userId": "5e465fdc-cf10-4a4e-bb7e-2c8ceb382da2",
+    "amount": 321,
+    "category": "Home",
+    "subcategory": "fyctgfdxdx",
+    "isEssential": true,
+    "date": "2026-06-01T17:25:29.647Z"
+  },
+  {
+    "_id": "465d7753-96f7-49f3-8a29-c7bb3e8882bb",
+    "createdAt": "2026-06-01T17:25:41.827Z",
+    "updatedAt": "2026-06-01T17:25:41.827Z",
+    "userId": "5e465fdc-cf10-4a4e-bb7e-2c8ceb382da2",
+    "amount": 120,
+    "category": "Home",
+    "subcategory": "rftdtrdtrd",
+    "isEssential": true,
+    "date": "2026-06-01T17:25:41.827Z"
+  }
+]

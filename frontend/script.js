@@ -3,13 +3,32 @@
 // ==============================
 
 let expenses = [];
+let analysisExpenses = [];
 let expenseChart = null;
 let barChart = null;
 let monthlyChart = null;
+let monthlyCategoryChart = null;
 let editingExpenseId = null;
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL =
+  (
+    window.SMART_EXPENSE_CONFIG?.API_BASE_URL ||
+    window.SMART_EXPENSE_API_BASE_URL ||
+    ""
+  ).replace(/\/$/, "");
 const TOKEN_KEY = "expenseTrackerToken";
+const EXPENSE_CATEGORIES = [
+  "Home",
+  "Food & Groceries",
+  "Utilities & Bills",
+  "Transport",
+  "Healthcare",
+  "Education",
+  "Entertainment",
+  "Personal Care",
+  "Shopping",
+  "Miscellaneous"
+];
 
 // ==============================
 // DOM ELEMENTS
@@ -17,12 +36,22 @@ const TOKEN_KEY = "expenseTrackerToken";
 
 const amountInput = document.getElementById("amount");
 const categoryInput = document.getElementById("category");
+const subcategoryInput = document.getElementById("subcategory");
+const essentialCheck = document.getElementById("essentialCheck");
+const nonEssentialCheck = document.getElementById("nonEssentialCheck");
 const dateInput = document.getElementById("date");
 const expenseList = document.getElementById("expenseList");
 const totalEl = document.getElementById("total");
 
-const viewDateInput = document.getElementById("viewDate");
+const fromDateInput = document.getElementById("fromDate");
+const toDateInput = document.getElementById("toDate");
 const historyLabel = document.getElementById("historyLabel");
+const analysisModeInput = document.getElementById("analysisMode");
+const analysisDateInput = document.getElementById("analysisDate");
+const analysisMonthInput = document.getElementById("analysisMonth");
+const analysisDateControl = document.getElementById("analysisDateControl");
+const analysisMonthControl = document.getElementById("analysisMonthControl");
+const analysisLabel = document.getElementById("analysisLabel");
 
 const authPage = document.getElementById("authPage");
 const dashboardPage = document.getElementById("dashboardPage");
@@ -71,6 +100,24 @@ const forecastAverageDailyEl = document.getElementById("forecastAverageDaily");
 const forecastRemainingBudgetEl = document.getElementById("forecastRemainingBudget");
 const forecastExplanationEl = document.getElementById("forecastExplanation");
 
+// ==============================
+// APP SHELL DOM ELEMENTS
+// ==============================
+
+const pageTitleEl = document.getElementById("pageTitle");
+const pageViews = document.querySelectorAll(".page-view");
+const sidebarLinks = document.querySelectorAll(".sidebar-link");
+const appStatusEl = document.getElementById("appStatus");
+const loadingStateEl = document.getElementById("loadingState");
+const dashboardRemainingBudgetEl = document.getElementById("dashboardRemainingBudget");
+const dashboardRecentExpensesEl = document.getElementById("dashboardRecentExpenses");
+const dashboardTopInsightEl = document.getElementById("dashboardTopInsight");
+const dashboardForecastSummaryEl = document.getElementById("dashboardForecastSummary");
+const reportStatusEl = document.getElementById("reportStatus");
+const toastContainer = document.getElementById("toastContainer");
+const profileMenuBtn = document.getElementById("profileMenuBtn");
+const profileMenu = document.getElementById("profileMenu");
+const sidebarThemeToggle = document.getElementById("sidebarDarkModeToggle");
 
 // ==============================
 // AUTH HELPERS
@@ -91,6 +138,8 @@ function clearToken() {
 function showAuth(view = "login") {
   authPage.classList.remove("hidden");
   dashboardPage.classList.add("hidden");
+  setLoading(false);
+  showStatus("");
 
   if (view === "signup") {
     signupView.classList.remove("hidden");
@@ -104,7 +153,107 @@ function showAuth(view = "login") {
 function showDashboard() {
   authPage.classList.add("hidden");
   dashboardPage.classList.remove("hidden");
-  fetchTodayExpenses();
+  setActiveView("dashboard");
+  initializeDateFilters();
+  fetchExpensesByRange();
+}
+
+function setActiveView(viewName) {
+  pageViews.forEach(view => {
+    view.classList.toggle("active", view.id === `view-${viewName}`);
+  });
+
+  sidebarLinks.forEach(link => {
+    link.classList.toggle("active", link.dataset.view === viewName);
+  });
+
+  const activeView = document.getElementById(`view-${viewName}`);
+  if (pageTitleEl && activeView) {
+    pageTitleEl.textContent = activeView.dataset.title || "Dashboard";
+  }
+
+  setTimeout(() => {
+    if (expenseChart) expenseChart.resize();
+    if (barChart) barChart.resize();
+    if (monthlyChart) monthlyChart.resize();
+    if (monthlyCategoryChart) monthlyCategoryChart.resize();
+    renderIcons();
+  }, 50);
+}
+
+function setLoading(isLoading, message = "Loading your finance data...") {
+  if (!loadingStateEl) return;
+
+  loadingStateEl.classList.toggle("hidden", !isLoading);
+  const textEl = loadingStateEl.querySelector("p");
+  if (textEl) textEl.textContent = message;
+}
+
+function createToast(message, type = "info") {
+  if (!toastContainer) return;
+
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  toastContainer.appendChild(toast);
+
+  setTimeout(() => {
+    toast.remove();
+  }, 4200);
+}
+
+function showStatus(message, type = "info") {
+  if (!message) {
+    if (appStatusEl) appStatusEl.className = "app-status hidden";
+    return;
+  }
+
+  if (appStatusEl) {
+    appStatusEl.textContent = message;
+    appStatusEl.className = `app-status ${type}`;
+  }
+
+  createToast(message, type);
+}
+
+function formatCurrency(amount) {
+  return `\u20B9${Math.round(Number(amount) || 0).toLocaleString("en-IN")}`;
+}
+
+function getTodayInputValue() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getCurrentMonthInputValue() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function getMonthDateRange(monthValue) {
+  const [year, month] = monthValue.split("-").map(Number);
+  const start = `${year}-${String(month).padStart(2, "0")}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const end = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  return { start, end };
+}
+
+function formatDisplayText(value, fallback = "Not specified") {
+  const text = String(value || "").trim();
+  if (!text) return fallback;
+  return text
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function renderIcons() {
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
 }
 
 async function authFetch(path, options = {}) {
@@ -141,6 +290,7 @@ async function login() {
   }
 
   try {
+    loginMessage.textContent = "Signing you in...";
     const res = await fetch(`${API_BASE_URL}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -175,6 +325,7 @@ async function signup() {
   }
 
   try {
+    signupMessage.textContent = "Creating your account...";
     const res = await fetch(`${API_BASE_URL}/auth/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -214,6 +365,18 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
+function getExpenseTypeLabel(expense) {
+  return expense.isEssential === false ? "Non-essential" : "Essential";
+}
+
+function getExpenseTypeClass(expense) {
+  return expense.isEssential === false ? "non-essential" : "essential";
+}
+
+function getSelectedExpenseType() {
+  return nonEssentialCheck?.checked ? false : true;
+}
+
 
 // ==============================
 // FETCH TODAY'S EXPENSES ON LOAD
@@ -221,13 +384,23 @@ function escapeHtml(value) {
 
 async function fetchTodayExpenses() {
   try {
+    setLoading(true, "Loading today's expenses...");
     const res = await authFetch("/expenses/today");
+    
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.message || "Failed to load today's expenses");
+    }
+
     expenses = await res.json();
 
     historyLabel.textContent = "Showing: Today";
     refreshUI();
   } catch (error) {
     console.error("Error fetching today's expenses:", error);
+    showStatus("Unable to load today's expenses. Please try again.", "error");
+  } finally {
+    setLoading(false);
   }
 }
 
@@ -237,29 +410,131 @@ async function fetchTodayExpenses() {
 
 async function fetchExpensesByDate(date) {
   try {
+    setLoading(true, "Loading expenses for the selected date...");
     const res = await authFetch(`/expenses/by-date?date=${date}`);
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.message || "Failed to load expenses");
+    }
+
     expenses = await res.json();
 
     historyLabel.textContent = "Showing: " + formatFullDate(date);
     refreshUI();
   } catch (error) {
     console.error("Error fetching expenses by date:", error);
+    showStatus("Unable to load expenses for that date.", "error");
+  } finally {
+    setLoading(false);
   }
 }
 
 // ==============================
-// DATE FILTER LISTENER
+// DATE RANGE FILTERS
 // ==============================
 
-if (viewDateInput) {
-  viewDateInput.addEventListener("change", () => {
-    if (viewDateInput.value) {
-      fetchExpensesByDate(viewDateInput.value);
-    } else {
-      fetchTodayExpenses();
-    }
-  });
+function initializeDateFilters() {
+  const today = getTodayInputValue();
+  if (fromDateInput && !fromDateInput.value) fromDateInput.value = today;
+  if (toDateInput && !toDateInput.value) toDateInput.value = today;
+  if (dateInput && !dateInput.value) dateInput.value = today;
+  if (analysisDateInput && !analysisDateInput.value) analysisDateInput.value = today;
+  if (analysisMonthInput && !analysisMonthInput.value) analysisMonthInput.value = getCurrentMonthInputValue();
 }
+
+async function fetchExpensesByRange() {
+  initializeDateFilters();
+
+  const from = fromDateInput?.value || getTodayInputValue();
+  const to = toDateInput?.value || from;
+
+  if (from > to) {
+    showStatus("From date cannot be after the to date.", "error");
+    return;
+  }
+
+  try {
+    setLoading(true, "Loading expenses for the selected range...");
+    const res = await authFetch(`/expenses/range?from=${from}&to=${to}`);
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.message || "Failed to load expense history");
+    }
+
+    expenses = await res.json();
+    historyLabel.textContent = from === to
+      ? `Showing: ${formatFullDate(from)}`
+      : `Showing: ${formatFullDate(from)} to ${formatFullDate(to)}`;
+    refreshUI();
+  } catch (error) {
+    console.error("Error fetching expenses by range:", error);
+    showStatus("Unable to load expenses for that date range.", "error");
+  } finally {
+    setLoading(false);
+  }
+}
+
+if (fromDateInput && toDateInput) {
+  fromDateInput.addEventListener("change", fetchExpensesByRange);
+  toDateInput.addEventListener("change", fetchExpensesByRange);
+}
+
+function syncAnalysisControls() {
+  const mode = analysisModeInput?.value || "date";
+  analysisDateControl?.classList.toggle("hidden", mode !== "date");
+  analysisMonthControl?.classList.toggle("hidden", mode !== "month");
+}
+
+async function loadAnalysisExpenses() {
+  initializeDateFilters();
+  syncAnalysisControls();
+
+  const mode = analysisModeInput?.value || "date";
+  let from = analysisDateInput?.value || getTodayInputValue();
+  let to = from;
+  let label = `Showing spending for ${formatFullDate(from)}`;
+
+  if (mode === "month") {
+    const monthValue = analysisMonthInput?.value || getCurrentMonthInputValue();
+    const range = getMonthDateRange(monthValue);
+    from = range.start;
+    to = range.end;
+    label = `Showing spending for ${formatMonth(monthValue)}`;
+  }
+
+  try {
+    const res = await authFetch(`/expenses/range?from=${from}&to=${to}`);
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.message || "Failed to load analysis data");
+    }
+
+    analysisExpenses = await res.json();
+    if (analysisLabel) analysisLabel.textContent = label;
+    updatePieChart();
+    updateBarChart();
+  } catch (error) {
+    console.error("Analysis chart error:", error);
+    showStatus("Unable to load spending overview for that selection.", "error");
+  }
+}
+
+if (analysisModeInput) {
+  analysisModeInput.addEventListener("change", loadAnalysisExpenses);
+}
+
+if (analysisDateInput) {
+  analysisDateInput.addEventListener("change", loadAnalysisExpenses);
+}
+
+if (analysisMonthInput) {
+  analysisMonthInput.addEventListener("change", loadAnalysisExpenses);
+}
+
+bindExclusiveChecks(essentialCheck, nonEssentialCheck);
 
 // ==============================
 // ADD EXPENSE
@@ -268,36 +543,50 @@ if (viewDateInput) {
 async function addExpense() {
   const amount = amountInput.value;
   const category = categoryInput.value;
+  const subcategory = subcategoryInput.value.trim();
+  const isEssential = getSelectedExpenseType();
   const date = dateInput.value;
 
   if (!amount || !category) {
-    alert("Please enter amount and category");
+    showStatus("Please enter an amount and category before adding an expense.", "error");
     return;
   }
 
   try {
-    await authFetch("/expenses", {
+    setLoading(true, "Saving expense...");
+    const res = await authFetch("/expenses", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         amount: Number(amount),
         category,
+        subcategory,
+        isEssential,
         date
       })
     });
 
-    if (viewDateInput.value) {
-      fetchExpensesByDate(viewDateInput.value);
-    } else {
-      fetchTodayExpenses();
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to add expense");
     }
 
+    await fetchExpensesByRange();
+
     amountInput.value = "";
-    categoryInput.value = "";
+    categoryInput.value = "Home";
+    subcategoryInput.value = "";
+    if (essentialCheck) essentialCheck.checked = true;
+    if (nonEssentialCheck) nonEssentialCheck.checked = false;
     dateInput.value = "";
+    showStatus("Expense added successfully.", "success");
 
   } catch (error) {
     console.error("Error adding expense:", error);
+    showStatus("Unable to add the expense right now.", "error");
+  } finally {
+    setLoading(false);
   }
 }
 
@@ -307,14 +596,25 @@ async function addExpense() {
 
 async function deleteExpense(id) {
   try {
-    await authFetch(`/expenses/${id}`, {
+    setLoading(true, "Deleting expense...");
+    const res = await authFetch(`/expenses/${id}`, {
       method: "DELETE"
     });
 
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to delete expense");
+    }
+
     expenses = expenses.filter(exp => exp._id !== id);
     refreshUI();
+    showStatus("Expense deleted.", "success");
   } catch (error) {
     console.error("Error deleting expense:", error);
+    showStatus("Unable to delete that expense.", "error");
+  } finally {
+    setLoading(false);
   }
 }
 
@@ -335,20 +635,25 @@ function cancelEditExpense() {
 async function updateExpense(id) {
   const amount = document.getElementById(`editAmount-${id}`).value;
   const category = document.getElementById(`editCategory-${id}`).value;
+  const subcategory = document.getElementById(`editSubcategory-${id}`).value.trim();
+  const isEssential = document.getElementById(`editEssential-${id}`).checked;
   const date = document.getElementById(`editDate-${id}`).value;
 
   if (!amount || !category) {
-    alert("Please enter amount and category");
+    showStatus("Please enter an amount and category before saving.", "error");
     return;
   }
 
   try {
+    setLoading(true, "Updating expense...");
     const res = await authFetch(`/expenses/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         amount: Number(amount),
         category,
+        subcategory,
+        isEssential,
         date
       })
     });
@@ -356,19 +661,19 @@ async function updateExpense(id) {
     const data = await res.json();
 
     if (!res.ok) {
-      alert(data.message || "Failed to update expense");
+      showStatus(data.message || "Failed to update expense.", "error");
       return;
     }
 
     editingExpenseId = null;
 
-    if (viewDateInput.value) {
-      fetchExpensesByDate(viewDateInput.value);
-    } else {
-      fetchTodayExpenses();
-    }
+    await fetchExpensesByRange();
+    showStatus("Expense updated successfully.", "success");
   } catch (error) {
     console.error("Error updating expense:", error);
+    showStatus("Unable to update that expense.", "error");
+  } finally {
+    setLoading(false);
   }
 }
 
@@ -378,9 +683,9 @@ async function updateExpense(id) {
 
 function refreshUI() {
   renderExpenses();
+  renderDashboardRecentExpenses();
   updateTotal();
-  updatePieChart();
-  updateBarChart();
+  loadAnalysisExpenses();
   updateTopCategory();
   loadMonthlyTrend();
   loadCurrentBudget();
@@ -395,6 +700,15 @@ function refreshUI() {
 function renderExpenses() {
   expenseList.innerHTML = "";
 
+  if (expenses.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "empty-state";
+    empty.textContent = "No expenses found for this view. Add one to start tracking.";
+    expenseList.appendChild(empty);
+    renderIcons();
+    return;
+  }
+
   expenses.forEach(exp => {
     const li = document.createElement("li");
     const inputDate = new Date(exp.date).toISOString().split("T")[0];
@@ -403,13 +717,29 @@ function renderExpenses() {
       li.classList.add("editing-expense");
       li.innerHTML = `
         <input type="number" id="editAmount-${exp._id}" value="${exp.amount}" />
-        <input type="text" id="editCategory-${exp._id}" value="${escapeHtml(exp.category)}" />
+        ${getCategorySelectMarkup(`editCategory-${exp._id}`, exp.category)}
+        <input type="text" id="editSubcategory-${exp._id}" value="${escapeHtml(exp.subcategory || "")}" placeholder="Subcategory" />
         <input type="date" id="editDate-${exp._id}" value="${inputDate}" />
+        <div class="edit-type-controls">
+          <label class="check-option">
+            <input type="checkbox" id="editEssential-${exp._id}" ${exp.isEssential === false ? "" : "checked"} />
+            <span>Essential</span>
+          </label>
+          <label class="check-option">
+            <input type="checkbox" id="editNonEssential-${exp._id}" ${exp.isEssential === false ? "checked" : ""} />
+            <span>Non-essential</span>
+          </label>
+        </div>
         <div class="expense-actions">
-          <button class="save-btn">Save</button>
-          <button class="cancel-btn">Cancel</button>
+          <button class="save-btn"><i data-lucide="check"></i>Save</button>
+          <button class="cancel-btn"><i data-lucide="x"></i>Cancel</button>
         </div>
       `;
+
+      bindExclusiveChecks(
+        document.getElementById(`editEssential-${exp._id}`),
+        document.getElementById(`editNonEssential-${exp._id}`)
+      );
 
       li.querySelector(".save-btn").addEventListener("click", () => {
         updateExpense(exp._id);
@@ -420,6 +750,7 @@ function renderExpenses() {
       });
 
       expenseList.appendChild(li);
+      renderIcons();
       return;
     }
 
@@ -430,12 +761,14 @@ function renderExpenses() {
     });
 
     li.innerHTML = `
-      <span>₹${exp.amount}</span>
-      <span class="tag">${escapeHtml(exp.category)}</span>
-      <span style="font-size:12px; opacity:0.6;">${dateText}</span>
+      <span>${formatCurrency(exp.amount)}</span>
+      <span class="tag">${escapeHtml(formatDisplayText(exp.category))}</span>
+      <span class="expense-subcategory">${escapeHtml(formatDisplayText(exp.subcategory))}</span>
+      <span class="type-badge ${getExpenseTypeClass(exp)}">${getExpenseTypeLabel(exp)}</span>
+      <span class="expense-date">${dateText}</span>
       <div class="expense-actions">
-        <button class="edit-btn">Edit</button>
-        <button class="delete-btn">✕</button>
+        <button class="edit-btn"><i data-lucide="pencil"></i>Edit</button>
+        <button class="delete-btn" aria-label="Delete expense"><i data-lucide="trash-2"></i></button>
       </div>
     `;
 
@@ -449,6 +782,75 @@ function renderExpenses() {
 
     expenseList.appendChild(li);
   });
+
+  renderIcons();
+}
+
+function renderDashboardRecentExpenses() {
+  if (!dashboardRecentExpensesEl) return;
+
+  dashboardRecentExpensesEl.innerHTML = "";
+
+  if (expenses.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "empty-state";
+    empty.textContent = "No recent expenses yet.";
+    dashboardRecentExpensesEl.appendChild(empty);
+    renderIcons();
+    return;
+  }
+
+  expenses.slice(0, 5).forEach(exp => {
+    const item = document.createElement("li");
+    const dateText = new Date(exp.date).toLocaleDateString("default", {
+      day: "numeric",
+      month: "short"
+    });
+
+    item.innerHTML = `
+      <div>
+        <strong>${escapeHtml(formatDisplayText(exp.category))}</strong>
+        <span>${exp.subcategory ? `${escapeHtml(formatDisplayText(exp.subcategory))} - ` : ""}${getExpenseTypeLabel(exp)} - ${dateText}</span>
+      </div>
+      <strong>${formatCurrency(exp.amount)}</strong>
+    `;
+    dashboardRecentExpensesEl.appendChild(item);
+  });
+
+  renderIcons();
+}
+
+function getCategorySelectMarkup(id, selectedCategory = "Home") {
+  const categories = EXPENSE_CATEGORIES.includes(selectedCategory)
+    ? EXPENSE_CATEGORIES
+    : [selectedCategory, ...EXPENSE_CATEGORIES];
+
+  const options = categories.map(category => {
+    const selected = category === selectedCategory ? "selected" : "";
+    return `<option value="${escapeHtml(category)}" ${selected}>${escapeHtml(category)}</option>`;
+  }).join("");
+
+  return `<select id="${id}">${options}</select>`;
+}
+
+function bindExclusiveChecks(essentialEl, nonEssentialEl) {
+  if (!essentialEl || !nonEssentialEl) return;
+
+  essentialEl.addEventListener("change", () => {
+    if (essentialEl.checked) {
+      nonEssentialEl.checked = false;
+    } else {
+      nonEssentialEl.checked = true;
+    }
+  });
+
+  nonEssentialEl.addEventListener("change", () => {
+    if (nonEssentialEl.checked) {
+      essentialEl.checked = false;
+    } else {
+      essentialEl.checked = true;
+    }
+  });
 }
 
 // ==============================
@@ -457,7 +859,7 @@ function renderExpenses() {
 
 function updateTotal() {
   const total = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
-  totalEl.textContent = `₹${total}`;
+  totalEl.textContent = formatCurrency(total);
 }
 
 // ==============================
@@ -471,13 +873,14 @@ function updatePieChart() {
   const ctx = canvas.getContext("2d");
 
   const categoryTotals = {};
-  expenses.forEach(exp => {
+  analysisExpenses.forEach(exp => {
     categoryTotals[exp.category] =
       (categoryTotals[exp.category] || 0) + Number(exp.amount);
   });
 
-  const labels = Object.keys(categoryTotals);
-  const data = Object.values(categoryTotals);
+  const entries = Object.entries(categoryTotals);
+  const labels = entries.map(([category]) => formatDisplayText(category));
+  const data = entries.map(([, amount]) => amount);
 
   if (data.length === 0) {
     if (expenseChart) expenseChart.destroy();
@@ -485,13 +888,13 @@ function updatePieChart() {
   }
 
   const colors = [
-    "#FF99C8",
-    "#A9DEF9",
-    "#D0F4DE",
-    "#E4C1F9",
-    "#FCF6BD",
-    "#FFD6A5",
-    "#BDB2FF"
+    "#0f766e",
+    "#2563eb",
+    "#d97706",
+    "#7c3aed",
+    "#16a34a",
+    "#dc2626",
+    "#0891b2"
   ];
 
   if (expenseChart) expenseChart.destroy();
@@ -518,29 +921,37 @@ function updatePieChart() {
       plugins: {
         legend: {
           position: "bottom",
+          align: "center",
           labels: {
-            padding: 18,
-            boxWidth: 14,
+            padding: 16,
+            boxWidth: 12,
+            usePointStyle: true,
+            color: "#475467",
             font: {
-              family: "Montserrat",
+              family: "Inter",
               size: 13,
               weight: "600"
             }
           }
         },
         tooltip: {
-          backgroundColor: "#1f2933",
-          padding: 12,
+          backgroundColor: "rgba(63, 58, 54, 0.92)",
+          titleColor: "#ffffff",
+          bodyColor: "#ffffff",
+          padding: 14,
           cornerRadius: 12,
           callbacks: {
             label(context) {
               const value = context.raw;
               const total = data.reduce((a, b) => a + b, 0);
               const percent = ((value / total) * 100).toFixed(1);
-              return `₹${value} • ${percent}%`;
+              return `\u20B9${value} - ${percent}%`;
             }
           }
         }
+      },
+      layout: {
+        padding: 16
       }
     }
   });
@@ -558,23 +969,24 @@ function updatePieChart() {
 
   // Group totals by category
   const categoryTotals = {};
-  expenses.forEach(exp => {
+  analysisExpenses.forEach(exp => {
     categoryTotals[exp.category] =
       (categoryTotals[exp.category] || 0) + Number(exp.amount);
   });
 
-  const labels = Object.keys(categoryTotals);
-  const data = Object.values(categoryTotals);
+  const entries = Object.entries(categoryTotals);
+  const labels = entries.map(([category]) => formatDisplayText(category));
+  const data = entries.map(([, amount]) => amount);
 
   if (labels.length === 0) {
     if (barChart) barChart.destroy();
     return;
   }
 
-  // Beautiful fintech gradient
+  // Warm pastel gradient
   const gradient = ctx.createLinearGradient(0, 0, 0, 350);
-  gradient.addColorStop(0, "#7FB3D5");
-  gradient.addColorStop(1, "#2E86C1");
+  gradient.addColorStop(0, "#0f766e");
+  gradient.addColorStop(1, "#2563eb");
 
   if (barChart) barChart.destroy();
 
@@ -583,16 +995,17 @@ function updatePieChart() {
     data: {
       labels,
       datasets: [{
-        label: "Spending (₹)",
+        label: "Spending (\u20B9)",
         data,
         backgroundColor: gradient,
-        borderRadius: 18,
-        barThickness: 42
+        borderRadius: 8,
+        borderSkipped: false,
+        barThickness: 36
       }]
     },
     options: {
       responsive: true,
-      maintainAspectRatio:false,
+      maintainAspectRatio: false,
       animation: {
         duration: 900,
         easing: "easeOutQuart"
@@ -600,23 +1013,34 @@ function updatePieChart() {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: "#1b3a4b",
-          padding: 12,
+          backgroundColor: "rgba(63, 58, 54, 0.92)",
+          titleColor: "#ffffff",
+          bodyColor: "#ffffff",
+          padding: 14,
           cornerRadius: 12,
           callbacks: {
-            label: ctx => `₹${ctx.raw}`
+            label: ctx => `\u20B9${ctx.raw}`
           }
         }
       },
+      layout: {
+        padding: 16
+      },
       scales: {
         x: {
-          grid: { display: false }
+          grid: { display: false },
+          ticks: {
+            color: "#667085",
+            font: { size: 12, weight: "600" }
+          }
         },
         y: {
           beginAtZero: true,
-          grid: { color: "#e3e3e3" },
+          grid: { color: "rgba(228, 231, 236, 0.9)" },
           ticks: {
-            callback: v => `₹${v}`
+            color: "#667085",
+            callback: v => `\u20B9${v}`,
+            font: { size: 12 }
           }
         }
       }
@@ -644,79 +1068,108 @@ function updateTopCategory() {
   });
 
   const top = Object.entries(totals).sort((a, b) => b[1] - a[1])[0];
-  el.textContent = `${top[0]} (₹${top[1]})`;
+  el.textContent = `${formatDisplayText(top[0])} (${formatCurrency(top[1])})`;
 }
 
 // ==============================
-// MONTHLY TREND (UNCHANGED)
+// MONTHLY TREND AND CATEGORY ANALYSIS
 // ==============================
 
 async function loadMonthlyTrend() {
   try {
-    const res = await authFetch("/expenses/monthly");
-    const data = await res.json();
+    const [expensesRes, budgetsRes] = await Promise.all([
+      authFetch("/expenses/monthly"),
+      authFetch("/budget/monthly")
+    ]);
+    const data = await expensesRes.json();
+    const budgetData = await budgetsRes.json();
 
     if (!data || data.length === 0) {
       if (monthlyChart) monthlyChart.destroy();
+      if (monthlyCategoryChart) monthlyCategoryChart.destroy();
       return;
     }
 
-    const labels = data.map(d => formatMonth(d.month));
-    const totals = data.map(d => d.totalSpent);
+    renderMonthlyCategoryChart(data);
+
+    const latestMonths = getLatestThreeMonthKeys(data, budgetData);
+    const labels = latestMonths.map(formatMonth);
+    const expenseTotalsByMonth = Object.fromEntries(
+      data.map(month => [month.month, Number(month.totalSpent) || 0])
+    );
+    const budgetByMonth = Object.fromEntries(
+      (budgetData || []).map(budget => [budget.month, Number(budget.amount) || 0])
+    );
+    const expenseTotals = latestMonths.map(month => expenseTotalsByMonth[month] || 0);
+    const budgetTotals = latestMonths.map(month => budgetByMonth[month] || 0);
 
     const canvas = document.getElementById("monthlyChart");
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
 
-    // Soft blue gradient fill
-    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-    gradient.addColorStop(0, "rgba(125, 185, 232, 0.6)");
-    gradient.addColorStop(1, "rgba(125, 185, 232, 0.05)");
-
     if (monthlyChart) monthlyChart.destroy();
 
     monthlyChart = new Chart(ctx, {
-      type: "line",
+      type: "bar",
       data: {
         labels,
-        datasets: [{
-          label: "Monthly Spending",
-          data: totals,
-          borderColor: "#2E86C1",
-          backgroundColor: gradient,
-          fill: true,
-          tension: 0.45,
-          borderWidth: 3,
-          pointRadius: 5,
-          pointBackgroundColor: "#2E86C1"
-        }]
+        datasets: [
+          {
+            label: "Budget",
+            data: budgetTotals,
+            backgroundColor: "rgba(29, 78, 216, 0.82)",
+            borderColor: "rgba(29, 78, 216, 1)",
+            borderWidth: 1,
+            borderRadius: 8,
+            borderSkipped: false
+          },
+          {
+            label: "Expenses",
+            data: expenseTotals,
+            backgroundColor: "rgba(15, 118, 110, 0.86)",
+            borderColor: "rgba(15, 118, 110, 1)",
+            borderWidth: 1,
+            borderRadius: 8,
+            borderSkipped: false
+          }
+        ]
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         animation: {
           duration: 1000,
           easing: "easeOutQuart"
         },
         plugins: {
-          legend: { display: false },
+          legend: getChartLegendConfig(),
           tooltip: {
-            backgroundColor: "#1b3a4b",
-            padding: 12,
+            backgroundColor: "rgba(17, 24, 39, 0.94)",
+            titleColor: "#ffffff",
+            bodyColor: "#ffffff",
+            padding: 14,
             cornerRadius: 12,
             callbacks: {
-              label: ctx => `₹${ctx.raw}`
+              label: ctx => `${ctx.dataset.label}: ${formatCurrency(ctx.raw)}`
             }
           }
+        },
+        layout: {
+          padding: 16
         },
         scales: {
           y: {
             beginAtZero: true,
-            grid: { color: "#e3e3e3" },
-            ticks: { callback: v => `₹${v}` }
+            grid: { color: "rgba(228, 231, 236, 0.9)" },
+            ticks: {
+              ...getChartTickConfig(),
+              callback: value => formatCurrency(value)
+            }
           },
           x: {
-            grid: { display: false }
+            grid: { display: false },
+            ticks: getChartTickConfig()
           }
         }
       }
@@ -725,6 +1178,167 @@ async function loadMonthlyTrend() {
   } catch (err) {
     console.error("Monthly trend error:", err);
   }
+}
+
+function renderMonthlyCategoryChart(monthlyData) {
+  const canvas = document.getElementById("monthlyCategoryChart");
+  if (!canvas) return;
+
+  const recentMonths = monthlyData.slice(-3).map(normalizeMonthlyCategoryData);
+  const categories = EXPENSE_CATEGORIES.filter(category =>
+    recentMonths.some(month => Number(month.byCategory?.[category] || 0) > 0)
+  );
+  const labels = recentMonths.map(month => formatMonth(month.month));
+
+  if (categories.length === 0) {
+    if (monthlyCategoryChart) monthlyCategoryChart.destroy();
+    return;
+  }
+
+  const datasets = categories.map((category, index) => ({
+    label: formatDisplayText(category),
+    data: recentMonths.map(month => Number(month.byCategory?.[category] || 0)),
+    backgroundColor: getChartColor(index, 0.86),
+    borderColor: getChartColor(index, 1),
+    borderWidth: 1,
+    borderRadius: 6,
+    borderSkipped: false
+  }));
+
+  if (monthlyCategoryChart) monthlyCategoryChart.destroy();
+
+  monthlyCategoryChart = new Chart(canvas.getContext("2d"), {
+    type: "bar",
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: {
+        duration: 900,
+        easing: "easeOutQuart"
+      },
+      plugins: {
+        legend: getChartLegendConfig(),
+        tooltip: {
+          backgroundColor: "rgba(17, 24, 39, 0.94)",
+          titleColor: "#ffffff",
+          bodyColor: "#ffffff",
+          padding: 14,
+          cornerRadius: 10,
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${formatCurrency(ctx.raw)}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: getChartTickConfig()
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: "rgba(228, 231, 236, 0.9)" },
+          ticks: {
+            ...getChartTickConfig(),
+            callback: value => formatCurrency(value)
+          }
+        }
+      }
+    }
+  });
+}
+
+function getLatestThreeMonthKeys(expenseMonths, budgetMonths) {
+  const keys = new Set();
+  (expenseMonths || []).forEach(month => keys.add(month.month));
+  (budgetMonths || []).forEach(month => keys.add(month.month));
+
+  const sortedKeys = Array.from(keys).filter(Boolean).sort();
+  if (sortedKeys.length >= 3) {
+    return sortedKeys.slice(-3);
+  }
+
+  const now = new Date();
+  const fallbackKeys = [];
+  for (let offset = 2; offset >= 0; offset -= 1) {
+    const date = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+    fallbackKeys.push(
+      `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
+    );
+  }
+
+  return Array.from(new Set([...fallbackKeys, ...sortedKeys])).sort().slice(-3);
+}
+
+function normalizeMonthlyCategoryData(month) {
+  const byCategory = {};
+
+  EXPENSE_CATEGORIES.forEach(category => {
+    byCategory[category] = 0;
+  });
+
+  Object.entries(month.byCategory || {}).forEach(([category, amount]) => {
+    const mainCategory = EXPENSE_CATEGORIES.includes(category)
+      ? category
+      : "Miscellaneous";
+    byCategory[mainCategory] += Number(amount) || 0;
+  });
+
+  return {
+    ...month,
+    byCategory
+  };
+}
+
+function getMonthlyCategories(monthlyData) {
+  const categories = new Set();
+  monthlyData.forEach(month => {
+    Object.keys(month.byCategory || {}).forEach(category => categories.add(category));
+  });
+  return Array.from(categories).sort((a, b) => a.localeCompare(b));
+}
+
+function getChartColor(index, alpha = 1) {
+  const palette = [
+    [15, 118, 110],
+    [29, 78, 216],
+    [217, 119, 6],
+    [124, 58, 237],
+    [22, 163, 74],
+    [220, 38, 38],
+    [8, 145, 178],
+    [190, 24, 93]
+  ];
+  const [r, g, b] = palette[index % palette.length];
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function getChartTickConfig() {
+  return {
+    color: "#667085",
+    font: {
+      family: "Inter",
+      size: 12,
+      weight: "600"
+    }
+  };
+}
+
+function getChartLegendConfig() {
+  return {
+    position: "bottom",
+    labels: {
+      boxWidth: 10,
+      padding: 16,
+      usePointStyle: true,
+      color: "#475467",
+      font: {
+        family: "Inter",
+        size: 12,
+        weight: "600"
+      }
+    }
+  };
 }
 
 
@@ -749,6 +1363,7 @@ function getCurrentMonthLabel() {
     if (budgetAmountEl) budgetAmountEl.textContent = budget;
     if (budgetSpentEl) budgetSpentEl.textContent = spent;
     if (budgetRemainingEl) budgetRemainingEl.textContent = remaining;
+    if (dashboardRemainingBudgetEl) dashboardRemainingBudgetEl.textContent = Math.round(remaining).toLocaleString("en-IN");
 
     if (!budgetBarFill || !budgetStatusEl) return;
 
@@ -761,32 +1376,32 @@ budgetBarFill.style.width = Math.min(percent, 100) + "%";
 
 // Default pastel green
 budgetBarFill.style.background =
-  "linear-gradient(90deg, #9AE6B4, #68D391)";
+  "linear-gradient(90deg, #0f766e, #2563eb)";
 
     //  CORRECT STATUS LOGIC
     if (percent < 70) {
       budgetBarFill.style.background =
-        "linear-gradient(90deg, #B7E4C7, #95D5B2)";
-      budgetStatusEl.textContent = "You’re on track";
-      budgetStatusEl.style.color = "#166534";
+        "linear-gradient(90deg, #0f766e, #2563eb)";
+      budgetStatusEl.textContent = "You're on track";
+      budgetStatusEl.style.color = "#0f766e";
 
     } else if (percent < 100) {
       budgetBarFill.style.background =
-        "linear-gradient(90deg, #FDE68A, #FACC15)";
+        "linear-gradient(90deg, #d97706, #f59e0b)";
       budgetStatusEl.textContent = "Approaching budget limit";
-      budgetStatusEl.style.color = "#92400e";
+      budgetStatusEl.style.color = "#d97706";
 
     }  else if (percent === 100) {
   budgetBarFill.style.background =
-    "linear-gradient(90deg, #FDE68A, #FACC15)";
+    "linear-gradient(90deg, #d97706, #f59e0b)";
   budgetStatusEl.textContent = "Budget reached";
-  budgetStatusEl.style.color = "#92400e";
+  budgetStatusEl.style.color = "#d97706";
 
 } else {
       budgetBarFill.style.background =
-        "linear-gradient(90deg, #FCA5A5, #EF4444)";
+        "linear-gradient(90deg, #dc2626, #d97706)";
       budgetStatusEl.textContent = "Budget exceeded";
-      budgetStatusEl.style.color = "#991b1b";
+      budgetStatusEl.style.color = "#dc2626";
     }
 
   } catch (error) {
@@ -795,40 +1410,21 @@ budgetBarFill.style.background =
 }
     
 
-async function setBudget() {
-  const input = prompt("Enter monthly budget amount (₹)");
-  if (!input) return;
-
-  const amount = Number(input);
-  if (isNaN(amount) || amount < 0) {
-    alert("Please enter a valid positive number");
-    return;
-  }
-
-  try {
-    await authFetch("/budget", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount })
-    });
-
-    loadCurrentBudget();
-  } catch (error) {
-    console.error("Error saving budget:", error);
-  }
-}
-
 // ==============================
 // EXPORT MONTHLY REPORT
 // ==============================
 
 async function exportMonthlyReport() {
   try {
+    setLoading(true, "Preparing your PDF report...");
+    if (reportStatusEl) reportStatusEl.textContent = "Preparing your report...";
     const res = await authFetch("/report/monthly");
 
     if (!res.ok) {
       const data = await res.json();
-      alert(data.message || "Failed to export report");
+      const message = data.message || "Failed to export report.";
+      if (reportStatusEl) reportStatusEl.textContent = message;
+      showStatus(message, "error");
       return;
     }
 
@@ -844,106 +1440,20 @@ async function exportMonthlyReport() {
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+    if (reportStatusEl) reportStatusEl.textContent = "Report downloaded successfully.";
+    showStatus("Report downloaded successfully.", "success");
   } catch (error) {
     console.error("Report export error:", error);
-    alert("Unable to export report right now");
+    if (reportStatusEl) reportStatusEl.textContent = "Unable to export report right now.";
+    showStatus("Unable to export report right now.", "error");
+  } finally {
+    setLoading(false);
   }
 }
 
 // ==============================
 // SMART INSIGHTS LOGIC
 // ==============================
-
-async function updateSmartInsights() {
-  try {
-    const res = await authFetch("/expenses/monthly");
-    const data = await res.json();
-
-    if (!data || data.length === 0) {
-      setEmptyInsights();
-      return;
-    }
-
-    const now = new Date();
-    const currentMonthKey = `${now.getFullYear()}-${String(
-      now.getMonth() + 1
-    ).padStart(2, "0")}`;
-
-    const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const prevMonthKey = `${prevMonthDate.getFullYear()}-${String(
-      prevMonthDate.getMonth() + 1
-    ).padStart(2, "0")}`;
-
-    const currentMonth = data.find(d => d.month === currentMonthKey);
-    const prevMonth = data.find(d => d.month === prevMonthKey);
-
-    const currentTotal = currentMonth ? currentMonth.totalSpent : 0;
-    const prevTotal = prevMonth ? prevMonth.totalSpent : 0;
-
-    // MONTHLY COMPARISON
-    const diff = currentTotal - prevTotal;
-
-    if (prevTotal === 0 && currentTotal === 0) {
-  insightComparisonEl.textContent = "No spending data yet";
-} else if (prevTotal === 0) {
-  insightComparisonEl.textContent = "No previous month data";
-}  else if (diff > 0) {
-      insightComparisonEl.textContent = `₹${diff} more than last month`;
-    } else if (diff < 0) {
-      insightComparisonEl.textContent = `₹${Math.abs(diff)} less than last month`;
-    } else {
-      insightComparisonEl.textContent = "Same as last month";
-    }
-
-    //  AVERAGE DAILY SPEND (CURRENT MONTH)
-    const dayTotals = {};
-    expenses.forEach(exp => {
-      const d = new Date(exp.date).toDateString();
-      dayTotals[d] = (dayTotals[d] || 0) + exp.amount;
-    });
-
-    const daysCount = Object.keys(dayTotals).length;
-    const visibleTotal = Object.values(dayTotals)
-  .reduce((sum, val) => sum + val, 0);
-
-const avg = daysCount > 0
-  ? Math.round(visibleTotal / daysCount)
-  : 0;
-
-    insightAverageEl.textContent = `₹${avg} / day`;
-
-    // MOST EXPENSIVE DAY
-    let maxDay = null;
-    let maxAmount = 0;
-
-    Object.entries(dayTotals).forEach(([day, amount]) => {
-      if (amount > maxAmount) {
-        maxAmount = amount;
-        maxDay = day;
-      }
-    });
-
-    if (maxDay) {
-      const formatted = new Date(maxDay).toLocaleDateString("default", {
-        day: "numeric",
-        month: "short"
-      });
-      insightExpensiveDayEl.textContent = `${formatted} (₹${maxAmount})`;
-    } else {
-      insightExpensiveDayEl.textContent = "No data";
-    }
-
-  } catch (error) {
-    console.error("Smart insights error:", error);
-    setEmptyInsights();
-  }
-}
-
-function setEmptyInsights() {
-  if (insightComparisonEl) insightComparisonEl.textContent = "No data";
-  if (insightAverageEl) insightAverageEl.textContent = "No data";
-  if (insightExpensiveDayEl) insightExpensiveDayEl.textContent = "No data";
-}
 
 async function updateAiInsights() {
   try {
@@ -986,6 +1496,9 @@ async function updateAiInsights() {
     updateBudgetWarningInsight(currentTotal, budgetData.budget || 0);
     updateSavingsInsight(currentMonthExpenses);
     updatePatternInsight(allExpenses);
+    if (dashboardTopInsightEl && insightTopCategoryEl) {
+      dashboardTopInsightEl.textContent = insightTopCategoryEl.textContent;
+    }
   } catch (error) {
     console.error("AI insights error:", error);
     setEmptyAiInsights();
@@ -1046,10 +1559,10 @@ function updateBudgetWarningInsight(currentTotal, budget) {
 
   if (projectedDifference > 0) {
     insightBudgetWarningEl.textContent =
-      `At the current pace, you may exceed your budget by ₹${projectedDifference}.`;
+      `At the current pace, you may exceed your budget by ${formatCurrency(projectedDifference)}.`;
   } else {
     insightBudgetWarningEl.textContent =
-      `At the current pace, you may stay ₹${Math.abs(projectedDifference)} under budget.`;
+      `At the current pace, you may stay ${formatCurrency(Math.abs(projectedDifference))} under budget.`;
   }
 }
 
@@ -1065,7 +1578,7 @@ function updateSavingsInsight(currentMonthExpenses) {
   const averageSpend = Math.round(amount / categoryExpenses.length);
 
   insightSavingsEl.textContent =
-    `Skipping one average ${category} expense could save approximately ₹${averageSpend} this month.`;
+    `Skipping one average ${category} expense could save approximately ${formatCurrency(averageSpend)} this month.`;
 }
 
 function updatePatternInsight(allExpenses) {
@@ -1103,6 +1616,7 @@ function setEmptyAiInsights() {
   if (insightBudgetWarningEl) insightBudgetWarningEl.textContent = "No budget warning yet.";
   if (insightSavingsEl) insightSavingsEl.textContent = "No savings recommendation yet.";
   if (insightPatternEl) insightPatternEl.textContent = "No spending pattern yet.";
+  if (dashboardTopInsightEl) dashboardTopInsightEl.textContent = "No spending insights yet. Add expenses to unlock analysis.";
 }
 
 
@@ -1135,40 +1649,112 @@ async function loadForecast() {
     const res = await authFetch("/forecast");
     const data = await res.json();
 
-    const amountEl = document.getElementById("forecastAmount");
-    const messageEl = document.getElementById("forecastMessage");
+    if (forecastAmountEl) {
+      forecastAmountEl.textContent = formatCurrency(data.projectedMonthEndSpending || 0);
+    }
 
-    if (!amountEl || !messageEl) return;
+    if (forecastMessageEl) {
+      forecastMessageEl.textContent = data.message || "Forecast is ready.";
+    }
 
-    amountEl.textContent = `₹${data.projectedMonthEndSpending || 0}`;
-    messageEl.textContent = data.message;
+    if (dashboardForecastSummaryEl) {
+      dashboardForecastSummaryEl.textContent = data.projectedMonthEndSpending
+        ? formatCurrency(data.projectedMonthEndSpending)
+        : "No forecast yet";
+    }
 
     if (forecastAverageDailyEl) {
-      forecastAverageDailyEl.textContent = `₹${data.averageDailySpending || 0}`;
+      forecastAverageDailyEl.textContent = formatCurrency(data.averageDailySpending || 0);
     }
 
     if (forecastRemainingBudgetEl) {
-      forecastRemainingBudgetEl.textContent = `₹${data.remainingBudget || 0}`;
+      forecastRemainingBudgetEl.textContent = formatCurrency(data.remainingBudget || 0);
     }
 
     if (forecastExplanationEl) {
       forecastExplanationEl.textContent = data.explanation || "";
     }
-
   } catch (err) {
     console.error("Forecast fetch error:", err);
+    if (dashboardForecastSummaryEl) dashboardForecastSummaryEl.textContent = "Forecast unavailable";
+    showStatus("Unable to load forecast insights.", "error");
+  }
+}
+
+async function setBudget() {
+  const input = prompt("Enter monthly budget amount (\u20B9)");
+  if (!input) return;
+
+  const amount = Number(input);
+  if (isNaN(amount) || amount < 0) {
+    showStatus("Please enter a valid positive budget amount.", "error");
+    return;
+  }
+
+  try {
+    setLoading(true, "Saving budget...");
+    const res = await authFetch("/budget", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to save budget");
+    }
+
+    await loadCurrentBudget();
+    showStatus("Budget updated successfully.", "success");
+  } catch (error) {
+    console.error("Error saving budget:", error);
+    showStatus("Unable to update the budget right now.", "error");
+  } finally {
+    setLoading(false);
   }
 }
 
 // ================= DARK MODE TOGGLE =================
 
-// Get the button
 const toggleBtn = document.getElementById("darkModeToggle");
 
-// When button is clicked
-if (toggleBtn) {
-  toggleBtn.addEventListener("click", () => {
-    document.body.classList.toggle("dark-mode");
+sidebarLinks.forEach(link => {
+  link.addEventListener("click", () => {
+    setActiveView(link.dataset.view);
+  });
+});
+
+document.querySelectorAll("[data-view-target]").forEach(button => {
+  button.addEventListener("click", () => {
+    setActiveView(button.dataset.viewTarget);
+  });
+});
+
+document.querySelectorAll("[data-logout-action]").forEach(button => {
+  button.addEventListener("click", logout);
+});
+
+[ toggleBtn, sidebarThemeToggle ].forEach(button => {
+  if (button) {
+    button.addEventListener("click", () => {
+      document.body.classList.toggle("dark-mode");
+    });
+  }
+});
+
+if (profileMenuBtn && profileMenu) {
+  profileMenuBtn.addEventListener("click", event => {
+    event.stopPropagation();
+    profileMenu.classList.toggle("visible");
+  });
+
+  profileMenu.addEventListener("click", event => {
+    event.stopPropagation();
+  });
+
+  document.addEventListener("click", () => {
+    profileMenu.classList.remove("visible");
   });
 }
 
@@ -1208,4 +1794,4 @@ if (getToken()) {
   showAuth("login");
 }
 
-
+renderIcons();

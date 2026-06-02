@@ -142,9 +142,9 @@ router.get("/monthly", async (req, res) => {
     const startOfPreviousMonth = new Date(previousMonthDate.getFullYear(), previousMonthDate.getMonth(), 1);
     const endOfPreviousMonth = new Date(previousMonthDate.getFullYear(), previousMonthDate.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    const [user, currentExpenses, previousExpenses, allExpenses, budgetDoc] =
+    const [userData, currentExpenses, previousExpenses, allExpenses, budgetDoc] =
       await Promise.all([
-        User.findById(req.user.id).select("name email"),
+        User.findById(req.user.id),
         Expense.find({
           userId: req.user.id,
           date: { $gte: startOfMonth, $lte: endOfMonth }
@@ -157,9 +157,14 @@ router.get("/monthly", async (req, res) => {
         Budget.findOne({ userId: req.user.id, month: monthKey })
       ]);
 
-    if (!user) {
+    if (!userData) {
       return res.status(404).json({ message: "User not found" });
     }
+
+    const user = {
+      name: userData.name,
+      email: userData.email
+    };
 
     const budget = budgetDoc ? budgetDoc.amount : 0;
     const totalSpending = currentExpenses.reduce(

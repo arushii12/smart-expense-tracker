@@ -1,108 +1,179 @@
-# 💸 Smart Expense Tracker
+# Smart Expense Tracker
 
-A full-stack web application to track daily expenses, analyze spending patterns, manage budgets, and visualize financial trends.
+Smart Expense Tracker is a full-stack personal finance app for tracking daily expenses, managing monthly budgets, forecasting spend, and generating AI-style spending insights.
 
-Built to help users **track → analyze → save smarter**.
+The backend is a Node.js and Express API connected to MongoDB Atlas. The frontend is a static HTML, CSS, and JavaScript dashboard that can be served by the backend in production or hosted separately with a configurable API base URL.
 
----
+## Features
 
-## 🚀 Features
+- JWT authentication with signup, login, logout, and protected routes
+- Expense CRUD for creating, reading, updating, and deleting expenses
+- Daily and date-based expense history
+- Monthly budget tracking with spent and remaining totals
+- Category breakdown charts and monthly trend charts
+- Forecast for projected month-end spending
+- AI-style spending insights and savings recommendations
+- PDF monthly report export
+- Responsive dashboard with dark mode
 
-* Add, view and categorize expenses
-* Monthly spending trend chart
-* Category-wise breakdown (Pie & Bar charts)
-* Budget management system
-* Spending insights & analytics
-* Expense history tracking
-* Clean dashboard UI
-* Dark mode toggle
-* Responsive design
+## Tech Stack
 
----
+- Frontend: HTML, CSS, JavaScript, Chart.js
+- Backend: Node.js, Express.js
+- Database: MongoDB Atlas with Mongoose
+- Authentication: JSON Web Tokens, bcrypt
+- Reports: PDFKit
 
-## 🧠 Problem It Solves
+## Project Structure
 
-Most people don’t know where their money goes every month. This app helps users understand spending habits, identify top expense categories, stay within budget, and make data-driven financial decisions.
-
----
-
-## 🛠 Tech Stack
-
-**Frontend:** HTML, CSS, JavaScript, Chart.js
-**Backend:** Node.js, Express.js
-**Database:** MongoDB Atlas
-**Other Tools:** Git, GitHub, REST APIs, MVC Architecture
-
----
-
-## 📊 Data Visualizations
-
-* Monthly Spending Trend – Line chart
-* Category Breakdown – Bar chart
-* Expense Distribution – Pie chart
-
----
-
-## 🏗 Project Structure
-
-```
-smart-expense-tracker
-│
-├── frontend        → UI (HTML, CSS, JS)
-├── backend
-│   ├── models      → Database schemas
-│   ├── routes      → API endpoints
-│   └── server.js   → Express server
-└── .gitignore
+```text
+smart-expense-tracker/
+  frontend/
+    index.html
+    style.css
+    script.js
+    config.js
+    config.example.js
+  middleware/
+    auth.js
+  models/
+    Budget.js
+    Expense.js
+    MonthlySummary.js
+    User.js
+  routes/
+    auth.js
+    budget.js
+    expenses.js
+    forecast.js
+    report.js
+  db.js
+  index.js
+  package.json
+  .env.example
 ```
 
----
+## Environment Variables
 
-## 🔌 API Endpoints
+Create a `.env` file in the project root. Use `.env.example` as the template.
 
-| Method | Route     | Description           |
-| ------ | --------- | --------------------- |
-| POST   | /expenses | Add new expense       |
-| GET    | /expenses | Fetch all expenses    |
-| POST   | /budget   | Set monthly budget    |
-| GET    | /forecast | Get spending forecast |
-
----
-
-## 💡 Key Learning Outcomes
-
-* Building full-stack applications
-* Connecting frontend with REST APIs
-* Working with MongoDB Atlas
-* Data visualization using charts
-* Managing Git repositories professionally
-
----
-
-## 🔐 Environment Variables
-
-Create a `.env` file:
-
-```
-MONGO_URI=your_mongodb_connection_string
+```env
+NODE_ENV=production
 PORT=5000
+MONGO_URI=mongodb+srv://<username>:<password>@<cluster-url>/expenseTracker?retryWrites=true&w=majority
+JWT_SECRET=replace-with-a-long-random-secret
+CORS_ORIGIN=
+SERVE_FRONTEND=true
 ```
 
----
+`MONGO_URI` should point to your MongoDB Atlas database.
 
-## ▶️ Run Locally
+`JWT_SECRET` should be a long, random value and must be kept private.
 
-1. Clone the repository
-2. Install dependencies using `npm install`
-3. Start server using `node server.js`
+`CORS_ORIGIN` is optional. Set it when the frontend is hosted on a different domain, for example:
 
----
+```env
+CORS_ORIGIN=https://your-frontend-domain.com
+```
 
-## 🌟 Future Improvements
+`SERVE_FRONTEND` defaults to `true`. Set it to `false` if you want the backend to run as an API only.
 
-* User authentication
-* Export expense reports (PDF/CSV)
-* AI-based spending prediction
-* Mobile version
+## Frontend API Configuration
 
----
+By default, `frontend/config.js` uses an empty `API_BASE_URL`, so the frontend calls the same origin that served it. This is ideal when Express serves the frontend in production.
+
+For separate frontend and backend deployments, update `frontend/config.js` before deploying the frontend:
+
+```js
+window.SMART_EXPENSE_CONFIG = {
+  API_BASE_URL: "https://your-backend-domain.com"
+};
+```
+
+## Local Setup
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Create `.env` from the example:
+
+```bash
+cp .env.example .env
+```
+
+3. Fill in `MONGO_URI` and `JWT_SECRET`.
+
+4. Start the app:
+
+```bash
+npm start
+```
+
+5. Open the local app using the configured port:
+
+```text
+http://localhost:<PORT>
+```
+
+## Production Deployment
+
+The backend can run independently with:
+
+```bash
+npm start
+```
+
+For a single-service deployment, keep `SERVE_FRONTEND=true`. Express will serve the static frontend from `frontend/` and expose the API routes from the same domain.
+
+For split deployments:
+
+- Deploy the backend with `SERVE_FRONTEND=false`.
+- Deploy the `frontend/` directory to a static host.
+- Set `frontend/config.js` to the deployed backend URL.
+- Set `CORS_ORIGIN` on the backend to the frontend URL.
+
+## API Routes
+
+| Method | Route | Description |
+| --- | --- | --- |
+| POST | `/auth/signup` | Create a user account |
+| POST | `/auth/login` | Log in and receive a JWT |
+| GET | `/expenses` | Fetch authenticated user's expenses |
+| POST | `/expenses` | Create an expense |
+| PUT | `/expenses/:id` | Update an expense |
+| DELETE | `/expenses/:id` | Delete an expense |
+| GET | `/expenses/today` | Fetch today's expenses |
+| GET | `/expenses/by-date?date=YYYY-MM-DD` | Fetch expenses by date |
+| GET | `/expenses/monthly` | Fetch monthly summaries |
+| GET | `/budget/current` | Fetch current budget and spend |
+| POST | `/budget` | Set current monthly budget |
+| GET | `/forecast` | Fetch spending forecast |
+| GET | `/report/monthly` | Download monthly PDF report |
+| GET | `/health` | Health check |
+
+## Screenshots
+
+Add screenshots here after deployment or local testing:
+
+- Login and signup
+- Dashboard overview
+- Expense history
+- Budget and forecast
+- PDF export
+
+## Live Demo
+
+Live demo URL:
+
+```text
+Add your deployed frontend or full-stack URL here.
+```
+
+Backend health check:
+
+```text
+https://your-backend-domain.com/health
+```

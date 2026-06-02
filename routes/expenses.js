@@ -11,7 +11,7 @@ router.use(auth);
 // =====================================================
 router.post("/", async (req, res) => {
   try {
-    const { amount, category, date } = req.body;
+    const { amount, category, subcategory, isEssential, date } = req.body;
 
     if (!amount || !category) {
       return res.status(400).json({
@@ -26,14 +26,14 @@ router.post("/", async (req, res) => {
     }
 
     // Save expense (date-safe)
-    const expense = new Expense({
+    const savedExpense = await Expense.create({
       userId: req.user.id,
       amount,
       category,
+      subcategory: sanitizeOptionalText(subcategory),
+      isEssential: isEssential !== false,
       date: date ? new Date(date) : new Date()
     });
-
-    const savedExpense = await expense.save();
 
     res.json({
       message: "Expense added successfully",
@@ -188,11 +188,47 @@ router.get("/by-date", async (req, res) => {
 });
 
 // =====================================================
+// GET /expenses/range?from=YYYY-MM-DD&to=YYYY-MM-DD
+// =====================================================
+router.get("/range", async (req, res) => {
+  try {
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+      return res.status(400).json({
+        message: "From and to dates are required (YYYY-MM-DD)"
+      });
+    }
+
+    const start = new Date(`${from}T00:00:00`);
+    const end = new Date(`${to}T23:59:59.999`);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return res.status(400).json({
+        message: "Please provide valid from and to dates"
+      });
+    }
+
+    const expenses = await Expense.find({
+      userId: req.user.id,
+      date: { $gte: start, $lte: end }
+    }).sort({ date: -1 });
+
+    res.json(expenses);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch expenses by range",
+      error: error.message
+    });
+  }
+});
+
+// =====================================================
 // PUT /expenses/:id
 // =====================================================
 router.put("/:id", async (req, res) => {
   try {
-    const { amount, category, date } = req.body;
+    const { amount, category, subcategory, isEssential, date } = req.body;
 
     if (!amount || !category) {
       return res.status(400).json({
@@ -214,6 +250,8 @@ router.put("/:id", async (req, res) => {
       {
         amount,
         category,
+        subcategory: sanitizeOptionalText(subcategory),
+        isEssential: isEssential !== false,
         date: date ? new Date(date) : new Date()
       },
       { new: true }
@@ -271,3 +309,7 @@ router.delete("/:id", async (req, res) => {
   }
 });
 module.exports = router;
+
+function sanitizeOptionalText(value) {
+  return typeof value === "string" ? value.trim() : "";
+}

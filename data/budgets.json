@@ -1,0 +1,18 @@
+[
+  {
+    "_id": "311bcafc-ca0f-4c25-9cd3-a3ca9d6a4ba7",
+    "createdAt": "2026-06-01T12:18:07.884Z",
+    "updatedAt": "2026-06-01T12:18:07.884Z",
+    "userId": "53280213-453f-44df-9d98-0ebf3b399792",
+    "month": "2026-06",
+    "amount": 500
+  },
+  {
+    "_id": "90c7c3c2-0cfc-402c-81b8-6b4508222e08",
+    "createdAt": "2026-06-01T15:58:49.012Z",
+    "updatedAt": "2026-06-01T17:49:05.087Z",
+    "userId": "5e465fdc-cf10-4a4e-bb7e-2c8ceb382da2",
+    "month": "2026-06",
+    "amount": 100000
+  }
+]

@@ -2,29 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Smart Expense Tracker</title>
 
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
   <div id="authPage" class="auth-page">
     <div class="auth-card">
       <div class="auth-brand">
-        <span class="logo"> Smart Expense Tracker</span>
-        <p>Track • Analyze • Save smarter</p>
+        <span class="brand-mark">SE</span>
+        <div>
+          <span class="logo">Smart Expense Tracker</span>
+          <p>Track, forecast, and improve your spending.</p>
+        </div>
       </div>
 
       <div id="loginView" class="auth-view">
-        <h1>Login</h1>
+        <p class="eyebrow">Welcome back</p>
+        <h1>Login to your dashboard</h1>
         <div class="auth-form">
-          <input type="email" id="loginEmail" placeholder="Email" />
-          <input type="password" id="loginPassword" placeholder="Password" />
-          <button id="loginBtn" class="auth-btn">Login</button>
+          <input type="email" id="loginEmail" placeholder="Email" autocomplete="email" />
+          <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password" />
+          <button id="loginBtn" class="auth-btn"><i data-lucide="log-in"></i>Login</button>
         </div>
-        <p id="loginMessage" class="auth-message"></p>
+        <p id="loginMessage" class="auth-message" role="status"></p>
         <p class="auth-switch">
           New here?
           <button id="showSignupBtn" type="button">Create an account</button>
@@ -32,14 +36,15 @@
       </div>
 
       <div id="signupView" class="auth-view hidden">
-        <h1>Signup</h1>
+        <p class="eyebrow">Start tracking</p>
+        <h1>Create your account</h1>
         <div class="auth-form">
-          <input type="text" id="signupName" placeholder="Name" />
-          <input type="email" id="signupEmail" placeholder="Email" />
-          <input type="password" id="signupPassword" placeholder="Password" />
-          <button id="signupBtn" class="auth-btn">Signup</button>
+          <input type="text" id="signupName" placeholder="Name" autocomplete="name" />
+          <input type="email" id="signupEmail" placeholder="Email" autocomplete="email" />
+          <input type="password" id="signupPassword" placeholder="Password" autocomplete="new-password" />
+          <button id="signupBtn" class="auth-btn"><i data-lucide="user-plus"></i>Signup</button>
         </div>
-        <p id="signupMessage" class="auth-message"></p>
+        <p id="signupMessage" class="auth-message" role="status"></p>
         <p class="auth-switch">
           Already registered?
           <button id="showLoginBtn" type="button">Login</button>
@@ -48,184 +53,393 @@
     </div>
   </div>
 
-  <div class="app hidden" id="dashboardPage">
-    <!-- ================= NAVBAR ================= -->
-<nav class="navbar">
-  <div class="nav-left">
-    <span class="logo"> Smart Expense Tracker</span>
-  </div>
-
-  <div class="nav-center">
-    <a href="#">Dashboard</a>
-    <a href="#">History</a>
-    <a href="#">Budget</a>
-    <a href="#">Insights</a>
-  </div>
-
-  <div class="nav-right">
-    <button id="darkModeToggle">🌙</button>
-    <div class="profile-icon">👤</div>
-    <button id="logoutBtn" class="logout-btn">Logout</button>
-  </div>
-</nav>
-
-
-    <!-- HERO -->
-    <div class="hero">
-      <h1>Smart Expense Tracker</h1>
-      <p>Track • Analyze • Save smarter</p>
-    </div>
-
-    <!-- DASHBOARD TOP -->
-    <div class="dashboard-top section">
-
-      <div class="dashboard-left">
-        <div class="stat-card">
-          <h3>Total Spent</h3>
-          <div id="total" class="stat-value">₹0</div>
-        </div>
-
-        <div class="stat-card">
-          <h3>Top Spending Category</h3>
-          <div id="topCategory" class="stat-value">No data</div>
+  <div class="app-shell hidden" id="dashboardPage">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <span class="brand-mark">SE</span>
+        <div>
+          <strong>Smart Expense</strong>
+          <span>Finance Control</span>
         </div>
       </div>
 
-      <div class="dashboard-right">
-        <h2 style="text-align:center;margin-bottom:20px;color:#1b3a4b;">Monthly Spending Trend</h2>
-        <canvas id="monthlyChart"></canvas>
+      <nav class="sidebar-nav" aria-label="Main navigation">
+        <button class="sidebar-link active" type="button" data-view="dashboard"><i data-lucide="layout-dashboard"></i><span class="nav-number">01</span>Dashboard</button>
+        <button class="sidebar-link" type="button" data-view="expenses"><i data-lucide="receipt-text"></i><span class="nav-number">02</span>Expenses</button>
+        <button class="sidebar-link" type="button" data-view="budget"><i data-lucide="wallet-cards"></i><span class="nav-number">03</span>Budget</button>
+        <button class="sidebar-link" type="button" data-view="insights"><i data-lucide="sparkles"></i><span class="nav-number">04</span>Insights</button>
+        <button class="sidebar-link" type="button" data-view="forecast"><i data-lucide="trending-up"></i><span class="nav-number">05</span>Forecast</button>
+        <button class="sidebar-link" type="button" data-view="reports"><i data-lucide="file-down"></i><span class="nav-number">06</span>Reports</button>
+        <button class="sidebar-link" type="button" data-view="profile"><i data-lucide="circle-user-round"></i><span class="nav-number">07</span>Profile</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button id="sidebarDarkModeToggle" class="ghost-btn" type="button"><i data-lucide="moon"></i>Theme</button>
+        <button id="logoutBtn" class="logout-btn" type="button"><i data-lucide="log-out"></i>Logout</button>
+      </div>
+    </aside>
+
+    <main class="content-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Financial command center</p>
+          <h1 id="pageTitle">Dashboard</h1>
+        </div>
+        <div class="topbar-actions">
+          <button id="darkModeToggle" class="icon-btn" type="button" aria-label="Toggle theme"><i data-lucide="moon"></i>Theme</button>
+          <button class="primary-btn compact" type="button" data-view-target="expenses"><i data-lucide="plus"></i>Add Expense</button>
+          <div class="profile-menu-wrapper">
+            <button id="profileMenuBtn" class="profile-button" type="button" aria-haspopup="true" aria-expanded="false">
+              <span class="profile-avatar">SE</span>
+              <span class="profile-name">Account</span>
+            </button>
+            <div id="profileMenu" class="profile-menu" role="menu">
+              <button class="menu-item" type="button" data-view-target="profile"><i data-lucide="circle-user-round"></i>Profile</button>
+              <button class="menu-item" type="button" data-view-target="reports"><i data-lucide="file-text"></i>Reports</button>
+              <button class="menu-item" type="button" data-logout-action="logout"><i data-lucide="log-out"></i>Logout</button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+      <div id="appStatus" class="app-status hidden" role="status"></div>
+      <div id="loadingState" class="loading-state hidden">
+        <span></span>
+        <p>Loading your finance data...</p>
       </div>
 
-    </div>
+      <section id="view-dashboard" class="page-view active" data-title="Dashboard">
+        <section class="dashboard-hero">
+          <div class="hero-copy">
+            <p class="eyebrow">Overview</p>
+            <h2>Take action on your spending and savings</h2>
+            <p class="hero-description">A refined dashboard helps you spot high-impact trends, track monthly budgets, and stay ahead of forecasted expenses.</p>
+            <div class="hero-actions">
+              <button class="primary-btn compact" type="button" data-view-target="expenses"><i data-lucide="plus"></i>Add Expense</button>
+              <button class="ghost-btn compact" type="button" data-view-target="budget"><i data-lucide="wallet"></i>Update Budget</button>
+            </div>
+          </div>
 
-    <!-- ADD EXPENSE -->
-    <div class="expense-card section">
-      <h2>Add Expense</h2>
+          <div class="hero-summary-grid">
+            <article class="metric-card">
+              <i class="metric-icon" data-lucide="indian-rupee"></i>
+              <span class="metric-label">Total Spending</span>
+              <strong id="total" class="metric-value">&#8377;0</strong>
+              <small>Based on the selected expense view</small>
+            </article>
+            <article class="metric-card success">
+              <i class="metric-icon" data-lucide="landmark"></i>
+              <span class="metric-label">Remaining Budget</span>
+              <strong class="metric-value">&#8377;<span id="dashboardRemainingBudget">0</span></strong>
+              <small>This month's available budget</small>
+            </article>
+            <article class="metric-card info">
+              <i class="metric-icon" data-lucide="tags"></i>
+              <span class="metric-label">Top Category</span>
+              <strong id="topCategory" class="metric-value text-value">No data</strong>
+              <small>Highest category in the selected view</small>
+            </article>
+            <article class="metric-card warning">
+              <i class="metric-icon" data-lucide="activity"></i>
+              <span class="metric-label">Forecast Summary</span>
+              <strong id="dashboardForecastSummary" class="metric-value text-value">Loading forecast...</strong>
+              <small>Month-end projection</small>
+            </article>
+          </div>
+        </section>
 
-      <div class="expense-form">
-        <input type="number" id="amount" placeholder="Amount (₹)" />
-        <input type="text" id="category" placeholder="Category (Food, Travel…)" />
-        <input type="date" id="date" />
-      </div>
+        <div class="dashboard-grid">
+          <article class="card chart-card wide">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Trend</p>
+                <h2>Monthly Budget and Expenses</h2>
+              </div>
+            </div>
+            <div class="chart-frame">
+              <canvas id="monthlyChart"></canvas>
+            </div>
+          </article>
 
-      <button class="add-btn" onclick="addExpense()">Add Expense</button>
-    </div>
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Activity</p>
+                <h2>Recent Expenses</h2>
+              </div>
+            </div>
+            <ul id="dashboardRecentExpenses" class="compact-list"></ul>
+          </article>
 
-    <!-- HISTORY -->
-    <div class="history-card section">
-      <div class="history-header">
-        <h2>Expense History</h2>
-        <div class="history-controls">
-          <span id="historyLabel">Showing: Today</span>
-          <input type="date" id="viewDate" />
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">AI Insight</p>
+                <h2>Top Insight</h2>
+              </div>
+            </div>
+            <p id="dashboardTopInsight" class="highlight-copy">Loading insights...</p>
+          </article>
         </div>
-      </div>
+      </section>
 
-      <ul id="expenseList" class="expense-list"></ul>
-    </div>
+      <section id="view-expenses" class="page-view" data-title="Expenses">
+        <div class="content-grid">
+          <article class="card expense-card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Create</p>
+                <h2>Add Expense</h2>
+              </div>
+            </div>
+            <div class="expense-form">
+              <label>
+                <span>Amount</span>
+                <input type="number" id="amount" placeholder="&#8377;0" />
+              </label>
+              <label>
+                <span>Category</span>
+                <select id="category">
+                  <option value="Home">Home</option>
+                  <option value="Food & Groceries">Food & Groceries</option>
+                  <option value="Utilities & Bills">Utilities & Bills</option>
+                  <option value="Transport">Transport</option>
+                  <option value="Healthcare">Healthcare</option>
+                  <option value="Education">Education</option>
+                  <option value="Entertainment">Entertainment</option>
+                  <option value="Personal Care">Personal Care</option>
+                  <option value="Shopping">Shopping</option>
+                  <option value="Miscellaneous">Miscellaneous</option>
+                </select>
+              </label>
+              <label>
+                <span>Subcategory</span>
+                <input type="text" id="subcategory" placeholder="Yogurt, rent, fuel, medicine" />
+              </label>
+              <label>
+                <span>Date</span>
+                <input type="date" id="date" />
+              </label>
+            </div>
+            <div class="expense-type-group" aria-label="Expense priority">
+              <label class="check-option">
+                <input type="checkbox" id="essentialCheck" checked />
+                <span>Essential</span>
+              </label>
+              <label class="check-option">
+                <input type="checkbox" id="nonEssentialCheck" />
+                <span>Non-essential</span>
+              </label>
+            </div>
+            <button class="primary-btn add-btn" type="button" onclick="addExpense()"><i data-lucide="plus"></i>Add Expense</button>
+          </article>
 
-    <!-- SPENDING OVERVIEW -->
-    <div class="overview-card">
-      <h2>Spending Overview</h2>
-
-      <div class="charts-grid">
-        <div class="chart-panel">
-          <h3>Expense Breakdown (Pie)</h3>
-          <canvas id="expenseChart"></canvas>
+          <article class="card history-card">
+            <div class="card-header history-header">
+              <div>
+                <p class="eyebrow">History</p>
+                <h2>Expense History</h2>
+              </div>
+              <div class="history-controls">
+                <span id="historyLabel">Showing: Today</span>
+                <label>
+                  <span>From</span>
+                  <input type="date" id="fromDate" />
+                </label>
+                <label>
+                  <span>To</span>
+                  <input type="date" id="toDate" />
+                </label>
+              </div>
+            </div>
+            <div class="expense-list-header" aria-hidden="true">
+              <span>Amount</span>
+              <span>Category</span>
+              <span>Subcategory</span>
+              <span>Type</span>
+              <span>Date</span>
+              <span>Actions</span>
+            </div>
+            <ul id="expenseList" class="expense-list"></ul>
+          </article>
         </div>
 
-        <div class="chart-panel">
-          <h3>Expense Breakdown (Bar)</h3>
-          <div class="chart-container">
-          <canvas id="barChart"></canvas>
+        <article class="card overview-card">
+          <div class="card-header overview-header">
+            <div>
+              <p class="eyebrow">Analysis</p>
+              <h2>Spending Overview</h2>
+            </div>
+            <div class="analysis-controls">
+              <label>
+                <span>View By</span>
+                <select id="analysisMode">
+                  <option value="date">Date</option>
+                  <option value="month">Month</option>
+                </select>
+              </label>
+              <label id="analysisDateControl">
+                <span>Date</span>
+                <input type="date" id="analysisDate" />
+              </label>
+              <label id="analysisMonthControl" class="hidden">
+                <span>Month</span>
+                <input type="month" id="analysisMonth" />
+              </label>
+            </div>
+          </div>
+          <p id="analysisLabel" class="analysis-label">Showing spending for today</p>
+          <div class="charts-grid">
+            <div class="chart-panel">
+              <h3>Expense Distribution</h3>
+              <div class="chart-frame compact-chart">
+                <canvas id="expenseChart"></canvas>
+              </div>
+            </div>
+            <div class="chart-panel">
+              <h3>Category Spending</h3>
+              <div class="chart-frame compact-chart">
+                <canvas id="barChart"></canvas>
+              </div>
+            </div>
+            <div class="chart-panel wide-chart">
+              <h3>Monthly Category Spending (Last 3 Months)</h3>
+              <div class="chart-frame trend-chart">
+                <canvas id="monthlyCategoryChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section id="view-budget" class="page-view" data-title="Budget">
+        <article class="card budget-card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Plan</p>
+              <h2>Monthly Budget</h2>
+            </div>
+            <button class="primary-btn budget-btn" type="button" onclick="setBudget()"><i data-lucide="wallet"></i>Update Budget</button>
+          </div>
+
+          <div class="budget-stats">
+            <div class="budget-box">
+              <span>Budget</span>
+              <strong>&#8377;<span id="budgetAmount">0</span></strong>
+            </div>
+            <div class="budget-box">
+              <span>Spent</span>
+              <strong>&#8377;<span id="budgetSpent">0</span></strong>
+            </div>
+            <div class="budget-box">
+              <span>Remaining</span>
+              <strong>&#8377;<span id="budgetRemaining">0</span></strong>
+            </div>
+          </div>
+
+          <div class="budget-bar">
+            <div class="budget-bar-fill" id="budgetBarFill"></div>
+          </div>
+          <div class="budget-status" id="budgetStatus"></div>
+        </article>
+      </section>
+
+      <section id="view-insights" class="page-view" data-title="Insights">
+        <div class="section-heading">
+          <p class="eyebrow">AI analysis</p>
+          <h2>Smart Insights</h2>
         </div>
+        <div class="insights-grid">
+          <article class="insight-card-pro">
+            <h4>Highest Spending Category</h4>
+            <p id="insightTopCategory">No data</p>
+          </article>
+          <article class="insight-card-pro">
+            <h4>Monthly Spending Trend</h4>
+            <p id="insightMonthlyTrend">No data</p>
+          </article>
+          <article class="insight-card-pro">
+            <h4>Budget Warning</h4>
+            <p id="insightBudgetWarning">No data</p>
+          </article>
+          <article class="insight-card-pro">
+            <h4>Savings Recommendation</h4>
+            <p id="insightSavings">No data</p>
+          </article>
+          <article class="insight-card-pro">
+            <h4>Spending Pattern</h4>
+            <p id="insightPattern">No data</p>
+          </article>
         </div>
-      </div>
-    </div>
+      </section>
 
-    <!-- BUDGET -->
-    <div class="budget-card section">
-      <h2>Monthly Budget</h2>
+      <section id="view-forecast" class="page-view" data-title="Forecast">
+        <article class="card forecast-card-pro">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Projection</p>
+              <h2>AI Monthly Forecast</h2>
+            </div>
+          </div>
+          <div class="forecast-amount" id="forecastAmount">&#8377;0</div>
+          <div class="forecast-label">Projected month-end spending</div>
+          <div class="forecast-stats">
+            <div class="forecast-stat-box">
+              <span>Average Daily</span>
+              <strong id="forecastAverageDaily">&#8377;0</strong>
+            </div>
+            <div class="forecast-stat-box">
+              <span>Remaining Budget</span>
+              <strong id="forecastRemainingBudget">&#8377;0</strong>
+            </div>
+          </div>
+          <div class="forecast-message" id="forecastMessage">Loading forecast insights...</div>
+          <div class="forecast-explanation" id="forecastExplanation"></div>
+        </article>
+      </section>
 
-      <div class="budget-stats">
-        <div class="budget-box">
-          <span>Budget</span>
-          <span>₹<span id="budgetAmount">0</span></span>
-        </div>
-        <div class="budget-box">
-          <span>Spent</span>
-          <span>₹<span id="budgetSpent">0</span></span>
-        </div>
-        <div class="budget-box">
-          <span>Remaining</span>
-          <span>₹<span id="budgetRemaining">0</span></span>
-        </div>
-      </div>
+      <section id="view-reports" class="page-view" data-title="Reports">
+        <article class="card report-card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Export</p>
+              <h2>Monthly PDF Report</h2>
+            </div>
+          </div>
+          <p class="report-copy">Download a professional monthly report with your spending summary, budget status, forecast, and AI insights.</p>
+          <button class="primary-btn report-btn" type="button" onclick="exportMonthlyReport()"><i data-lucide="download"></i>Export Monthly Report</button>
+          <p id="reportStatus" class="helper-text"></p>
+        </article>
+      </section>
 
-      <div class="budget-bar">
-        <div class="budget-bar-fill" id="budgetBarFill"></div>
-      </div>
-
-      <div class="budget-status" id="budgetStatus"></div>
-
-      <button class="budget-btn" onclick="setBudget()">Update Budget</button>
-      <button class="report-btn" onclick="exportMonthlyReport()">Export Report</button>
-    </div>
-
-    <!-- INSIGHTS -->
-    <div class="insights-section">
-      <div class="insights-title">Smart Insights</div>
-
-      <div class="insights-grid">
-        <div class="insight-card-pro">
-          <h4>Highest Spending Category</h4>
-          <p id="insightTopCategory">No data</p>
-        </div>
-
-        <div class="insight-card-pro">
-          <h4>Monthly Spending Trend</h4>
-          <p id="insightMonthlyTrend">No data</p>
-        </div>
-
-        <div class="insight-card-pro">
-          <h4>Budget Warning</h4>
-          <p id="insightBudgetWarning">No data</p>
-        </div>
-
-        <div class="insight-card-pro">
-          <h4>Savings Recommendation</h4>
-          <p id="insightSavings">No data</p>
-        </div>
-
-        <div class="insight-card-pro">
-          <h4>Spending Pattern</h4>
-          <p id="insightPattern">No data</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- FORECAST -->
-    <div class="forecast-card-pro section">
-      <h2>AI Monthly Forecast</h2>
-      <div class="forecast-amount" id="forecastAmount">₹0</div>
-      <div class="forecast-label">Projected month-end spending</div>
-      <div class="forecast-stats">
-        <div class="forecast-stat-box">
-          <span>Average Daily</span>
-          <strong id="forecastAverageDaily">₹0</strong>
-        </div>
-        <div class="forecast-stat-box">
-          <span>Remaining Budget</span>
-          <strong id="forecastRemainingBudget">₹0</strong>
-        </div>
-      </div>
-      <div class="forecast-message" id="forecastMessage">Loading forecast insights…</div>
-      <div class="forecast-explanation" id="forecastExplanation"></div>
-    </div>
-
+      <section id="view-profile" class="page-view" data-title="Profile">
+        <article class="card profile-card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Account</p>
+              <h2>Profile</h2>
+            </div>
+          </div>
+          <div class="profile-summary">
+            <div class="profile-avatar">SE</div>
+            <div>
+              <h3>Smart Expense User</h3>
+              <p>Your account is protected with token-based authentication.</p>
+            </div>
+          </div>
+          <div class="profile-actions">
+            <button class="ghost-btn" type="button" data-view-target="budget"><i data-lucide="wallet"></i>Manage Budget</button>
+            <button class="logout-btn" type="button" data-logout-action><i data-lucide="log-out"></i>Logout</button>
+          </div>
+        </article>
+      </section>
+    </main>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="config.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

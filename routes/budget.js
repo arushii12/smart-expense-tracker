@@ -55,6 +55,27 @@ router.get("/current", async (req, res) => {
 });
 
 // =======================================
+// GET /budget/monthly
+// =======================================
+router.get("/monthly", async (req, res) => {
+  try {
+    const budgets = await Budget.find({ userId: req.user.id }).sort({
+      month: 1
+    });
+
+    res.json(budgets.map(budget => ({
+      month: budget.month,
+      amount: budget.amount
+    })));
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch monthly budgets",
+      error: error.message
+    });
+  }
+});
+
+// =======================================
 // POST /budget
 // =======================================
 router.post("/", async (req, res) => {

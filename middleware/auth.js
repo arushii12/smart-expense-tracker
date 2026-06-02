@@ -1,6 +1,14 @@
 const jwt = require("jsonwebtoken");
 
-const JWT_SECRET = process.env.JWT_SECRET || "smart-expense-tracker-secret";
+const JWT_SECRET =
+  process.env.JWT_SECRET ||
+  "replace-this-default-secret-for-local-development";
+
+if (!process.env.JWT_SECRET) {
+  console.warn(
+    "JWT_SECRET not set. Using a fallback secret for local development."
+  );
+}
 
 function auth(req, res, next) {
   const authHeader = req.headers.authorization;

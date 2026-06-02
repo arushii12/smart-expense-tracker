@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const fallbackDb = require("../fallbackDb");
 
 const ExpenseSchema = new mongoose.Schema({
   userId: {
@@ -14,10 +15,36 @@ const ExpenseSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  subcategory: {
+    type: String,
+    default: ""
+  },
+  isEssential: {
+    type: Boolean,
+    default: true
+  },
   date: {
     type: Date,
     default: Date.now
   }
 });
 
-module.exports = mongoose.model("Expense", ExpenseSchema);
+let ExpenseModel;
+function getExpenseModel() {
+  if (global.__DB_FALLBACK__) {
+    return fallbackDb.collection("expenses");
+  }
+  if (!ExpenseModel) {
+    ExpenseModel = mongoose.models.Expense || mongoose.model("Expense", ExpenseSchema);
+  }
+  return ExpenseModel;
+}
+
+module.exports = {
+  create: async data => getExpenseModel().create(data),
+  find: query => getExpenseModel().find(query),
+  findOne: async query => getExpenseModel().findOne(query),
+  findOneAndUpdate: async (filter, update, options) =>
+    getExpenseModel().findOneAndUpdate(filter, update, options),
+  findOneAndDelete: async filter => getExpenseModel().findOneAndDelete(filter)
+};
