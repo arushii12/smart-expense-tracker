@@ -57,20 +57,24 @@
     <aside class="sidebar">
       <div class="sidebar-brand">
         <span class="brand-mark">SE</span>
-        <div>
+        <div class="brand-text">
           <strong>Smart Expense</strong>
-          <span>Finance Control</span>
+          <span>Financial Pulse</span>
         </div>
+        <button id="sidebarCollapseToggle" class="sidebar-toggle" type="button" aria-label="Collapse sidebar" aria-expanded="true">
+          <i data-lucide="panel-left-close"></i>
+        </button>
       </div>
 
       <nav class="sidebar-nav" aria-label="Main navigation">
-        <button class="sidebar-link active" type="button" data-view="dashboard"><i data-lucide="layout-dashboard"></i><span class="nav-number">01</span>Dashboard</button>
-        <button class="sidebar-link" type="button" data-view="expenses"><i data-lucide="receipt-text"></i><span class="nav-number">02</span>Expenses</button>
-        <button class="sidebar-link" type="button" data-view="budget"><i data-lucide="wallet-cards"></i><span class="nav-number">03</span>Budget</button>
-        <button class="sidebar-link" type="button" data-view="insights"><i data-lucide="sparkles"></i><span class="nav-number">04</span>Insights</button>
-        <button class="sidebar-link" type="button" data-view="forecast"><i data-lucide="trending-up"></i><span class="nav-number">05</span>Forecast</button>
-        <button class="sidebar-link" type="button" data-view="reports"><i data-lucide="file-down"></i><span class="nav-number">06</span>Reports</button>
-        <button class="sidebar-link" type="button" data-view="profile"><i data-lucide="circle-user-round"></i><span class="nav-number">07</span>Profile</button>
+        <button class="sidebar-link active" type="button" data-view="dashboard" title="Dashboard"><i data-lucide="layout-dashboard"></i><span class="nav-number">01</span><span class="nav-label">Dashboard</span></button>
+        <button class="sidebar-link" type="button" data-view="expenses" title="Expenses"><i data-lucide="receipt-text"></i><span class="nav-number">02</span><span class="nav-label">Expenses</span></button>
+        <button class="sidebar-link" type="button" data-view="budget" title="Budget"><i data-lucide="wallet-cards"></i><span class="nav-number">03</span><span class="nav-label">Budget</span></button>
+        <button class="sidebar-link" type="button" data-view="insights" title="Insights"><i data-lucide="sparkles"></i><span class="nav-number">04</span><span class="nav-label">Insights</span></button>
+        <button class="sidebar-link" type="button" data-view="forecast" title="Forecast"><i data-lucide="trending-up"></i><span class="nav-number">05</span><span class="nav-label">Forecast</span></button>
+        <button class="sidebar-link" type="button" data-view="reports" title="Reports"><i data-lucide="file-down"></i><span class="nav-number">06</span><span class="nav-label">Reports</span></button>
+        <button class="sidebar-link" type="button" data-view="profile" title="Profile"><i data-lucide="circle-user-round"></i><span class="nav-number">07</span><span class="nav-label">Profile</span></button>
+        <button class="sidebar-link" type="button" data-view="workflow-guide" title="User Guide"><i data-lucide="info"></i><span class="nav-number">08</span><span class="nav-label">User Guide</span></button>
       </nav>
 
       <div class="sidebar-footer">
@@ -82,10 +86,12 @@
     <main class="content-shell">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Financial command center</p>
+          <p class="eyebrow">Financial Planning Dashboard</p>
+          <p class="topbar-subtitle">📊 Budget Allocation | 💳 Expense Tracking | 🎯 Savings</p>
           <h1 id="pageTitle">Dashboard</h1>
         </div>
         <div class="topbar-actions">
+          <button id="dashboardGuideBtn" class="icon-btn dashboard-only-action" type="button" data-view-target="workflow-guide" aria-label="Open workflow guide"><i data-lucide="info"></i>Guide</button>
           <button id="darkModeToggle" class="icon-btn" type="button" aria-label="Toggle theme"><i data-lucide="moon"></i>Theme</button>
           <button class="primary-btn compact" type="button" data-view-target="expenses"><i data-lucide="plus"></i>Add Expense</button>
           <div class="profile-menu-wrapper">
@@ -112,9 +118,36 @@
       <section id="view-dashboard" class="page-view active" data-title="Dashboard">
         <section class="dashboard-hero">
           <div class="hero-copy">
-            <p class="eyebrow">Overview</p>
-            <h2>Take action on your spending and savings</h2>
-            <p class="hero-description">A refined dashboard helps you spot high-impact trends, track monthly budgets, and stay ahead of forecasted expenses.</p>
+            <p class="eyebrow">Financial Pulse</p>
+            <div class="dashboard-month-control">
+              <h2 id="dashboardPulseMonth">June 2026</h2>
+              <label class="compact-field">
+                <span>Dashboard Month</span>
+                <input type="month" id="dashboardMonth" />
+              </label>
+            </div>
+            <div class="pulse-score">
+              <span>Financial Health</span>
+              <strong id="dashboardHealthScore">0 / 100</strong>
+            </div>
+            <div class="pulse-metrics">
+              <div>
+                <span>Budget Used</span>
+                <strong id="dashboardPulseBudgetUsed">0%</strong>
+              </div>
+              <div>
+                <span>Status</span>
+                <strong id="dashboardPulseStatus">On Track</strong>
+              </div>
+            </div>
+            <div class="quick-insights">
+              <span>Quick Insights</span>
+              <ul>
+                <li id="dashboardInsightBudget">Budget utilization loading</li>
+                <li id="dashboardInsightLargest">Largest spend loading</li>
+                <li id="dashboardInsightForecast">Forecast confidence loading</li>
+              </ul>
+            </div>
             <div class="hero-actions">
               <button class="primary-btn compact" type="button" data-view-target="expenses"><i data-lucide="plus"></i>Add Expense</button>
               <button class="ghost-btn compact" type="button" data-view-target="budget"><i data-lucide="wallet"></i>Update Budget</button>
@@ -122,29 +155,36 @@
           </div>
 
           <div class="hero-summary-grid">
-            <article class="metric-card">
-              <i class="metric-icon" data-lucide="indian-rupee"></i>
-              <span class="metric-label">Total Spending</span>
+            <article class="metric-card danger">
+              <i class="metric-icon" data-lucide="wallet"></i>
+              <span class="metric-label">Actual Spending</span>
               <strong id="total" class="metric-value">&#8377;0</strong>
-              <small>Based on the selected expense view</small>
+              <small id="dashboardExpenseChip">Current month</small>
             </article>
             <article class="metric-card success">
-              <i class="metric-icon" data-lucide="landmark"></i>
-              <span class="metric-label">Remaining Budget</span>
+              <i class="metric-icon" data-lucide="target"></i>
+              <span class="metric-label">Budget Remaining</span>
               <strong class="metric-value">&#8377;<span id="dashboardRemainingBudget">0</span></strong>
-              <small>This month's available budget</small>
+              <div class="metric-progress"><span id="dashboardBudgetProgress"></span></div>
+              <small id="dashboardBudgetChip">0% used / 0% left</small>
+            </article>
+            <article class="metric-card savings">
+              <i class="metric-icon" data-lucide="piggy-bank"></i>
+              <span class="metric-label">Savings</span>
+              <strong class="metric-value">&#8377;<span id="dashboardSavings">0</span></strong>
+              <small id="dashboardSavingsChip">Current month</small>
             </article>
             <article class="metric-card info">
               <i class="metric-icon" data-lucide="tags"></i>
-              <span class="metric-label">Top Category</span>
+              <span class="metric-label">Top Spending Category</span>
               <strong id="topCategory" class="metric-value text-value">No data</strong>
-              <small>Highest category in the selected view</small>
+              <small id="dashboardTopCategoryChip">0% of expenses</small>
             </article>
             <article class="metric-card warning">
-              <i class="metric-icon" data-lucide="activity"></i>
-              <span class="metric-label">Forecast Summary</span>
+              <i class="metric-icon" data-lucide="trending-up"></i>
+              <span class="metric-label">Month-End Forecast</span>
               <strong id="dashboardForecastSummary" class="metric-value text-value">Loading forecast...</strong>
-              <small>Month-end projection</small>
+              <small id="dashboardForecastChip">Risk: Loading</small>
             </article>
           </div>
         </section>
@@ -399,20 +439,30 @@
               <p class="eyebrow">Plan</p>
               <h2>Monthly Budget</h2>
             </div>
-            <button class="primary-btn budget-btn" type="button" onclick="setBudget()"><i data-lucide="wallet"></i>Update Budget</button>
+            <div class="budget-actions">
+              <label class="field compact-field">
+                <span>Month</span>
+                <input type="month" id="budgetMonth" />
+              </label>
+              <label class="field compact-field">
+                <span>Budget Amount</span>
+                <input type="number" id="budgetValue" min="0" step="1" placeholder="Monthly budget" />
+              </label>
+              <button class="primary-btn budget-btn" type="button" onclick="setBudget()"><i data-lucide="save"></i>Save Allocation</button>
+            </div>
           </div>
 
           <div class="budget-stats">
             <div class="budget-box">
-              <span>Budget</span>
+              <span>Monthly Budget</span>
               <strong>&#8377;<span id="budgetAmount">0</span></strong>
             </div>
             <div class="budget-box">
-              <span>Spent</span>
+              <span>Expenses</span>
               <strong>&#8377;<span id="budgetSpent">0</span></strong>
             </div>
             <div class="budget-box">
-              <span>Remaining</span>
+              <span>Monthly Savings</span>
               <strong>&#8377;<span id="budgetRemaining">0</span></strong>
             </div>
           </div>
@@ -421,6 +471,16 @@
             <div class="budget-bar-fill" id="budgetBarFill"></div>
           </div>
           <div class="budget-status" id="budgetStatus"></div>
+
+          <div class="budget-allocation-panel">
+            <div class="budget-allocation-header">
+              <div>
+                <p class="eyebrow">Monthly allocation</p>
+                <h3>Saved Monthly Budgets</h3>
+              </div>
+            </div>
+            <div class="budget-allocation-list" id="budgetAllocationList"></div>
+          </div>
         </article>
       </section>
 
@@ -458,11 +518,11 @@
           <div class="card-header">
             <div>
               <p class="eyebrow">Projection</p>
-              <h2>AI Monthly Forecast</h2>
+              <h2>Month-End Forecast</h2>
             </div>
           </div>
           <div class="forecast-amount" id="forecastAmount">&#8377;0</div>
-          <div class="forecast-label">Projected month-end spending</div>
+          <div class="forecast-label" id="forecastLabel">Projected month-end spending</div>
           <div class="forecast-stats">
             <div class="forecast-stat-box">
               <span>Average Daily</span>
@@ -471,6 +531,14 @@
             <div class="forecast-stat-box">
               <span>Remaining Budget</span>
               <strong id="forecastRemainingBudget">&#8377;0</strong>
+            </div>
+            <div class="forecast-stat-box">
+              <span>Days Tracked</span>
+              <strong id="forecastDaysTracked">0 of 0</strong>
+            </div>
+            <div class="forecast-stat-box">
+              <span>Risk Level</span>
+              <strong id="forecastRiskLevel">No data</strong>
             </div>
           </div>
           <div class="forecast-message" id="forecastMessage">Loading forecast insights...</div>
@@ -486,8 +554,14 @@
               <h2>Monthly PDF Report</h2>
             </div>
           </div>
-          <p class="report-copy">Download a professional monthly report with your spending summary, budget status, forecast, and AI insights.</p>
-          <button class="primary-btn report-btn" type="button" onclick="exportMonthlyReport()"><i data-lucide="download"></i>Export Monthly Report</button>
+          <p class="report-copy">Download a professional monthly report with your financial snapshot, spending by category, smart insights, and month-end forecast.</p>
+          <div class="report-controls">
+            <label class="field compact-field">
+              <span>Report Month</span>
+              <input type="month" id="reportMonth" />
+            </label>
+            <button class="primary-btn report-btn" type="button" onclick="exportMonthlyReport()"><i data-lucide="download"></i>Export Monthly Report</button>
+          </div>
           <p id="reportStatus" class="helper-text"></p>
         </article>
       </section>
@@ -501,17 +575,158 @@
             </div>
           </div>
           <div class="profile-summary">
-            <div class="profile-avatar">SE</div>
+            <div class="profile-avatar" id="profileAvatar">SE</div>
             <div>
-              <h3>Smart Expense User</h3>
-              <p>Your account is protected with token-based authentication.</p>
+              <h3 id="profileDisplayName">Smart Expense User</h3>
+              <p id="profileDisplayEmail">Your account is protected with token-based authentication.</p>
             </div>
           </div>
+          <div class="profile-form">
+            <label>
+              <span>Name</span>
+              <input type="text" id="profileName" placeholder="Your name" />
+            </label>
+            <label>
+              <span>Email</span>
+              <input type="email" id="profileEmail" placeholder="you@example.com" />
+            </label>
+            <p id="profileStatus" class="helper-text"></p>
+          </div>
           <div class="profile-actions">
+            <button class="primary-btn" type="button" id="saveProfileBtn"><i data-lucide="save"></i>Save Profile</button>
             <button class="ghost-btn" type="button" data-view-target="budget"><i data-lucide="wallet"></i>Manage Budget</button>
             <button class="logout-btn" type="button" data-logout-action><i data-lucide="log-out"></i>Logout</button>
           </div>
         </article>
+      </section>
+
+      <section id="view-workflow-guide" class="page-view" data-title="User Guide">
+        <section class="guide-hero">
+          <div>
+            <p class="eyebrow">User Guide</p>
+            <h2>Smart Expense Workflow Guide</h2>
+            <p>Learn how to track expenses, manage budgets, monitor savings, and understand your financial health.</p>
+          </div>
+          <div class="guide-actions">
+            <button class="ghost-btn compact" type="button" data-view-target="dashboard"><i data-lucide="arrow-left"></i>Back to Dashboard</button>
+            <button class="primary-btn compact" type="button" data-view-target="expenses"><i data-lucide="plus"></i>Start by Adding Expense</button>
+            <button class="ghost-btn compact" type="button" data-view-target="budget"><i data-lucide="wallet"></i>Update Budget</button>
+          </div>
+        </section>
+
+        <section class="workflow-strip" aria-label="Recommended monthly workflow">
+          <div><i data-lucide="wallet-cards"></i><span>Set Budget</span></div>
+          <div><i data-lucide="receipt-text"></i><span>Add Expenses</span></div>
+          <div><i data-lucide="bar-chart-3"></i><span>Track Spending</span></div>
+          <div><i data-lucide="sparkles"></i><span>Review Insights</span></div>
+          <div><i data-lucide="trending-up"></i><span>Check Forecast</span></div>
+          <div><i data-lucide="file-down"></i><span>Generate Report</span></div>
+          <div><i data-lucide="piggy-bank"></i><span>Improve Savings</span></div>
+        </section>
+
+        <section class="guide-grid">
+          <article class="guide-card">
+            <span class="guide-icon"><i data-lucide="layout-dashboard"></i></span>
+            <div>
+              <p class="eyebrow">01</p>
+              <h3>Getting Started</h3>
+              <ul>
+                <li>Open the Dashboard to view your monthly financial summary.</li>
+                <li>Select the dashboard month.</li>
+                <li>Review financial health score, budget used, actual spending, savings, and quick insights.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="guide-card">
+            <span class="guide-icon"><i data-lucide="receipt-text"></i></span>
+            <div>
+              <p class="eyebrow">02</p>
+              <h3>Add Expenses</h3>
+              <ul>
+                <li>Go to the Expenses page or click Add Expense.</li>
+                <li>Enter amount, category, date, payment method, and notes.</li>
+                <li>Save the transaction so dashboard cards and charts update automatically.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="guide-card">
+            <span class="guide-icon"><i data-lucide="wallet-cards"></i></span>
+            <div>
+              <p class="eyebrow">03</p>
+              <h3>Manage Budget</h3>
+              <ul>
+                <li>Go to the Budget page.</li>
+                <li>Add or update the monthly budget.</li>
+                <li>Allocate budget across Home, Food & Groceries, Utilities & Bills, Transport, and Miscellaneous.</li>
+                <li>Track used budget and remaining budget.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="guide-card">
+            <span class="guide-icon"><i data-lucide="sparkles"></i></span>
+            <div>
+              <p class="eyebrow">04</p>
+              <h3>Review Insights</h3>
+              <ul>
+                <li>Go to the Insights page.</li>
+                <li>Review AI-generated spending insights.</li>
+                <li>Identify high-spending categories and spending trends.</li>
+                <li>Use insights to control unnecessary expenses.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="guide-card">
+            <span class="guide-icon"><i data-lucide="trending-up"></i></span>
+            <div>
+              <p class="eyebrow">05</p>
+              <h3>Check Forecast</h3>
+              <ul>
+                <li>Go to the Forecast page.</li>
+                <li>Review projected month-end spending.</li>
+                <li>Check the displayed forecast confidence.</li>
+                <li>If fewer than 7 days of data are available, treat the forecast as an early estimate.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="guide-card">
+            <span class="guide-icon"><i data-lucide="file-down"></i></span>
+            <div>
+              <p class="eyebrow">06</p>
+              <h3>View Reports</h3>
+              <ul>
+                <li>Go to the Reports page.</li>
+                <li>Generate monthly finance reports.</li>
+                <li>Review total spending, remaining budget, savings, top categories, insights, and forecast summary.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="guide-card">
+            <span class="guide-icon"><i data-lucide="circle-user-round"></i></span>
+            <div>
+              <p class="eyebrow">07</p>
+              <h3>Manage Profile</h3>
+              <ul>
+                <li>Go to the Profile page.</li>
+                <li>Manage user details and preferences.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="guide-card guide-card-accent">
+            <span class="guide-icon"><i data-lucide="target"></i></span>
+            <div>
+              <p class="eyebrow">Monthly Routine</p>
+              <h3>Recommended Monthly Workflow</h3>
+              <p>Set Budget -> Add Expenses -> Track Spending -> Review Insights -> Check Forecast -> Generate Report -> Improve Savings.</p>
+            </div>
+          </article>
+        </section>
       </section>
     </main>
   </div>

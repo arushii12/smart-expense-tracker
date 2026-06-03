@@ -33,8 +33,22 @@ function getMonthKey(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function isValidMonth(value) {
+  if (!/^\d{4}-\d{2}$/.test(String(value || ""))) return false;
+  const [, month] = String(value).split("-").map(Number);
+  return month >= 1 && month <= 12;
+}
+
 function formatCurrency(amount) {
-  return `₹${Math.round(amount || 0).toLocaleString("en-IN")}`;
+  return `\u20B9${Math.round(amount || 0).toLocaleString("en-IN")}`;
+}
+
+function formatReportDate(date) {
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  });
 }
 
 function getCategoryTotals(expenses) {
@@ -51,10 +65,20 @@ function getHighestCategory(categoryTotals) {
   return entries.sort((a, b) => b[1] - a[1])[0];
 }
 
-function buildInsights(currentExpenses, allExpenses, currentTotal, previousTotal, budget) {
+function getDayTypeSpend(expenses) {
+  return expenses.reduce((totals, expense) => {
+    const day = new Date(expense.date).getDay();
+    const type = day === 0 || day === 6 ? "weekend" : "weekday";
+    totals[type] += Number(expense.amount);
+    return totals;
+  }, { weekday: 0, weekend: 0 });
+}
+
+function buildInsights(currentExpenses, currentTotal, previousTotal, budget) {
   const insights = [];
   const categoryTotals = getCategoryTotals(currentExpenses);
   const highestCategory = getHighestCategory(categoryTotals);
+  const dayTypeSpend = getDayTypeSpend(currentExpenses);
 
   if (highestCategory && currentTotal > 0) {
     const [category, amount] = highestCategory;
@@ -67,11 +91,11 @@ function buildInsights(currentExpenses, allExpenses, currentTotal, previousTotal
   if (previousTotal > 0) {
     const trendPercent = Math.round(((currentTotal - previousTotal) / previousTotal) * 100);
     if (trendPercent > 0) {
-      insights.push(`Spending increased by ${trendPercent}% compared to last month.`);
+      insights.push(`Up ${trendPercent}% from ${formatCurrency(previousTotal)} last month.`);
     } else if (trendPercent < 0) {
-      insights.push(`Spending decreased by ${Math.abs(trendPercent)}% compared to last month.`);
+      insights.push(`Down ${Math.abs(trendPercent)}% from ${formatCurrency(previousTotal)} last month.`);
     } else {
-      insights.push("Spending is unchanged compared to last month.");
+      insights.push(`Spending is unchanged from ${formatCurrency(previousTotal)} last month.`);
     }
   } else {
     insights.push("There is not enough previous-month data for a trend comparison.");
@@ -82,25 +106,18 @@ function buildInsights(currentExpenses, allExpenses, currentTotal, previousTotal
     const count = currentExpenses.filter(expense => expense.category === category).length;
     const averageSpend = count > 0 ? Math.round(amount / count) : 0;
     insights.push(
-      `Skipping one average ${category} expense could save approximately ${formatCurrency(averageSpend)} this month.`
+      `Skipping one average ${category} transaction could save approximately ${formatCurrency(averageSpend)} this month.`
     );
   } else {
     insights.push("Add more expenses to unlock savings recommendations.");
   }
 
-  const dayTypeSpend = { weekday: 0, weekend: 0 };
-  allExpenses.forEach(expense => {
-    const day = new Date(expense.date).getDay();
-    const type = day === 0 || day === 6 ? "weekend" : "weekday";
-    dayTypeSpend[type] += Number(expense.amount);
-  });
-
   if (dayTypeSpend.weekend > dayTypeSpend.weekday) {
-    insights.push("Most spending occurs during weekends.");
+    insights.push(`Most spending occurs during weekends. Weekday spending: ${formatCurrency(dayTypeSpend.weekday)} / Weekend spending: ${formatCurrency(dayTypeSpend.weekend)}.`);
   } else if (dayTypeSpend.weekday > dayTypeSpend.weekend) {
-    insights.push("Most spending occurs during weekdays.");
+    insights.push(`Most spending occurs during weekdays. Weekday spending: ${formatCurrency(dayTypeSpend.weekday)} / Weekend spending: ${formatCurrency(dayTypeSpend.weekend)}.`);
   } else {
-    insights.push("Spending is evenly split between weekdays and weekends.");
+    insights.push(`Spending is evenly split. Weekday spending: ${formatCurrency(dayTypeSpend.weekday)} / Weekend spending: ${formatCurrency(dayTypeSpend.weekend)}.`);
   }
 
   if (!budget) {
@@ -108,6 +125,16 @@ function buildInsights(currentExpenses, allExpenses, currentTotal, previousTotal
   }
 
   return insights;
+}
+
+function getRiskLevel({ budget, projectedMonthEndSpending, isEarlyEstimate }) {
+  if (!budget) return "No budget set";
+  if (isEarlyEstimate) return "Early estimate";
+
+  const ratio = projectedMonthEndSpending / budget;
+  if (ratio >= 1) return "High Risk";
+  if (ratio >= 0.85) return "Moderate Risk";
+  return "Low Risk";
 }
 
 function drawSectionTitle(doc, title) {
@@ -118,7 +145,8 @@ function drawSectionTitle(doc, title) {
   doc.moveDown(0.7);
 }
 
-function drawKeyValue(doc, label, value) {
+function drawKeyValue(doc, label, value, options = {}) {
+  const lineGap = options.lineGap || 0;
   doc
     .fontSize(10)
     .fillColor("#5E503F")
@@ -127,22 +155,29 @@ function drawKeyValue(doc, label, value) {
     .fillColor("#1f2933")
     .font(fontRegular)
     .text(` ${value}`);
+  if (lineGap) doc.moveDown(lineGap);
 }
 
 router.get("/monthly", async (req, res) => {
   try {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    const monthKey = getMonthKey(now);
+    const requestedMonth = req.query.month || getMonthKey(now);
+
+    if (!isValidMonth(requestedMonth)) {
+      return res.status(400).json({ message: "Please select a valid report month" });
+    }
+
+    const [year, monthNumber] = requestedMonth.split("-").map(Number);
+    const month = monthNumber - 1;
+    const reportDate = new Date(year, month, 1);
+    const monthKey = requestedMonth;
     const previousMonthDate = new Date(year, month - 1, 1);
-    const previousMonthKey = getMonthKey(previousMonthDate);
     const startOfMonth = new Date(year, month, 1);
     const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999);
     const startOfPreviousMonth = new Date(previousMonthDate.getFullYear(), previousMonthDate.getMonth(), 1);
     const endOfPreviousMonth = new Date(previousMonthDate.getFullYear(), previousMonthDate.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    const [userData, currentExpenses, previousExpenses, allExpenses, budgetDoc] =
+    const [userData, currentExpenses, previousExpenses, budgetDoc] =
       await Promise.all([
         User.findById(req.user.id),
         Expense.find({
@@ -153,18 +188,12 @@ router.get("/monthly", async (req, res) => {
           userId: req.user.id,
           date: { $gte: startOfPreviousMonth, $lte: endOfPreviousMonth }
         }),
-        Expense.find({ userId: req.user.id }),
         Budget.findOne({ userId: req.user.id, month: monthKey })
       ]);
 
     if (!userData) {
       return res.status(404).json({ message: "User not found" });
     }
-
-    const user = {
-      name: userData.name,
-      email: userData.email
-    };
 
     const budget = budgetDoc ? budgetDoc.amount : 0;
     const totalSpending = currentExpenses.reduce(
@@ -176,26 +205,30 @@ router.get("/monthly", async (req, res) => {
       0
     );
     const remainingBudget = Math.max(budget - totalSpending, 0);
+    const remainingPercent = budget ? Math.round((remainingBudget / budget) * 100) : 0;
     const categoryTotals = getCategoryTotals(currentExpenses);
     const highestCategory = getHighestCategory(categoryTotals);
-    const daysPassed = now.getDate();
+    const isCurrentMonth = monthKey === getMonthKey(now);
+    const daysPassed = isCurrentMonth ? now.getDate() : new Date(year, month + 1, 0).getDate();
     const totalDays = new Date(year, month + 1, 0).getDate();
+    const isEarlyEstimate = daysPassed < 7;
+    const averageWindowDays = Math.max(daysPassed, 7);
     const averageDailySpending = totalSpending
-      ? Math.round(totalSpending / daysPassed)
+      ? Math.round(totalSpending / averageWindowDays)
       : 0;
     const projectedMonthEndSpending = totalSpending
-      ? Math.round((totalSpending / daysPassed) * totalDays)
+      ? Math.round((totalSpending / averageWindowDays) * totalDays)
       : 0;
     const budgetRiskAmount = Math.max(projectedMonthEndSpending - budget, 0);
+    const riskLevel = getRiskLevel({ budget, projectedMonthEndSpending, isEarlyEstimate });
     const insights = buildInsights(
       currentExpenses,
-      allExpenses,
       totalSpending,
       previousTotal,
       budget
     );
 
-    const reportMonth = now.toLocaleString("en-IN", {
+    const reportMonth = reportDate.toLocaleString("en-IN", {
       month: "long",
       year: "numeric"
     });
@@ -215,31 +248,40 @@ router.get("/monthly", async (req, res) => {
       .fillColor("#1b3a4b")
       .font(fontBold)
       .fontSize(24)
-      .text("Monthly Finance Report", 50, 35);
+      .text("Smart Home Finance Hub", 50, 35);
     doc
       .font(fontRegular)
       .fontSize(11)
       .fillColor("#344e41")
-      .text(`Generated on ${now.toLocaleDateString("en-IN")}`, 50, 68);
+      .text(`Generated on ${formatReportDate(now)}`, 50, 68);
     doc.y = 135;
 
-    drawSectionTitle(doc, "Report Details");
-    drawKeyValue(doc, "User:", `${user.name} (${user.email})`);
-    drawKeyValue(doc, "Report month:", reportMonth);
+    drawSectionTitle(doc, "Report Overview");
+    drawKeyValue(doc, "User:", `${userData.name} (${userData.email})`, { lineGap: 0.15 });
+    drawKeyValue(doc, "Report month:", reportMonth, { lineGap: 0.15 });
+    drawKeyValue(doc, "Days tracked:", `${daysPassed} of ${totalDays}`, { lineGap: 0.15 });
 
-    drawSectionTitle(doc, "Financial Summary");
-    drawKeyValue(doc, "Total spending:", formatCurrency(totalSpending));
-    drawKeyValue(doc, "Budget amount:", budget ? formatCurrency(budget) : "No budget set");
-    drawKeyValue(doc, "Remaining budget:", formatCurrency(remainingBudget));
+    drawSectionTitle(doc, "Monthly Financial Snapshot");
+    drawKeyValue(doc, "Actual Spending:", formatCurrency(totalSpending), { lineGap: 0.15 });
+    drawKeyValue(doc, "Monthly Budget:", budget ? formatCurrency(budget) : "No budget set", { lineGap: 0.15 });
     drawKeyValue(
       doc,
-      "Highest spending category:",
+      "Remaining Budget:",
+      budget
+        ? `${formatCurrency(remainingBudget)} remaining / ${remainingPercent}% budget left`
+        : formatCurrency(remainingBudget),
+      { lineGap: 0.15 }
+    );
+    drawKeyValue(
+      doc,
+      "Top Spending Category:",
       highestCategory
-        ? `${highestCategory[0]} (${formatCurrency(highestCategory[1])})`
-        : "No expenses recorded"
+        ? `${highestCategory[0]} - ${formatCurrency(highestCategory[1])}`
+        : "No expenses recorded",
+      { lineGap: 0.15 }
     );
 
-    drawSectionTitle(doc, "Category-wise Spending Breakdown");
+    drawSectionTitle(doc, "Spending by Category");
     if (Object.keys(categoryTotals).length) {
       Object.entries(categoryTotals)
         .sort((a, b) => b[1] - a[1])
@@ -252,36 +294,51 @@ router.get("/monthly", async (req, res) => {
             .fillColor("#1f2933")
             .font(fontRegular)
             .text(`${category}: ${formatCurrency(amount)} (${percent}%)`);
+          doc.moveDown(0.15);
         });
     } else {
       doc.fontSize(10).fillColor("#1f2933").text("No expenses recorded for this month.");
     }
 
-    drawSectionTitle(doc, "AI Insights Summary");
+    drawSectionTitle(doc, "Smart Insights");
     insights.forEach(insight => {
-      doc.fontSize(10).fillColor("#1f2933").text(`• ${insight}`, {
+      doc.fontSize(10).fillColor("#1f2933").text(`\u2022 ${insight}`, {
         paragraphGap: 4
       });
     });
 
-    drawSectionTitle(doc, "Forecast Summary");
+    drawSectionTitle(doc, "Month-End Forecast");
+    drawKeyValue(doc, "Forecast type:", isEarlyEstimate ? "Early Estimate" : "Month-End Forecast");
     drawKeyValue(doc, "Average daily spending:", formatCurrency(averageDailySpending));
     drawKeyValue(doc, "Projected month-end spending:", formatCurrency(projectedMonthEndSpending));
     drawKeyValue(
       doc,
       "Budget risk:",
       budget
-        ? budgetRiskAmount > 0
-          ? `May exceed budget by ${formatCurrency(budgetRiskAmount)}`
-          : `Projected to stay ${formatCurrency(budget - projectedMonthEndSpending)} under budget`
+        ? isEarlyEstimate
+          ? `Early estimate (${riskLevel})`
+          : budgetRiskAmount > 0
+            ? `${riskLevel}: May exceed budget by ${formatCurrency(budgetRiskAmount)}`
+            : `${riskLevel}: Projected to stay ${formatCurrency(budget - projectedMonthEndSpending)} under budget`
         : "No budget set"
     );
+
+    if (isEarlyEstimate) {
+      doc
+        .moveDown(0.4)
+        .fontSize(10)
+        .fillColor("#7c2d12")
+        .font(fontBold)
+        .text(`Early estimate based on only ${daysPassed} day(s) of data. A minimum 7-day average is used.`);
+    }
+
     doc
       .moveDown(0.5)
-      .fontSize(10)
+      .fontSize(9)
       .fillColor("#344e41")
+      .font(fontRegular)
       .text(
-        `Forecast calculated from ${formatCurrency(totalSpending)} spent over ${daysPassed} day(s), multiplied across ${totalDays} days in ${reportMonth}.`
+        `Forecast calculated from ${formatCurrency(totalSpending)} spent over ${averageWindowDays} day(s) average window, multiplied across ${totalDays} days in ${reportMonth}. If fewer than 7 days are available, total spending is divided by 7.`
       );
 
     doc.end();

@@ -126,5 +126,13 @@
     "name": "test export",
     "email": "reporttest@example.com",
     "password": "$2b$10$j6d6K9E6tADb9hEi7Sns4.RE8/A7X0KQbvjYXROvPJETuI0s2plW."
+  },
+  {
+    "_id": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "createdAt": "2026-06-02T14:01:19.821Z",
+    "updatedAt": "2026-06-02T15:35:11.627Z",
+    "name": "Ajai",
+    "email": "ajaigzb@gmail.com",
+    "password": "$2b$10$V.rnQwkZiIEeMiRU7n2ILeaAOb/0SWVknY.GmiIvYZpW4gfsHVk5a"
   }
 ]

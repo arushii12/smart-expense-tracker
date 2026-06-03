@@ -34,6 +34,8 @@ function getUserModel() {
 module.exports = {
   create: async data => getUserModel().create(data),
   findOne: async query => getUserModel().findOne(query),
+  findOneAndUpdate: async (filter, update, options) =>
+    getUserModel().findOneAndUpdate(filter, update, options),
   findById: id => {
     const model = getUserModel();
     if (global.__DB_FALLBACK__) {

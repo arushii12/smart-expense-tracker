@@ -21,6 +21,7 @@ const budgetRoutes = require("./routes/budget");
 const forecastRoutes = require("./routes/forecast");
 const reportRoutes = require("./routes/report");
 const receiptRoutes = require("./routes/receipts");
+const profileRoutes = require("./routes/profile");
 
 // ==============================
 // App setup
@@ -57,6 +58,8 @@ app.use("/budget", budgetRoutes);
 app.use("/forecast", forecastRoutes);
 app.use("/report", reportRoutes);
 app.use("/api/receipts", receiptRoutes);
+app.use("/api/profile", profileRoutes);
+app.use("/profile", profileRoutes);
 app.use("/uploads", express.static(uploadsPath));
 
 // ==============================

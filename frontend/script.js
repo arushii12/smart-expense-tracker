@@ -11,6 +11,7 @@ let barChart = null;
 let monthlyChart = null;
 let monthlyCategoryChart = null;
 let editingExpenseId = null;
+let selectedBudgetMonth = "";
 
 const API_BASE_URL =
   (
@@ -97,6 +98,9 @@ const budgetSpentEl = document.getElementById("budgetSpent");
 const budgetRemainingEl = document.getElementById("budgetRemaining");
 const budgetBarFill = document.getElementById("budgetBarFill");
 const budgetStatusEl = document.getElementById("budgetStatus");
+const budgetMonthInput = document.getElementById("budgetMonth");
+const budgetValueInput = document.getElementById("budgetValue");
+const budgetAllocationList = document.getElementById("budgetAllocationList");
 
 // ==============================
 // SMART INSIGHTS DOM ELEMENTS
@@ -113,9 +117,12 @@ const insightPatternEl = document.getElementById("insightPattern");
 // ==============================
 
 const forecastAmountEl = document.getElementById("forecastAmount");
+const forecastLabelEl = document.getElementById("forecastLabel");
 const forecastMessageEl = document.getElementById("forecastMessage");
 const forecastAverageDailyEl = document.getElementById("forecastAverageDaily");
 const forecastRemainingBudgetEl = document.getElementById("forecastRemainingBudget");
+const forecastDaysTrackedEl = document.getElementById("forecastDaysTracked");
+const forecastRiskLevelEl = document.getElementById("forecastRiskLevel");
 const forecastExplanationEl = document.getElementById("forecastExplanation");
 
 // ==============================
@@ -125,17 +132,51 @@ const forecastExplanationEl = document.getElementById("forecastExplanation");
 const pageTitleEl = document.getElementById("pageTitle");
 const pageViews = document.querySelectorAll(".page-view");
 const sidebarLinks = document.querySelectorAll(".sidebar-link");
+const dashboardOnlyActions = document.querySelectorAll(".dashboard-only-action");
 const appStatusEl = document.getElementById("appStatus");
 const loadingStateEl = document.getElementById("loadingState");
 const dashboardRemainingBudgetEl = document.getElementById("dashboardRemainingBudget");
+const dashboardBudgetProgressEl = document.getElementById("dashboardBudgetProgress");
+const dashboardBudgetChipEl = document.getElementById("dashboardBudgetChip");
+const dashboardSavingsEl = document.getElementById("dashboardSavings");
+const dashboardSavingsChipEl = document.getElementById("dashboardSavingsChip");
+const dashboardExpenseChipEl = document.getElementById("dashboardExpenseChip");
+const dashboardTopCategoryChipEl = document.getElementById("dashboardTopCategoryChip");
 const dashboardRecentExpensesEl = document.getElementById("dashboardRecentExpenses");
 const dashboardTopInsightEl = document.getElementById("dashboardTopInsight");
 const dashboardForecastSummaryEl = document.getElementById("dashboardForecastSummary");
+const dashboardForecastChipEl = document.getElementById("dashboardForecastChip");
+const dashboardMonthInput = document.getElementById("dashboardMonth");
+const dashboardPulseMonthEl = document.getElementById("dashboardPulseMonth");
+const dashboardHealthScoreEl = document.getElementById("dashboardHealthScore");
+const dashboardPulseBudgetUsedEl = document.getElementById("dashboardPulseBudgetUsed");
+const dashboardPulseStatusEl = document.getElementById("dashboardPulseStatus");
+const dashboardInsightBudgetEl = document.getElementById("dashboardInsightBudget");
+const dashboardInsightLargestEl = document.getElementById("dashboardInsightLargest");
+const dashboardInsightForecastEl = document.getElementById("dashboardInsightForecast");
+
+const pathViewMap = {
+  "/workflow-guide": "workflow-guide",
+  "/user-guide": "workflow-guide"
+};
+
+function getRouteView() {
+  return pathViewMap[window.location.pathname] || "dashboard";
+}
 const reportStatusEl = document.getElementById("reportStatus");
+const reportMonthInput = document.getElementById("reportMonth");
 const toastContainer = document.getElementById("toastContainer");
 const profileMenuBtn = document.getElementById("profileMenuBtn");
 const profileMenu = document.getElementById("profileMenu");
+const profileAvatarEl = document.getElementById("profileAvatar");
+const profileDisplayNameEl = document.getElementById("profileDisplayName");
+const profileDisplayEmailEl = document.getElementById("profileDisplayEmail");
+const profileNameInput = document.getElementById("profileName");
+const profileEmailInput = document.getElementById("profileEmail");
+const profileStatusEl = document.getElementById("profileStatus");
+const saveProfileBtn = document.getElementById("saveProfileBtn");
 const sidebarThemeToggle = document.getElementById("sidebarDarkModeToggle");
+const sidebarCollapseToggle = document.getElementById("sidebarCollapseToggle");
 
 // ==============================
 // AUTH HELPERS
@@ -171,23 +212,43 @@ function showAuth(view = "login") {
 function showDashboard() {
   authPage.classList.add("hidden");
   dashboardPage.classList.remove("hidden");
-  setActiveView("dashboard");
+  setActiveView(getRouteView(), { syncRoute: false });
   initializeDateFilters();
+  loadProfile();
   fetchExpensesByRange();
 }
 
-function setActiveView(viewName) {
+function setActiveView(viewName, options = {}) {
+  const { syncRoute = true } = options;
+  const requestedView = document.getElementById(`view-${viewName}`) ? viewName : "dashboard";
+
   pageViews.forEach(view => {
-    view.classList.toggle("active", view.id === `view-${viewName}`);
+    view.classList.toggle("active", view.id === `view-${requestedView}`);
   });
 
   sidebarLinks.forEach(link => {
-    link.classList.toggle("active", link.dataset.view === viewName);
+    link.classList.toggle("active", link.dataset.view === requestedView);
   });
 
-  const activeView = document.getElementById(`view-${viewName}`);
+  const activeView = document.getElementById(`view-${requestedView}`);
   if (pageTitleEl && activeView) {
     pageTitleEl.textContent = activeView.dataset.title || "Dashboard";
+  }
+
+  dashboardOnlyActions.forEach(action => {
+    action.classList.toggle("hidden", requestedView !== "dashboard");
+  });
+
+  if (syncRoute) {
+    const nextPath = requestedView === "workflow-guide" ? "/workflow-guide" : "/";
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState({ view: requestedView }, "", nextPath);
+    }
+  }
+
+  if (requestedView === "dashboard") {
+    updateDashboardKpis();
+    loadForecast(getSelectedDashboardMonth());
   }
 
   setTimeout(() => {
@@ -259,6 +320,10 @@ function getMonthDateRange(monthValue) {
   return { start, end };
 }
 
+function getSelectedDashboardMonth() {
+  return dashboardMonthInput?.value || getCurrentMonthInputValue();
+}
+
 function formatDisplayText(value, fallback = "Not specified") {
   const text = String(value || "").trim();
   if (!text) return fallback;
@@ -296,6 +361,15 @@ async function authFetch(path, options = {}) {
   }
 
   return res;
+}
+
+async function parseJsonResponse(res) {
+  const text = await res.text();
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch (error) {
+    throw new Error("Profile API is not active. Please restart the server and refresh the page.");
+  }
 }
 
 async function login() {
@@ -372,6 +446,81 @@ function logout() {
   clearToken();
   expenses = [];
   showAuth("login");
+}
+
+function updateProfileUI(user) {
+  if (!user) return;
+
+  const initials = String(user.name || "SE")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part.charAt(0).toUpperCase())
+    .join("") || "SE";
+
+  if (profileAvatarEl) profileAvatarEl.textContent = initials;
+  document.querySelectorAll(".profile-avatar").forEach(avatar => {
+    avatar.textContent = initials;
+  });
+  if (profileDisplayNameEl) profileDisplayNameEl.textContent = user.name || "Smart Expense User";
+  if (profileDisplayEmailEl) profileDisplayEmailEl.textContent = user.email || "";
+  if (profileNameInput) profileNameInput.value = user.name || "";
+  if (profileEmailInput) profileEmailInput.value = user.email || "";
+
+  const profileName = document.querySelector(".profile-name");
+  if (profileName) profileName.textContent = user.name || "Account";
+}
+
+async function loadProfile() {
+  try {
+    const res = await authFetch("/api/profile");
+    const data = await parseJsonResponse(res);
+
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to load profile");
+    }
+
+    updateProfileUI(data);
+  } catch (error) {
+    console.error("Profile load error:", error);
+    if (profileStatusEl) profileStatusEl.textContent = "Unable to load profile.";
+  }
+}
+
+async function saveProfile() {
+  const name = profileNameInput?.value.trim();
+  const email = profileEmailInput?.value.trim();
+
+  if (!name || !email) {
+    if (profileStatusEl) profileStatusEl.textContent = "Name and email are required.";
+    return;
+  }
+
+  try {
+    setLoading(true, "Saving profile...");
+    if (profileStatusEl) profileStatusEl.textContent = "Saving profile...";
+
+    const res = await authFetch("/api/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email })
+    });
+    const data = await parseJsonResponse(res);
+
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to save profile");
+    }
+
+    updateProfileUI(data.user);
+    if (profileStatusEl) profileStatusEl.textContent = "Profile updated successfully.";
+    showStatus("Profile updated successfully.", "success");
+  } catch (error) {
+    console.error("Profile save error:", error);
+    if (profileStatusEl) profileStatusEl.textContent = error.message || "Unable to save profile.";
+    showStatus(error.message || "Unable to save profile.", "error");
+  } finally {
+    setLoading(false);
+  }
 }
 
 function escapeHtml(value) {
@@ -475,6 +624,10 @@ function initializeDateFilters() {
   if (dateInput && !dateInput.value) dateInput.value = today;
   if (analysisDateInput && !analysisDateInput.value) analysisDateInput.value = today;
   if (analysisMonthInput && !analysisMonthInput.value) analysisMonthInput.value = getCurrentMonthInputValue();
+  if (dashboardMonthInput && !dashboardMonthInput.value) dashboardMonthInput.value = getCurrentMonthInputValue();
+  if (!selectedBudgetMonth) selectedBudgetMonth = getCurrentMonthInputValue();
+  if (budgetMonthInput && !budgetMonthInput.value) budgetMonthInput.value = selectedBudgetMonth;
+  if (reportMonthInput && !reportMonthInput.value) reportMonthInput.value = getCurrentMonthInputValue();
 }
 
 async function fetchExpensesByRange() {
@@ -566,6 +719,20 @@ if (analysisDateInput) {
 
 if (analysisMonthInput) {
   analysisMonthInput.addEventListener("change", loadAnalysisExpenses);
+}
+
+if (dashboardMonthInput) {
+  dashboardMonthInput.addEventListener("change", async () => {
+    await updateDashboardKpis();
+    await loadForecast(getSelectedDashboardMonth());
+  });
+}
+
+if (budgetMonthInput) {
+  budgetMonthInput.addEventListener("change", async () => {
+    selectedBudgetMonth = budgetMonthInput.value;
+    await loadCurrentBudget();
+  });
 }
 
 bindExclusiveChecks(essentialCheck, nonEssentialCheck);
@@ -725,8 +892,9 @@ function refreshUI() {
   updateTopCategory();
   loadMonthlyTrend();
   loadCurrentBudget();
+  loadBudgetAllocations();
   updateAiInsights();
-  loadForecast();
+  loadForecast(getSelectedDashboardMonth());
 }
 
 // ==============================
@@ -1078,12 +1246,161 @@ function clearReceiptScan(clearFile = true) {
 }
 
 // ==============================
-// TOTAL SPENT
+// DASHBOARD KPI CARDS
 // ==============================
 
-function updateTotal() {
-  const total = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
-  totalEl.textContent = formatCurrency(total);
+async function updateTotal() {
+  return updateDashboardKpis();
+}
+
+async function updateDashboardKpis() {
+  if (!totalEl) return;
+
+  try {
+    const currentMonth = dashboardMonthInput?.value || getCurrentMonthInputValue();
+    if (dashboardMonthInput && dashboardMonthInput.value !== currentMonth) dashboardMonthInput.value = currentMonth;
+    const now = new Date();
+    const [selectedYear, selectedMonthNumber] = currentMonth.split("-").map(Number);
+    const previousMonthDate = new Date(selectedYear, selectedMonthNumber - 2, 1);
+    const previousMonth = `${previousMonthDate.getFullYear()}-${String(previousMonthDate.getMonth() + 1).padStart(2, "0")}`;
+    const range = getMonthDateRange(currentMonth);
+
+    const [monthlyRes, budgetRes, expensesRes] = await Promise.all([
+      authFetch("/expenses/monthly"),
+      authFetch(`/budget/current?month=${encodeURIComponent(currentMonth)}`),
+      authFetch(`/expenses/range?from=${range.start}&to=${range.end}`)
+    ]);
+    const monthlyData = await monthlyRes.json();
+    const budgetData = await budgetRes.json();
+    const currentMonthExpenses = await expensesRes.json();
+
+    const currentSummary = (monthlyData || []).find(month => month.month === currentMonth) || {};
+    const previousSummary = (monthlyData || []).find(month => month.month === previousMonth) || {};
+    const currentTotal = Number(currentSummary.totalSpent) || 0;
+    const previousTotal = Number(previousSummary.totalSpent) || 0;
+    const budget = Number(budgetData.budget) || 0;
+    const remaining = Math.max(budget - currentTotal, 0);
+    const usedPercent = budget ? Math.min(Math.round((currentTotal / budget) * 100), 999) : 0;
+    const leftPercent = budget ? Math.max(100 - Math.min(usedPercent, 100), 0) : 0;
+    const isCurrentDashboardMonth = currentMonth === getCurrentMonthInputValue();
+    const totalDays = new Date(selectedYear, selectedMonthNumber, 0).getDate();
+    const daysRemaining = isCurrentDashboardMonth ? Math.max(totalDays - now.getDate(), 0) : 0;
+
+    totalEl.textContent = formatCurrency(currentTotal);
+    if (dashboardExpenseChipEl) {
+      const trendText = getMonthTrendText(currentTotal, previousTotal);
+      dashboardExpenseChipEl.textContent = `${currentMonthExpenses.length} transaction${currentMonthExpenses.length === 1 ? "" : "s"} • ${daysRemaining} day${daysRemaining === 1 ? "" : "s"} left • ${trendText}`;
+    }
+
+    if (dashboardExpenseChipEl) {
+      const trendText = getMonthTrendText(currentTotal, previousTotal);
+      const dayText = isCurrentDashboardMonth
+        ? `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} left`
+        : "Completed month";
+      dashboardExpenseChipEl.textContent = `${currentMonthExpenses.length} transaction${currentMonthExpenses.length === 1 ? "" : "s"} | ${dayText} | ${trendText}`;
+    }
+
+    if (dashboardRemainingBudgetEl) {
+      dashboardRemainingBudgetEl.textContent = Math.round(remaining).toLocaleString("en-IN");
+    }
+    if (dashboardBudgetProgressEl) {
+      dashboardBudgetProgressEl.style.width = `${Math.min(usedPercent, 100)}%`;
+    }
+    if (dashboardBudgetChipEl) {
+      dashboardBudgetChipEl.textContent = budget
+        ? `${usedPercent}% used / ${leftPercent}% left`
+        : "Set a monthly budget";
+    }
+
+    if (dashboardSavingsEl) {
+      dashboardSavingsEl.textContent = Math.round(remaining).toLocaleString("en-IN");
+    }
+    if (dashboardSavingsChipEl) {
+      dashboardSavingsChipEl.textContent = budget
+        ? `${formatCurrency(remaining)} projected monthly savings`
+        : "Budget needed for savings";
+    }
+
+    const topCategory = updateDashboardTopCategory(currentSummary.byCategory || {}, currentTotal);
+    updateDashboardPulse({
+      month: currentMonth,
+      budget,
+      currentTotal,
+      remaining,
+      usedPercent,
+      topCategory
+    });
+  } catch (error) {
+    console.error("Error loading dashboard KPIs:", error);
+    totalEl.textContent = formatCurrency(0);
+  }
+}
+
+function getMonthTrendText(currentTotal, previousTotal) {
+  if (!previousTotal && currentTotal) return "No prior-month baseline";
+  if (!previousTotal) return "No prior-month data";
+
+  const diff = currentTotal - previousTotal;
+  const percent = Math.round((Math.abs(diff) / previousTotal) * 100);
+  if (diff > 0) return `Up ${percent}% vs last month`;
+  if (diff < 0) return `Down ${percent}% vs last month`;
+  return "Flat vs last month";
+}
+
+function updateDashboardTopCategory(byCategory, currentTotal) {
+  const entries = Object.entries(byCategory || {})
+    .map(([category, amount]) => [category, Number(amount) || 0])
+    .filter(([, amount]) => amount > 0)
+    .sort((a, b) => b[1] - a[1]);
+
+  const el = document.getElementById("topCategory");
+  if (!entries.length || !currentTotal) {
+    if (el) el.textContent = "No data yet";
+    if (dashboardTopCategoryChipEl) dashboardTopCategoryChipEl.textContent = "0% of expenses";
+    return null;
+  }
+
+  const [category, amount] = entries[0];
+  const percent = Math.round((amount / currentTotal) * 100);
+  if (el) el.textContent = `${formatDisplayText(category)} (${formatCurrency(amount)})`;
+  if (dashboardTopCategoryChipEl) dashboardTopCategoryChipEl.textContent = `${percent}% of expenses`;
+  return { category, amount, percent };
+}
+
+function updateDashboardPulse({ month, budget, currentTotal, remaining, usedPercent, topCategory }) {
+  const forecastText = dashboardForecastChipEl?.textContent || "";
+  const isLowForecastConfidence = /low confidence|early/i.test(forecastText);
+  const savingsRatio = budget ? remaining / budget : 0;
+  const budgetScore = budget ? Math.max(0, 40 - Math.max(usedPercent - 75, 0)) : 20;
+  const savingsScore = Math.round(Math.min(savingsRatio, 1) * 30);
+  const forecastScore = isLowForecastConfidence ? 10 : 20;
+  const consistencyScore = currentTotal > 0 ? 10 : 5;
+  const score = Math.max(0, Math.min(100, budgetScore + savingsScore + forecastScore + consistencyScore));
+  const status = usedPercent >= 100 ? "Over Budget" : usedPercent >= 85 ? "Watch" : "On Track";
+
+  if (dashboardPulseMonthEl) dashboardPulseMonthEl.textContent = formatMonth(month);
+  if (dashboardHealthScoreEl) dashboardHealthScoreEl.textContent = `${score} / 100`;
+  if (dashboardPulseBudgetUsedEl) dashboardPulseBudgetUsedEl.textContent = budget ? `${usedPercent}%` : "No budget";
+  if (dashboardPulseStatusEl) dashboardPulseStatusEl.textContent = status;
+  if (dashboardInsightBudgetEl) {
+    dashboardInsightBudgetEl.textContent = budget
+      ? usedPercent <= 75
+        ? "Budget utilization healthy"
+        : usedPercent < 100
+          ? "Budget utilization needs attention"
+          : "Budget limit exceeded"
+      : "Set a monthly budget";
+  }
+  if (dashboardInsightLargestEl) {
+    dashboardInsightLargestEl.textContent = topCategory
+      ? `Largest spend: ${formatDisplayText(topCategory.category)}`
+      : "Largest spend: no expenses yet";
+  }
+  if (dashboardInsightForecastEl) {
+    dashboardInsightForecastEl.textContent = isLowForecastConfidence
+      ? "Forecast confidence low"
+      : "Forecast confidence normal";
+  }
 }
 
 // ==============================
@@ -1222,9 +1539,10 @@ function updatePieChart() {
         label: "Spending (\u20B9)",
         data,
         backgroundColor: gradient,
-        borderRadius: 8,
+        borderRadius: 0,
         borderSkipped: false,
-        barThickness: 36
+        barThickness: 24,
+        maxBarThickness: 24
       }]
     },
     options: {
@@ -1278,6 +1596,10 @@ function updatePieChart() {
 // ==============================
 
 function updateTopCategory() {
+  if (document.getElementById("view-dashboard")?.classList.contains("active")) {
+    return;
+  }
+
   const el = document.getElementById("topCategory");
 
   if (!el || expenses.length === 0) {
@@ -1308,13 +1630,13 @@ async function loadMonthlyTrend() {
     const data = await expensesRes.json();
     const budgetData = await budgetsRes.json();
 
-    if (!data || data.length === 0) {
+    if ((!data || data.length === 0) && (!budgetData || budgetData.length === 0)) {
       if (monthlyChart) monthlyChart.destroy();
       if (monthlyCategoryChart) monthlyCategoryChart.destroy();
       return;
     }
 
-    renderMonthlyCategoryChart(data);
+    renderMonthlyCategoryChart(data || []);
 
     const latestMonths = getLatestThreeMonthKeys(data, budgetData);
     const labels = latestMonths.map(formatMonth);
@@ -1326,6 +1648,9 @@ async function loadMonthlyTrend() {
     );
     const expenseTotals = latestMonths.map(month => expenseTotalsByMonth[month] || 0);
     const budgetTotals = latestMonths.map(month => budgetByMonth[month] || 0);
+    const savingTotals = latestMonths.map((month, index) =>
+      Math.max((budgetTotals[index] || 0) - (expenseTotalsByMonth[month] || 0), 0)
+    );
 
     const canvas = document.getElementById("monthlyChart");
     if (!canvas) return;
@@ -1342,20 +1667,38 @@ async function loadMonthlyTrend() {
           {
             label: "Budget",
             data: budgetTotals,
-            backgroundColor: "rgba(29, 78, 216, 0.82)",
-            borderColor: "rgba(29, 78, 216, 1)",
+            backgroundColor: "rgba(29, 78, 216, 0.88)",
+            borderColor: "#1d4ed8",
             borderWidth: 1,
-            borderRadius: 8,
-            borderSkipped: false
+            borderRadius: 0,
+            borderSkipped: false,
+            categoryPercentage: 0.58,
+            barPercentage: 0.72,
+            maxBarThickness: 22
           },
           {
             label: "Expenses",
             data: expenseTotals,
-            backgroundColor: "rgba(15, 118, 110, 0.86)",
-            borderColor: "rgba(15, 118, 110, 1)",
+            backgroundColor: "rgba(220, 38, 38, 0.78)",
+            borderColor: "#dc2626",
             borderWidth: 1,
-            borderRadius: 8,
-            borderSkipped: false
+            borderRadius: 0,
+            borderSkipped: false,
+            categoryPercentage: 0.58,
+            barPercentage: 0.72,
+            maxBarThickness: 22
+          },
+          {
+            label: "Savings",
+            data: savingTotals,
+            backgroundColor: "rgba(22, 163, 74, 0.82)",
+            borderColor: "#16a34a",
+            borderWidth: 1,
+            borderRadius: 0,
+            borderSkipped: false,
+            categoryPercentage: 0.58,
+            barPercentage: 0.72,
+            maxBarThickness: 22
           }
         ]
       },
@@ -1380,18 +1723,25 @@ async function loadMonthlyTrend() {
           }
         },
         layout: {
-          padding: 16
+          padding: {
+            top: 14,
+            right: 18,
+            bottom: 6,
+            left: 8
+          }
         },
         scales: {
           y: {
             beginAtZero: true,
-            grid: { color: "rgba(228, 231, 236, 0.9)" },
+            border: { display: false },
+            grid: { color: "rgba(228, 231, 236, 0.72)" },
             ticks: {
               ...getChartTickConfig(),
               callback: value => formatCurrency(value)
             }
           },
           x: {
+            border: { display: false },
             grid: { display: false },
             ticks: getChartTickConfig()
           }
@@ -1408,26 +1758,66 @@ function renderMonthlyCategoryChart(monthlyData) {
   const canvas = document.getElementById("monthlyCategoryChart");
   if (!canvas) return;
 
-  const recentMonths = monthlyData.slice(-3).map(normalizeMonthlyCategoryData);
+  const monthlyDataByKey = Object.fromEntries(
+    (monthlyData || []).map(month => [month.month, month])
+  );
+  const monthKeys = getLatestThreeMonthKeys();
+  const recentMonths = monthKeys.map(month =>
+    normalizeMonthlyCategoryData(monthlyDataByKey[month] || { month, byCategory: {} })
+  );
   const categories = EXPENSE_CATEGORIES.filter(category =>
     recentMonths.some(month => Number(month.byCategory?.[category] || 0) > 0)
   );
   const labels = recentMonths.map(month => formatMonth(month.month));
+  const chartWidth = canvas.getBoundingClientRect().width || canvas.clientWidth || 900;
+  const plotWidth = Math.max(chartWidth - 120, 300);
+  const pixelsPerMonth = plotWidth / Math.max(labels.length, 1);
+  const barWidth = Math.max(8, Math.min(12, Math.floor(pixelsPerMonth / 42)));
+  const barGap = 4;
+  const offsetStep = (barWidth + barGap) / pixelsPerMonth;
 
   if (categories.length === 0) {
     if (monthlyCategoryChart) monthlyCategoryChart.destroy();
     return;
   }
 
-  const datasets = categories.map((category, index) => ({
-    label: formatDisplayText(category),
-    data: recentMonths.map(month => Number(month.byCategory?.[category] || 0)),
-    backgroundColor: getChartColor(index, 0.86),
-    borderColor: getChartColor(index, 1),
-    borderWidth: 1,
-    borderRadius: 6,
-    borderSkipped: false
-  }));
+  const categoryColorIndex = Object.fromEntries(
+    categories.map((category, index) => [category, index])
+  );
+  const barData = [];
+  const barColors = [];
+  const barBorderColors = [];
+
+  recentMonths.forEach((month, monthIndex) => {
+    const activeCategories = categories.filter(category =>
+      Number(month.byCategory?.[category] || 0) > 0
+    );
+
+    activeCategories.forEach((category, barIndex) => {
+      const centeredOffset = (barIndex - (activeCategories.length - 1) / 2) * offsetStep;
+      barData.push({
+        x: monthIndex + centeredOffset,
+        y: Number(month.byCategory[category]) || 0,
+        month: labels[monthIndex],
+        category
+      });
+      barColors.push(getChartColor(categoryColorIndex[category], 0.86));
+      barBorderColors.push(getChartColor(categoryColorIndex[category], 1));
+    });
+  });
+
+  const datasets = [{
+    label: "Category Spending",
+    data: barData,
+    parsing: false,
+    backgroundColor: barColors,
+    borderColor: barBorderColors,
+    borderWidth: 0,
+    borderRadius: 0,
+    borderSkipped: false,
+    barThickness: barWidth,
+    maxBarThickness: barWidth
+  }];
 
   if (monthlyCategoryChart) monthlyCategoryChart.destroy();
 
@@ -1442,7 +1832,20 @@ function renderMonthlyCategoryChart(monthlyData) {
         easing: "easeOutQuart"
       },
       plugins: {
-        legend: getChartLegendConfig(),
+        legend: {
+          ...getChartLegendConfig(),
+          onClick: () => {},
+          labels: {
+            ...getChartLegendConfig().labels,
+            generateLabels: () => categories.map(category => ({
+              text: formatDisplayText(category),
+              fillStyle: getChartColor(categoryColorIndex[category], 0.86),
+              strokeStyle: getChartColor(categoryColorIndex[category], 1),
+              lineWidth: 1,
+              hidden: false
+            }))
+          }
+        },
         tooltip: {
           backgroundColor: "rgba(17, 24, 39, 0.94)",
           titleColor: "#ffffff",
@@ -1450,14 +1853,22 @@ function renderMonthlyCategoryChart(monthlyData) {
           padding: 14,
           cornerRadius: 10,
           callbacks: {
-            label: ctx => `${ctx.dataset.label}: ${formatCurrency(ctx.raw)}`
+            title: items => items[0]?.raw?.month || "",
+            label: ctx => `${formatDisplayText(ctx.raw?.category)}: ${formatCurrency(ctx.raw?.y || 0)}`
           }
         }
       },
       scales: {
         x: {
+          type: "linear",
+          min: -0.5,
+          max: labels.length - 0.5,
           grid: { display: false },
-          ticks: getChartTickConfig()
+          ticks: {
+            ...getChartTickConfig(),
+            stepSize: 1,
+            callback: value => labels[value] || ""
+          }
         },
         y: {
           beginAtZero: true,
@@ -1472,26 +1883,18 @@ function renderMonthlyCategoryChart(monthlyData) {
   });
 }
 
-function getLatestThreeMonthKeys(expenseMonths, budgetMonths) {
-  const keys = new Set();
-  (expenseMonths || []).forEach(month => keys.add(month.month));
-  (budgetMonths || []).forEach(month => keys.add(month.month));
-
-  const sortedKeys = Array.from(keys).filter(Boolean).sort();
-  if (sortedKeys.length >= 3) {
-    return sortedKeys.slice(-3);
-  }
-
+function getLatestThreeMonthKeys() {
   const now = new Date();
-  const fallbackKeys = [];
+  const months = [];
+
   for (let offset = 2; offset >= 0; offset -= 1) {
     const date = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-    fallbackKeys.push(
+    months.push(
       `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
     );
   }
 
-  return Array.from(new Set([...fallbackKeys, ...sortedKeys])).sort().slice(-3);
+  return months;
 }
 
 function normalizeMonthlyCategoryData(month) {
@@ -1575,19 +1978,33 @@ function getCurrentMonthLabel() {
   return now.toLocaleString("default", { month: "long", year: "numeric" });
 }
 
+function getSelectedBudgetMonth() {
+  const pickerValue = document.getElementById("budgetMonth")?.value;
+  if (/^\d{4}-\d{2}$/.test(pickerValue || "")) {
+    selectedBudgetMonth = pickerValue;
+  }
+  return selectedBudgetMonth || getCurrentMonthInputValue();
+}
+
  async function loadCurrentBudget() {
   try {
-    const res = await authFetch("/budget/current");
+    const month = getSelectedBudgetMonth();
+    if (budgetMonthInput && budgetMonthInput.value !== month) budgetMonthInput.value = month;
+    console.log("Loading budget month:", month);
+    const res = await authFetch(`/budget/current?month=${encodeURIComponent(month)}`);
     const data = await res.json();
 
     const budget = data.budget || 0;
     const spent = data.spent || 0;
     const remaining = Math.max(budget - spent, 0);
 
-    if (budgetAmountEl) budgetAmountEl.textContent = budget;
-    if (budgetSpentEl) budgetSpentEl.textContent = spent;
-    if (budgetRemainingEl) budgetRemainingEl.textContent = remaining;
-    if (dashboardRemainingBudgetEl) dashboardRemainingBudgetEl.textContent = Math.round(remaining).toLocaleString("en-IN");
+    if (budgetValueInput) budgetValueInput.value = budget || "";
+    if (budgetAmountEl) budgetAmountEl.textContent = Math.round(budget).toLocaleString("en-IN");
+    if (budgetSpentEl) budgetSpentEl.textContent = Math.round(spent).toLocaleString("en-IN");
+    if (budgetRemainingEl) budgetRemainingEl.textContent = Math.round(remaining).toLocaleString("en-IN");
+    if (dashboardRemainingBudgetEl && month === getCurrentMonthInputValue()) {
+      dashboardRemainingBudgetEl.textContent = Math.round(remaining).toLocaleString("en-IN");
+    }
 
     if (!budgetBarFill || !budgetStatusEl) return;
 
@@ -1632,6 +2049,48 @@ budgetBarFill.style.background =
     console.error("Error loading budget:", error);
   }
 }
+
+async function loadBudgetAllocations() {
+  if (!budgetAllocationList) return;
+
+  try {
+    const res = await authFetch("/budget/monthly");
+    const data = await res.json();
+
+    if (!data || data.length === 0) {
+      budgetAllocationList.innerHTML = `<p class="helper-text">No monthly budgets saved yet.</p>`;
+      return;
+    }
+
+    budgetAllocationList.innerHTML = data
+      .slice()
+      .sort((a, b) => String(a.month).localeCompare(String(b.month)))
+      .map(budget => `
+        <div class="budget-allocation-row">
+          <span>${formatMonth(budget.month)}</span>
+          <strong>${formatCurrency(budget.amount || 0)}</strong>
+          <button class="ghost-btn compact" type="button" onclick="editBudgetAllocation('${budget.month}', ${Number(budget.amount) || 0})">
+            <i data-lucide="pencil"></i>Update
+          </button>
+        </div>
+      `).join("");
+
+    renderIcons();
+  } catch (error) {
+    console.error("Error loading budget allocations:", error);
+    showStatus("Unable to load monthly budget allocations.", "error");
+  }
+}
+
+async function editBudgetAllocation(month, amount) {
+  selectedBudgetMonth = month;
+  if (budgetMonthInput) budgetMonthInput.value = month;
+  if (budgetValueInput) {
+    budgetValueInput.value = amount || "";
+    budgetValueInput.focus();
+  }
+  await loadCurrentBudget();
+}
     
 
 // ==============================
@@ -1640,9 +2099,10 @@ budgetBarFill.style.background =
 
 async function exportMonthlyReport() {
   try {
+    const month = reportMonthInput?.value || getCurrentMonthInputValue();
     setLoading(true, "Preparing your PDF report...");
     if (reportStatusEl) reportStatusEl.textContent = "Preparing your report...";
-    const res = await authFetch("/report/monthly");
+    const res = await authFetch(`/report/monthly?month=${encodeURIComponent(month)}`);
 
     if (!res.ok) {
       const data = await res.json();
@@ -1655,8 +2115,6 @@ async function exportMonthlyReport() {
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    const now = new Date();
-    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
     link.href = url;
     link.download = `monthly-finance-report-${month}.pdf`;
@@ -1777,8 +2235,9 @@ function updateBudgetWarningInsight(currentTotal, budget) {
 
   const now = new Date();
   const daysPassed = now.getDate();
+  const averageWindowDays = Math.max(daysPassed, 7);
   const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const forecast = Math.round((currentTotal / daysPassed) * totalDays);
+  const forecast = Math.round((currentTotal / averageWindowDays) * totalDays);
   const projectedDifference = forecast - budget;
 
   if (projectedDifference > 0) {
@@ -1868,13 +2327,19 @@ function formatFullDate(dateStr) {
 // MONTHLY FORECAST (AI-LIKE LOGIC)
 // ==============================
 
-async function loadForecast() {
+async function loadForecast(month = getCurrentMonthInputValue()) {
   try {
-    const res = await authFetch("/forecast");
+    const res = await authFetch(`/forecast?month=${encodeURIComponent(month)}`);
     const data = await res.json();
 
     if (forecastAmountEl) {
       forecastAmountEl.textContent = formatCurrency(data.projectedMonthEndSpending || 0);
+    }
+
+    if (forecastLabelEl) {
+      forecastLabelEl.textContent = data.isEarlyEstimate
+        ? "Early estimate projected month-end spending"
+        : "Projected month-end spending";
     }
 
     if (forecastMessageEl) {
@@ -1887,12 +2352,30 @@ async function loadForecast() {
         : "No forecast yet";
     }
 
+    if (dashboardForecastChipEl) {
+      const confidence = data.isEarlyEstimate ? "Low confidence" : "Normal confidence";
+      dashboardForecastChipEl.textContent = `Risk: ${data.riskLevel || "No data"} • ${confidence}`;
+      if (dashboardInsightForecastEl) {
+        dashboardInsightForecastEl.textContent = data.isEarlyEstimate
+          ? "Forecast confidence low"
+          : "Forecast confidence normal";
+      }
+    }
+
     if (forecastAverageDailyEl) {
       forecastAverageDailyEl.textContent = formatCurrency(data.averageDailySpending || 0);
     }
 
     if (forecastRemainingBudgetEl) {
       forecastRemainingBudgetEl.textContent = formatCurrency(data.remainingBudget || 0);
+    }
+
+    if (forecastDaysTrackedEl) {
+      forecastDaysTrackedEl.textContent = `${data.daysPassed || 0} of ${data.totalDays || 0}`;
+    }
+
+    if (forecastRiskLevelEl) {
+      forecastRiskLevelEl.textContent = data.riskLevel || "No data";
     }
 
     if (forecastExplanationEl) {
@@ -1906,21 +2389,20 @@ async function loadForecast() {
 }
 
 async function setBudget() {
-  const input = prompt("Enter monthly budget amount (\u20B9)");
-  if (!input) return;
-
-  const amount = Number(input);
-  if (isNaN(amount) || amount < 0) {
-    showStatus("Please enter a valid positive budget amount.", "error");
+  const month = getSelectedBudgetMonth();
+  const amount = Number(document.getElementById("budgetValue")?.value || 0);
+  if (!month || isNaN(amount) || amount <= 0) {
+    showStatus("Please select a month and enter a valid positive budget amount.", "error");
     return;
   }
 
   try {
     setLoading(true, "Saving budget...");
+    console.log("Saving budget allocation:", { month, amount });
     const res = await authFetch("/budget", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount })
+      body: JSON.stringify({ amount, month })
     });
 
     const data = await res.json();
@@ -1930,13 +2412,20 @@ async function setBudget() {
     }
 
     await loadCurrentBudget();
-    showStatus("Budget updated successfully.", "success");
+    await loadBudgetAllocations();
+    await loadMonthlyTrend();
+    await updateAiInsights();
+    showStatus(`Budget saved for ${formatMonth(month)}.`, "success");
   } catch (error) {
     console.error("Error saving budget:", error);
     showStatus("Unable to update the budget right now.", "error");
   } finally {
     setLoading(false);
   }
+}
+
+async function saveBudgetAllocations() {
+  return setBudget();
 }
 
 // ================= DARK MODE TOGGLE =================
@@ -1955,6 +2444,12 @@ document.querySelectorAll("[data-view-target]").forEach(button => {
   });
 });
 
+window.addEventListener("popstate", () => {
+  if (!dashboardPage.classList.contains("hidden")) {
+    setActiveView(getRouteView(), { syncRoute: false });
+  }
+});
+
 document.querySelectorAll("[data-logout-action]").forEach(button => {
   button.addEventListener("click", logout);
 });
@@ -1966,6 +2461,24 @@ document.querySelectorAll("[data-logout-action]").forEach(button => {
     });
   }
 });
+
+if (sidebarCollapseToggle) {
+  sidebarCollapseToggle.addEventListener("click", () => {
+    const isCollapsed = dashboardPage.classList.toggle("sidebar-collapsed");
+    sidebarCollapseToggle.setAttribute("aria-expanded", String(!isCollapsed));
+    sidebarCollapseToggle.setAttribute("aria-label", isCollapsed ? "Expand sidebar" : "Collapse sidebar");
+    sidebarCollapseToggle.innerHTML = isCollapsed
+      ? '<i data-lucide="panel-left-open"></i>'
+      : '<i data-lucide="panel-left-close"></i>';
+    renderIcons();
+    setTimeout(() => {
+      if (expenseChart) expenseChart.resize();
+      if (barChart) barChart.resize();
+      if (monthlyChart) monthlyChart.resize();
+      if (monthlyCategoryChart) monthlyCategoryChart.resize();
+    }, 240);
+  });
+}
 
 if (profileMenuBtn && profileMenu) {
   profileMenuBtn.addEventListener("click", event => {
@@ -1985,6 +2498,7 @@ if (profileMenuBtn && profileMenu) {
 if (loginBtn) loginBtn.addEventListener("click", login);
 if (signupBtn) signupBtn.addEventListener("click", signup);
 if (logoutBtn) logoutBtn.addEventListener("click", logout);
+if (saveProfileBtn) saveProfileBtn.addEventListener("click", saveProfile);
 
 if (showSignupBtn) {
   showSignupBtn.addEventListener("click", () => {

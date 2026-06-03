@@ -2,7 +2,9 @@ const { recognize } = require("tesseract.js");
 
 async function scanReceiptImage(imagePath) {
   const result = await recognize(imagePath, "eng", {
-    logger: () => {}
+    logger: () => {},
+    tessedit_pageseg_mode: "6",
+    preserve_interword_spaces: "1"
   });
 
   return {
