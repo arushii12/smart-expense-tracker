@@ -11,7 +11,12 @@ const router = express.Router();
 const uploadDir = getUploadDir();
 
 function isServerlessRuntime() {
-  return Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+  return Boolean(
+    process.env.VERCEL ||
+    process.env.VERCEL_ENV ||
+    process.env.NOW_REGION ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME
+  );
 }
 
 function getUploadDir() {
