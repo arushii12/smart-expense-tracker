@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const fallbackDb = require("./fallbackDb");
+const Budget = require("./models/Budget");
 
 const MONGO_URI = process.env.MONGO_URI;
 
@@ -17,8 +18,9 @@ function useFallbackDatabase() {
 if (MONGO_URI) {
   mongoose
     .connect(MONGO_URI)
-    .then(() => {
+    .then(async () => {
       console.log("MongoDB connected successfully");
+      await Budget.ensureMongoIndexes();
     })
     .catch((error) => {
       console.error("MongoDB connection failed:", error.message);
