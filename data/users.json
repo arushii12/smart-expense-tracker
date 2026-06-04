@@ -142,5 +142,13 @@
     "name": "AJAI GOSWAMI",
     "email": "ajairdso@gmail.com",
     "password": "$2b$10$3tMF/7YuOM4xw4ZuMgW.RuHGquHWcRprGOg5Fhrs2avWtJLXXQn3m"
+  },
+  {
+    "_id": "aefe2799-fbe6-471c-9306-be8c2b1503f1",
+    "createdAt": "2026-06-04T18:12:53.083Z",
+    "updatedAt": "2026-06-04T18:12:53.083Z",
+    "name": "Vercel Check",
+    "email": "vercel-check-1780596772905@example.com",
+    "password": "$2b$10$gxQxb4PZtgrDPUjFYo7qgeFqb4AEUmwoxPM/ij0kitHMRboGne7h."
   }
 ]

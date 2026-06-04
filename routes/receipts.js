@@ -8,12 +8,38 @@ const { scanReceiptImage } = require("../services/ocrService");
 const { parseReceiptText } = require("../services/receiptParser");
 
 const router = express.Router();
-const uploadDir = path.join(__dirname, "..", "uploads", "receipts");
+const uploadDir = getUploadDir();
 
-fs.mkdirSync(uploadDir, { recursive: true });
+function isServerlessRuntime() {
+  return Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+}
+
+function getUploadDir() {
+  if (isServerlessRuntime()) {
+    return path.join("/tmp", "uploads", "receipts");
+  }
+
+  return path.join(__dirname, "..", "uploads", "receipts");
+}
+
+function ensureUploadDir() {
+  try {
+    fs.mkdirSync(uploadDir, { recursive: true });
+    return null;
+  } catch (error) {
+    console.error("Receipt upload directory unavailable:", error.message);
+    return error;
+  }
+}
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
+    const directoryError = ensureUploadDir();
+    if (directoryError) {
+      cb(new Error("Receipt uploads are temporarily unavailable."));
+      return;
+    }
+
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
