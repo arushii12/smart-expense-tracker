@@ -734,6 +734,7 @@ select:focus {
   height: var(--dashboard-top-card-height);
   justify-content: flex-start;
   min-height: var(--dashboard-top-card-height);
+  overflow: hidden;
   padding: 20px;
 }
 
@@ -747,6 +748,14 @@ select:focus {
   text-transform: uppercase;
 }
 
+.pulse-score span,
+.pulse-score strong,
+.pulse-grade,
+.pulse-status {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
 .pulse-score strong {
   color: var(--text);
   display: block;
@@ -756,9 +765,10 @@ select:focus {
 }
 
 .pulse-score strong.no-score {
-  font-size: 24px;
-  line-height: 1.25;
-  max-width: 360px;
+  font-size: clamp(20px, 2.7vw, 22px);
+  line-height: 1.2;
+  margin-top: 20px;
+  max-width: 100%;
 }
 
 .pulse-grade {
@@ -770,10 +780,14 @@ select:focus {
   margin-top: 26px;
 }
 
+.pulse-score strong.no-score + .pulse-grade {
+  margin-top: 12px;
+}
+
 .pulse-status {
   color: var(--muted-strong);
   display: block;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.35;
   margin-top: 4px;

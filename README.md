@@ -1,179 +1,216 @@
 # Smart Expense Tracker
 
-Smart Expense Tracker is a full-stack personal finance app for tracking daily expenses, managing monthly budgets, forecasting spend, and generating AI-style spending insights.
+Smart Expense Tracker is a full-stack personal finance and household budgeting application. It helps users track expenses, manage monthly budgets, monitor savings, analyze spending habits, forecast future expenses, and generate monthly financial reports from a clean dashboard interface.
 
-The backend is a Node.js and Express API connected to MongoDB Atlas. The frontend is a static HTML, CSS, and JavaScript dashboard that can be served by the backend in production or hosted separately with a configurable API base URL.
+The application includes JWT-based authentication, MongoDB-backed user data, budget and expense workflows, spending insights, receipt OCR support, forecasting, and PDF report export.
 
-## Features
+## Key Features
 
-- JWT authentication with signup, login, logout, and protected routes
-- Expense CRUD for creating, reading, updating, and deleting expenses
-- Daily and date-based expense history
-- Monthly budget tracking with spent and remaining totals
-- Category breakdown charts and monthly trend charts
-- Forecast for projected month-end spending
-- AI-style spending insights and savings recommendations
-- PDF monthly report export
-- Responsive dashboard with dark mode
+### Dashboard
+- Financial overview for the selected month
+- Budget, expense, savings, and spending summaries
+- Financial Score with status indicators
+- Charts for monthly and category-level spending
 
-## Tech Stack
+### Expense Management
+- Add, edit, and delete expenses
+- Categorize expenses and mark needs vs wants
+- Track expenses by day, date range, and month
+- Upload receipt images for OCR-assisted expense entry
 
-- Frontend: HTML, CSS, JavaScript, Chart.js
-- Backend: Node.js, Express.js
-- Database: MongoDB Atlas with Mongoose
-- Authentication: JSON Web Tokens, bcrypt
-- Reports: PDFKit
+### Budget Planning
+- Set monthly budgets
+- Track budget utilization and remaining budget
+- Review monthly budget allocations
+- Detect overspending and budget risk
 
-## Project Structure
+### Insights
+- Financial Score calculation
+- Spending pattern analysis
+- Savings recommendations
+- KPI-style dashboard metrics
+- Category and trend insights
+
+### Forecasting
+- Month-end spending projection
+- Average daily spending estimate
+- Remaining budget forecast
+- Risk level and forecast confidence indicators
+
+### Reports
+- Downloadable PDF financial reports
+- Monthly spending summaries
+- Budget, savings, insights, and forecast performance tracking
+
+### User Profile
+- Profile view and account details
+- Name and email management
+- Token-protected account access
+
+## Technology Stack
+
+### Frontend
+- HTML
+- CSS
+- JavaScript
+- Chart.js
+- Lucide icons
+
+### Backend
+- Node.js
+- Express.js
+
+### Database
+- MongoDB
+- Mongoose
+- Local JSON fallback for development only
+
+### Authentication
+- JWT Authentication
+- bcrypt password hashing
+
+### Reports and OCR
+- PDFKit
+- Tesseract.js
+- Multer
+
+### Deployment
+- Vercel
+- MongoDB Atlas
+
+## Project Workflow
 
 ```text
-smart-expense-tracker/
-  frontend/
-    index.html
-    style.css
-    script.js
-    config.js
-    config.example.js
-  middleware/
-    auth.js
-  models/
-    Budget.js
-    Expense.js
-    MonthlySummary.js
-    User.js
-  routes/
-    auth.js
-    budget.js
-    expenses.js
-    forecast.js
-    report.js
-  db.js
-  index.js
-  package.json
-  .env.example
+Budget Setup
+|
+v
+Add Expenses
+|
+v
+Track Spending
+|
+v
+Analyze Insights
+|
+v
+Review Forecast
+|
+v
+Generate Reports
+|
+v
+Improve Financial Score
 ```
 
-## Environment Variables
+## Financial Score
 
-Create a `.env` file in the project root. Use `.env.example` as the template.
+The Financial Score is calculated from several budgeting and spending signals:
 
-```env
-NODE_ENV=production
-PORT=5000
-MONGO_URI=mongodb+srv://<username>:<password>@<cluster-url>/expenseTracker?retryWrites=true&w=majority
-JWT_SECRET=replace-with-a-long-random-secret
-CORS_ORIGIN=
-SERVE_FRONTEND=true
+- Budget Performance
+- Savings Ratio
+- Forecast Reliability
+- Spending Consistency
+
+Implemented score ranges:
+
+| Score | Rating |
+| --- | --- |
+| 90-100 | Excellent |
+| 80-89 | Very Good |
+| 70-79 | Good |
+| 60-69 | Fair |
+| 40-59 | At Risk |
+| 0-39 | Critical |
+
+## Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/arushii12/smart-expense-tracker.git
+cd smart-expense-tracker
 ```
 
-`MONGO_URI` should point to your MongoDB Atlas database.
-
-`JWT_SECRET` should be a long, random value and must be kept private.
-
-`CORS_ORIGIN` is optional. Set it when the frontend is hosted on a different domain, for example:
-
-```env
-CORS_ORIGIN=https://your-frontend-domain.com
-```
-
-`SERVE_FRONTEND` defaults to `true`. Set it to `false` if you want the backend to run as an API only.
-
-## Frontend API Configuration
-
-By default, `frontend/config.js` uses an empty `API_BASE_URL`, so the frontend calls the same origin that served it. This is ideal when Express serves the frontend in production.
-
-For separate frontend and backend deployments, update `frontend/config.js` before deploying the frontend:
-
-```js
-window.SMART_EXPENSE_CONFIG = {
-  API_BASE_URL: "https://your-backend-domain.com"
-};
-```
-
-## Local Setup
-
-1. Install dependencies:
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-2. Create `.env` from the example:
+Create an environment file:
 
 ```bash
 cp .env.example .env
 ```
 
-3. Fill in `MONGO_URI` and `JWT_SECRET`.
-
-4. Start the app:
+Configure the required environment variables, then start the development server:
 
 ```bash
 npm start
 ```
 
-5. Open the local app using the configured port:
+Open the app:
 
 ```text
-http://localhost:<PORT>
+http://localhost:5000
 ```
 
-## Production Deployment
+## Environment Variables
 
-The backend can run independently with:
+| Variable | Description |
+| --- | --- |
+| `MONGO_URI` | MongoDB Atlas connection string. Required in production. |
+| `JWT_SECRET` | Secret key used to sign and verify JWT tokens. Required. |
+| `NODE_ENV` | Runtime environment, usually `development` or `production`. |
+| `SERVE_FRONTEND` | Controls whether Express serves the static frontend. Defaults to `true`. |
 
-```bash
-npm start
-```
+Optional:
 
-For a single-service deployment, keep `SERVE_FRONTEND=true`. Express will serve the static frontend from `frontend/` and expose the API routes from the same domain.
+| Variable | Description |
+| --- | --- |
+| `CORS_ORIGIN` | Allowed frontend origin for split frontend/backend deployments. |
+| `PORT` | Local server port. Do not set manually on Vercel. |
 
-For split deployments:
-
-- Deploy the backend with `SERVE_FRONTEND=false`.
-- Deploy the `frontend/` directory to a static host.
-- Set `frontend/config.js` to the deployed backend URL.
-- Set `CORS_ORIGIN` on the backend to the frontend URL.
-
-## API Routes
-
-| Method | Route | Description |
-| --- | --- | --- |
-| POST | `/auth/signup` | Create a user account |
-| POST | `/auth/login` | Log in and receive a JWT |
-| GET | `/expenses` | Fetch authenticated user's expenses |
-| POST | `/expenses` | Create an expense |
-| PUT | `/expenses/:id` | Update an expense |
-| DELETE | `/expenses/:id` | Delete an expense |
-| GET | `/expenses/today` | Fetch today's expenses |
-| GET | `/expenses/by-date?date=YYYY-MM-DD` | Fetch expenses by date |
-| GET | `/expenses/monthly` | Fetch monthly summaries |
-| GET | `/budget/current` | Fetch current budget and spend |
-| POST | `/budget` | Set current monthly budget |
-| GET | `/forecast` | Fetch spending forecast |
-| GET | `/report/monthly` | Download monthly PDF report |
-| GET | `/health` | Health check |
-
-## Screenshots
-
-Add screenshots here after deployment or local testing:
-
-- Login and signup
-- Dashboard overview
-- Expense history
-- Budget and forecast
-- PDF export
-
-## Live Demo
-
-Live demo URL:
+## Folder Structure
 
 ```text
-Add your deployed frontend or full-stack URL here.
+smart-expense-tracker/
+|-- api/              # Vercel serverless entry point
+|-- frontend/         # Static UI: HTML, CSS, JavaScript and client config
+|-- routes/           # Express routes for auth, expenses, budgets, insights, forecast, receipts, profile and reports
+|-- models/           # Mongoose models for users, expenses, budgets and monthly summaries
+|-- middleware/       # JWT authentication middleware
+|-- services/         # OCR and receipt parsing services
+|-- data/             # Local development JSON fallback data
+|-- uploads/          # Local receipt uploads for development
+|-- db.js             # MongoDB connection and production database guard
+|-- index.js          # Express application setup
+`-- vercel.json       # Vercel routing configuration
 ```
 
-Backend health check:
+## Deployment Notes
 
-```text
-https://your-backend-domain.com/health
-```
+The project is configured for a single Vercel deployment where the static frontend and Express API share the same domain.
+
+Production requires:
+
+- `MONGO_URI`
+- `JWT_SECRET`
+- `NODE_ENV=production`
+- `SERVE_FRONTEND=true`
+
+MongoDB Atlas is required in production. The local JSON fallback is intended only for development.
+
+Receipt uploads use temporary serverless storage on Vercel. For persistent receipt image storage, integrate a durable service such as Cloudinary, S3, or Vercel Blob.
+
+## Future Enhancements
+
+- AI spending recommendations
+- Goal-based savings tracking
+- Multi-user family budgeting
+- Recurring expense automation
+- Mobile application
+
+## Author
+
+Developed by **Arushii** as a full-stack personal finance project focused on budgeting workflows, financial insights, forecasting, and production-ready deployment practices.
