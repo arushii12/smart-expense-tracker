@@ -1441,7 +1441,7 @@ async function updateDashboardKpis() {
     }
 
     if (dashboardRemainingBudgetEl) {
-      dashboardRemainingBudgetEl.textContent = Math.round(remaining).toLocaleString("en-IN");
+      dashboardRemainingBudgetEl.textContent = Math.round(budget).toLocaleString("en-IN");
     }
     if (dashboardBudgetProgressEl) {
       dashboardBudgetProgressEl.style.width = `${Math.min(usedPercent, 100)}%`;
@@ -1510,8 +1510,36 @@ function updateDashboardTopCategory(byCategory, currentTotal) {
 function updateDashboardPulse({ month, budget, currentTotal, remaining, usedPercent, topCategory }) {
   const forecastText = dashboardForecastChipEl?.textContent || "";
   const isLowForecastConfidence = /low confidence|early/i.test(forecastText);
+  if (dashboardPulseMonthEl) dashboardPulseMonthEl.textContent = formatMonth(month);
+
+  if (!budget) {
+    if (dashboardHealthScoreEl) {
+      dashboardHealthScoreEl.textContent = "Not enough information to generate a score";
+      dashboardHealthScoreEl.classList.add("no-score");
+    }
+    if (dashboardHealthGradeEl) {
+      dashboardHealthGradeEl.textContent = "Budget Required";
+      dashboardHealthGradeEl.dataset.gradeColor = "amber";
+    }
+    if (dashboardHealthStatusEl) dashboardHealthStatusEl.textContent = "Set a monthly budget to calculate financial health.";
+    if (dashboardPulseBudgetUsedEl) dashboardPulseBudgetUsedEl.textContent = "No budget";
+    if (dashboardPulseStatusEl) dashboardPulseStatusEl.textContent = "No Budget";
+    if (dashboardInsightBudgetEl) dashboardInsightBudgetEl.textContent = "Set a monthly budget";
+    if (dashboardInsightLargestEl) {
+      dashboardInsightLargestEl.textContent = topCategory
+        ? `Largest spend: ${formatDisplayText(topCategory.category)}`
+        : "Largest spend: no expenses yet";
+    }
+    if (dashboardInsightForecastEl) {
+      dashboardInsightForecastEl.textContent = isLowForecastConfidence
+        ? "Forecast confidence low"
+        : "Forecast confidence normal";
+    }
+    return;
+  }
+
   const savingsRatio = budget ? remaining / budget : 0;
-  const budgetScore = budget ? Math.max(0, 40 - Math.max(usedPercent - 75, 0)) : 20;
+  const budgetScore = Math.max(0, 40 - Math.max(usedPercent - 75, 0));
   const savingsScore = Math.round(Math.min(savingsRatio, 1) * 30);
   const forecastScore = isLowForecastConfidence ? 10 : 20;
   const consistencyScore = currentTotal > 0 ? 10 : 5;
@@ -1519,8 +1547,10 @@ function updateDashboardPulse({ month, budget, currentTotal, remaining, usedPerc
   const status = usedPercent >= 100 ? "Over Budget" : usedPercent >= 85 ? "Watch" : "On Track";
   const healthGrade = getFinancialHealthGrade(score);
 
-  if (dashboardPulseMonthEl) dashboardPulseMonthEl.textContent = formatMonth(month);
-  if (dashboardHealthScoreEl) dashboardHealthScoreEl.textContent = `${score} / 100`;
+  if (dashboardHealthScoreEl) {
+    dashboardHealthScoreEl.textContent = `${score} / 100`;
+    dashboardHealthScoreEl.classList.remove("no-score");
+  }
   if (dashboardHealthGradeEl) {
     dashboardHealthGradeEl.textContent = healthGrade.grade;
     dashboardHealthGradeEl.dataset.gradeColor = healthGrade.color;
@@ -2163,7 +2193,7 @@ function getSelectedBudgetMonth() {
     if (budgetSpentEl) budgetSpentEl.textContent = Math.round(spent).toLocaleString("en-IN");
     if (budgetRemainingEl) budgetRemainingEl.textContent = Math.round(remaining).toLocaleString("en-IN");
     if (dashboardRemainingBudgetEl && month === getCurrentMonthInputValue()) {
-      dashboardRemainingBudgetEl.textContent = Math.round(remaining).toLocaleString("en-IN");
+      dashboardRemainingBudgetEl.textContent = Math.round(budget).toLocaleString("en-IN");
     }
 
     if (!budgetBarFill || !budgetStatusEl) return;
@@ -2500,46 +2530,45 @@ function updatePatternInsight(allExpenses) {
 function getFinancialHealthGrade(score) {
   if (score >= 90) {
     return {
-      grade: "⭐ Excellent",
-      status: "Outstanding Financial Health",
+      grade: "Excellent",
+      status: "Outstanding Financial Score",
       color: "green"
     };
   }
   if (score >= 80) {
     return {
-      grade: "✅ Very Good",
-      status: "Healthy Financial Position",
+      grade: "Very Good",
+      status: "Good Financial Position",
       color: "teal"
     };
   }
   if (score >= 70) {
     return {
-      grade: "👍 Good",
-      status: "Generally On Track",
+      grade: "Good",
+      status: "On Track",
       color: "blue"
     };
   }
   if (score >= 60) {
     return {
-      grade: "⚠ Fair",
+      grade: "Fair",
       status: "Needs Attention",
       color: "amber"
     };
   }
   if (score >= 40) {
     return {
-      grade: "🔶 At Risk",
+      grade: "At Risk",
       status: "Budget Concerns",
       color: "orange"
     };
   }
   return {
-    grade: "🔴 Critical",
+    grade: "Critical",
     status: "Immediate Action Required",
     color: "red"
   };
 }
-
 function getCategoryTotals(expenseItems) {
   return expenseItems.reduce((totals, exp) => {
     totals[exp.category] = (totals[exp.category] || 0) + Number(exp.amount);

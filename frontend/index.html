@@ -129,8 +129,8 @@
             <div class="pulse-score">
               <span>Financial Score</span>
               <strong id="dashboardHealthScore">0 / 100</strong>
-              <em id="dashboardHealthGrade" class="pulse-grade">👍 Good</em>
-              <small id="dashboardHealthStatus" class="pulse-status">Generally On Track</small>
+              <em id="dashboardHealthGrade" class="pulse-grade">Good</em>
+              <small id="dashboardHealthStatus" class="pulse-status">On Track</small>
             </div>
             <div class="pulse-metrics">
               <div>
@@ -157,18 +157,18 @@
           </div>
 
           <div class="hero-summary-grid">
+            <article class="metric-card success">
+              <i class="metric-icon" data-lucide="target"></i>
+              <span class="metric-label">Budget</span>
+              <strong class="metric-value">&#8377;<span id="dashboardRemainingBudget">0</span></strong>
+              <div class="metric-progress"><span id="dashboardBudgetProgress"></span></div>
+              <small id="dashboardBudgetChip">Selected month budget</small>
+            </article>
             <article class="metric-card danger">
               <i class="metric-icon" data-lucide="wallet"></i>
               <span class="metric-label">Actual Spending</span>
               <strong id="total" class="metric-value">&#8377;0</strong>
               <small id="dashboardExpenseChip">Current month</small>
-            </article>
-            <article class="metric-card success">
-              <i class="metric-icon" data-lucide="target"></i>
-              <span class="metric-label">Budget Remaining</span>
-              <strong class="metric-value">&#8377;<span id="dashboardRemainingBudget">0</span></strong>
-              <div class="metric-progress"><span id="dashboardBudgetProgress"></span></div>
-              <small id="dashboardBudgetChip">0% used / 0% left</small>
             </article>
             <article class="metric-card savings">
               <i class="metric-icon" data-lucide="piggy-bank"></i>
@@ -652,7 +652,7 @@
         <section class="guide-hero">
           <div>
             <p class="eyebrow">User Guide</p>
-            <h2>Smart Expense Workflow Guide</h2>
+            <h2>Smart Expense Workflow</h2>
             <p>Learn how to track expenses, manage budgets, monitor savings, and understand your financial health.</p>
           </div>
           <div class="guide-actions">
