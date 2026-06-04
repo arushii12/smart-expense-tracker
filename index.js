@@ -76,9 +76,13 @@ if (shouldServeFrontend && fs.existsSync(frontendPath)) {
 // ==============================
 // Server start
 // ==============================
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;
 
 function loadEnvFile() {
   const envPath = path.join(__dirname, ".env");

@@ -34,5 +34,6 @@ module.exports = {
   find: query => getBudgetModel().find(query),
   findOne: async query => getBudgetModel().findOne(query),
   findOneAndUpdate: async (filter, update, options) =>
-    getBudgetModel().findOneAndUpdate(filter, update, options)
+    getBudgetModel().findOneAndUpdate(filter, update, options),
+  findOneAndDelete: async filter => getBudgetModel().findOneAndDelete(filter)
 };

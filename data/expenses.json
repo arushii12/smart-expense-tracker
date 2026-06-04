@@ -494,22 +494,6 @@
     "date": "2026-06-01T00:00:00.000Z"
   },
   {
-    "_id": "071f1fa2-f7f8-4f88-b6d3-04e2c6a2d67e",
-    "createdAt": "2026-06-03T13:57:33.753Z",
-    "updatedAt": "2026-06-03T13:57:33.753Z",
-    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
-    "amount": 1000,
-    "category": "Transport",
-    "subcategory": "ola",
-    "isEssential": true,
-    "receiptImageUrl": "",
-    "rawReceiptText": "",
-    "ocrConfidence": 0,
-    "extractedMerchant": "",
-    "extractedDate": "",
-    "date": "2026-06-03T00:00:00.000Z"
-  },
-  {
     "_id": "6f33da27-af12-40d4-bc6c-55f88726a413",
     "createdAt": "2026-06-03T15:34:30.241Z",
     "updatedAt": "2026-06-03T15:34:30.241Z",

@@ -28,5 +28,8 @@ if (MONGO_URI) {
       useFallbackDatabase();
     });
 } else {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("MONGO_URI environment variable is required in production.");
+  }
   useFallbackDatabase();
 }
