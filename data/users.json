@@ -130,9 +130,17 @@
   {
     "_id": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
     "createdAt": "2026-06-02T14:01:19.821Z",
-    "updatedAt": "2026-06-02T15:35:11.627Z",
+    "updatedAt": "2026-06-04T05:15:20.931Z",
     "name": "Ajai",
     "email": "ajaigzb@gmail.com",
     "password": "$2b$10$V.rnQwkZiIEeMiRU7n2ILeaAOb/0SWVknY.GmiIvYZpW4gfsHVk5a"
+  },
+  {
+    "_id": "226a9811-30cc-4728-80f7-ebf330483997",
+    "createdAt": "2026-06-03T18:30:07.710Z",
+    "updatedAt": "2026-06-03T18:30:07.710Z",
+    "name": "AJAI GOSWAMI",
+    "email": "ajairdso@gmail.com",
+    "password": "$2b$10$3tMF/7YuOM4xw4ZuMgW.RuHGquHWcRprGOg5Fhrs2avWtJLXXQn3m"
   }
 ]

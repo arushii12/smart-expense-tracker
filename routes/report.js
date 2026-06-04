@@ -13,6 +13,21 @@ router.use(auth);
 
 let fontRegular = "Helvetica";
 let fontBold = "Helvetica-Bold";
+const REPORT_LINE_HEIGHT = 1.12;
+const REPORT_COLORS = {
+  headerBackground: "#e8f3f4",
+  title: "#102a43",
+  heading: "#1d4ed8",
+  label: "#475569",
+  body: "#1f2937",
+  muted: "#64748b",
+  line: "#d8e0e8",
+  warning: "#92400e"
+};
+
+function getReportLineGap(fontSize) {
+  return fontSize * (REPORT_LINE_HEIGHT - 1);
+}
 
 function registerFonts(doc) {
   const regularPath = "C:/Windows/Fonts/arial.ttf";
@@ -138,23 +153,27 @@ function getRiskLevel({ budget, projectedMonthEndSpending, isEarlyEstimate }) {
 }
 
 function drawSectionTitle(doc, title) {
-  doc.moveDown(1.2);
-  doc.fontSize(14).fillColor("#1b3a4b").font(fontBold).text(title);
-  doc.moveDown(0.4);
-  doc.strokeColor("#d7b899").lineWidth(1).moveTo(50, doc.y).lineTo(545, doc.y).stroke();
-  doc.moveDown(0.7);
+  const fontSize = 13;
+  doc.moveDown(0.9);
+  doc.fontSize(fontSize).fillColor(REPORT_COLORS.heading).font(fontBold).text(title, {
+    lineGap: getReportLineGap(fontSize)
+  });
+  doc.moveDown(0.28);
+  doc.strokeColor(REPORT_COLORS.line).lineWidth(0.75).moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+  doc.moveDown(0.48);
 }
 
 function drawKeyValue(doc, label, value, options = {}) {
   const lineGap = options.lineGap || 0;
+  const fontSize = 10;
   doc
-    .fontSize(10)
-    .fillColor("#5E503F")
+    .fontSize(fontSize)
+    .fillColor(REPORT_COLORS.label)
     .font(fontBold)
     .text(label, { continued: true })
-    .fillColor("#1f2933")
+    .fillColor(REPORT_COLORS.body)
     .font(fontRegular)
-    .text(` ${value}`);
+    .text(` ${value}`, { lineGap: getReportLineGap(fontSize) });
   if (lineGap) doc.moveDown(lineGap);
 }
 
@@ -242,19 +261,19 @@ router.get("/monthly", async (req, res) => {
     doc.pipe(res);
 
     doc
-      .rect(0, 0, doc.page.width, 110)
-      .fill("#B3DEE2");
+      .rect(0, 0, doc.page.width, 100)
+      .fill(REPORT_COLORS.headerBackground);
     doc
-      .fillColor("#1b3a4b")
+      .fillColor(REPORT_COLORS.title)
       .font(fontBold)
-      .fontSize(24)
-      .text("Smart Home Finance Hub", 50, 35);
+      .fontSize(22)
+      .text("Smart Home Finance Hub", 50, 32, { lineGap: getReportLineGap(22) });
     doc
       .font(fontRegular)
-      .fontSize(11)
-      .fillColor("#344e41")
-      .text(`Generated on ${formatReportDate(now)}`, 50, 68);
-    doc.y = 135;
+      .fontSize(10)
+      .fillColor(REPORT_COLORS.muted)
+      .text(`Generated on ${formatReportDate(now)}`, 50, 63, { lineGap: getReportLineGap(10) });
+    doc.y = 120;
 
     drawSectionTitle(doc, "Report Overview");
     drawKeyValue(doc, "User:", `${userData.name} (${userData.email})`, { lineGap: 0.15 });
@@ -291,19 +310,24 @@ router.get("/monthly", async (req, res) => {
             : 0;
           doc
             .fontSize(10)
-            .fillColor("#1f2933")
+            .fillColor(REPORT_COLORS.body)
             .font(fontRegular)
-            .text(`${category}: ${formatCurrency(amount)} (${percent}%)`);
-          doc.moveDown(0.15);
+            .text(`${category}: ${formatCurrency(amount)} (${percent}%)`, {
+              lineGap: getReportLineGap(10)
+            });
+          doc.moveDown(0.12);
         });
     } else {
-      doc.fontSize(10).fillColor("#1f2933").text("No expenses recorded for this month.");
+      doc.fontSize(10).fillColor(REPORT_COLORS.body).text("No expenses recorded for this month.", {
+        lineGap: getReportLineGap(10)
+      });
     }
 
     drawSectionTitle(doc, "Smart Insights");
     insights.forEach(insight => {
-      doc.fontSize(10).fillColor("#1f2933").text(`\u2022 ${insight}`, {
-        paragraphGap: 4
+      doc.fontSize(10).fillColor(REPORT_COLORS.body).text(`\u2022 ${insight}`, {
+        lineGap: getReportLineGap(10),
+        paragraphGap: 3
       });
     });
 
@@ -325,20 +349,23 @@ router.get("/monthly", async (req, res) => {
 
     if (isEarlyEstimate) {
       doc
-        .moveDown(0.4)
+        .moveDown(0.35)
         .fontSize(10)
-        .fillColor("#7c2d12")
+        .fillColor(REPORT_COLORS.warning)
         .font(fontBold)
-        .text(`Early estimate based on only ${daysPassed} day(s) of data. A minimum 7-day average is used.`);
+        .text(`Early estimate based on only ${daysPassed} day(s) of data. A minimum 7-day average is used.`, {
+          lineGap: getReportLineGap(10)
+        });
     }
 
     doc
-      .moveDown(0.5)
+      .moveDown(0.45)
       .fontSize(9)
-      .fillColor("#344e41")
+      .fillColor(REPORT_COLORS.muted)
       .font(fontRegular)
       .text(
-        `Forecast calculated from ${formatCurrency(totalSpending)} spent over ${averageWindowDays} day(s) average window, multiplied across ${totalDays} days in ${reportMonth}. If fewer than 7 days are available, total spending is divided by 7.`
+        `Forecast calculated from ${formatCurrency(totalSpending)} spent over ${averageWindowDays} day(s) average window, multiplied across ${totalDays} days in ${reportMonth}. If fewer than 7 days are available, total spending is divided by 7.`,
+        { lineGap: getReportLineGap(9) }
       );
 
     doc.end();

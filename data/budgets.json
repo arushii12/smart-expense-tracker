@@ -38,5 +38,29 @@
     "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
     "month": "2026-04",
     "amount": 80000
+  },
+  {
+    "_id": "07494e76-34d3-41c0-a87c-907a364befac",
+    "createdAt": "2026-06-03T18:39:00.668Z",
+    "updatedAt": "2026-06-03T18:39:39.124Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "month": "2026-02",
+    "amount": 20000
+  },
+  {
+    "_id": "891eb03c-6445-48db-9f8a-c3aa9962686e",
+    "createdAt": "2026-06-03T18:43:37.979Z",
+    "updatedAt": "2026-06-03T18:43:37.979Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "month": "2026-01",
+    "amount": 50000
+  },
+  {
+    "_id": "a1b9097c-057e-4e04-90ff-515721e0b713",
+    "createdAt": "2026-06-03T21:10:24.438Z",
+    "updatedAt": "2026-06-03T21:10:24.438Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "month": "2026-03",
+    "amount": 50000
   }
 ]

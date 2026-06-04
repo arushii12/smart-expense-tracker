@@ -134,4 +134,40 @@ router.post("/", async (req, res) => {
   }
 });
 
+// =======================================
+// DELETE /budget/:month
+// =======================================
+router.delete("/:month", async (req, res) => {
+  try {
+    const { month } = req.params;
+
+    if (!isValidMonth(month)) {
+      return res.status(400).json({
+        message: "Please select a valid month for this budget"
+      });
+    }
+
+    const deletedBudget = await Budget.findOneAndDelete({
+      userId: req.user.id,
+      month
+    });
+
+    if (!deletedBudget) {
+      return res.status(404).json({
+        message: "Budget not found"
+      });
+    }
+
+    res.json({
+      message: "Budget deleted successfully",
+      month
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to delete budget",
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

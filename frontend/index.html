@@ -59,7 +59,7 @@
         <span class="brand-mark">SE</span>
         <div class="brand-text">
           <strong>Smart Expense</strong>
-          <span>Financial Pulse</span>
+          <span>Financial Insight</span>
         </div>
         <button id="sidebarCollapseToggle" class="sidebar-toggle" type="button" aria-label="Collapse sidebar" aria-expanded="true">
           <i data-lucide="panel-left-close"></i>
@@ -118,7 +118,7 @@
       <section id="view-dashboard" class="page-view active" data-title="Dashboard">
         <section class="dashboard-hero">
           <div class="hero-copy">
-            <p class="eyebrow">Financial Pulse</p>
+            <p class="eyebrow">Financial Insight</p>
             <div class="dashboard-month-control">
               <h2 id="dashboardPulseMonth">June 2026</h2>
               <label class="compact-field">
@@ -127,8 +127,10 @@
               </label>
             </div>
             <div class="pulse-score">
-              <span>Financial Health</span>
+              <span>Financial Score</span>
               <strong id="dashboardHealthScore">0 / 100</strong>
+              <em id="dashboardHealthGrade" class="pulse-grade">👍 Good</em>
+              <small id="dashboardHealthStatus" class="pulse-status">Generally On Track</small>
             </div>
             <div class="pulse-metrics">
               <div>
@@ -208,6 +210,9 @@
                 <p class="eyebrow">Activity</p>
                 <h2>Recent Expenses</h2>
               </div>
+              <button class="icon-btn dashboard-card-link" type="button" data-view-target="expenses" aria-label="Open expenses page" title="Open expenses page">
+                <i data-lucide="external-link"></i>
+              </button>
             </div>
             <ul id="dashboardRecentExpenses" class="compact-list"></ul>
           </article>
@@ -218,6 +223,9 @@
                 <p class="eyebrow">AI Insight</p>
                 <h2>Top Insight</h2>
               </div>
+              <button class="icon-btn dashboard-card-link" type="button" data-view-target="insights" aria-label="Open insights page" title="Open insights page">
+                <i data-lucide="external-link"></i>
+              </button>
             </div>
             <p id="dashboardTopInsight" class="highlight-copy">Loading insights...</p>
           </article>
@@ -357,19 +365,36 @@
           <article class="card history-card">
             <div class="card-header history-header">
               <div>
-                <p class="eyebrow">History</p>
                 <h2>Expense History</h2>
               </div>
               <div class="history-controls">
+                <div class="history-date-row">
+                  <label>
+                    <span>From</span>
+                    <div class="history-date-field">
+                      <input type="text" id="fromDate" placeholder="01 Jun 2026" autocomplete="off" readonly />
+                      <button class="history-date-picker-btn" type="button" data-picker-target="fromDatePicker" aria-label="Open from date picker">
+                        <i data-lucide="calendar-days"></i>
+                      </button>
+                      <input class="history-native-date" type="date" id="fromDatePicker" aria-hidden="true" tabindex="-1" />
+                    </div>
+                  </label>
+                  <label>
+                    <span>To</span>
+                    <div class="history-date-field">
+                      <input type="text" id="toDate" placeholder="04 Jun 2026" autocomplete="off" readonly />
+                      <button class="history-date-picker-btn" type="button" data-picker-target="toDatePicker" aria-label="Open to date picker">
+                        <i data-lucide="calendar-days"></i>
+                      </button>
+                      <input class="history-native-date" type="date" id="toDatePicker" aria-hidden="true" tabindex="-1" />
+                    </div>
+                  </label>
+                </div>
+                <div class="history-actions-row">
+                  <button id="applyDateFilterBtn" class="primary-btn compact" type="button">Apply</button>
+                  <button id="todayDateFilterBtn" class="ghost-btn compact" type="button">Today</button>
+                </div>
                 <span id="historyLabel">Showing: Today</span>
-                <label>
-                  <span>From</span>
-                  <input type="date" id="fromDate" />
-                </label>
-                <label>
-                  <span>To</span>
-                  <input type="date" id="toDate" />
-                </label>
               </div>
             </div>
             <div class="expense-list-header" aria-hidden="true">
@@ -378,9 +403,10 @@
               <span>Subcategory</span>
               <span>Type</span>
               <span>Date</span>
-              <span>Actions</span>
             </div>
-            <ul id="expenseList" class="expense-list"></ul>
+            <div class="expense-list-scroll">
+              <ul id="expenseList" class="expense-list"></ul>
+            </div>
           </article>
         </div>
 
@@ -395,14 +421,14 @@
                 <span>View By</span>
                 <select id="analysisMode">
                   <option value="date">Date</option>
-                  <option value="month">Month</option>
+                  <option value="month" selected>Month</option>
                 </select>
               </label>
-              <label id="analysisDateControl">
+              <label id="analysisDateControl" class="hidden">
                 <span>Date</span>
                 <input type="date" id="analysisDate" />
               </label>
-              <label id="analysisMonthControl" class="hidden">
+              <label id="analysisMonthControl">
                 <span>Month</span>
                 <input type="month" id="analysisMonth" />
               </label>
@@ -486,8 +512,14 @@
 
       <section id="view-insights" class="page-view" data-title="Insights">
         <div class="section-heading">
-          <p class="eyebrow">AI analysis</p>
-          <h2>Smart Insights</h2>
+          <div>
+            <p class="eyebrow">AI analysis</p>
+            <h2>Smart Insights</h2>
+          </div>
+          <label class="field compact-field">
+            <span>Insight Month</span>
+            <input type="month" id="insightMonth" />
+          </label>
         </div>
         <div class="insights-grid">
           <article class="insight-card-pro">
@@ -502,9 +534,25 @@
             <h4>Budget Warning</h4>
             <p id="insightBudgetWarning">No data</p>
           </article>
+          <article class="insight-card-pro" id="insightOverspendingCard">
+            <h4>Overspending Alert</h4>
+            <p id="insightOverspendingAlert">No data</p>
+          </article>
+          <article class="insight-card-pro">
+            <h4>Alert</h4>
+            <p id="insightCategoryAlert">No data</p>
+          </article>
           <article class="insight-card-pro">
             <h4>Savings Recommendation</h4>
             <p id="insightSavings">No data</p>
+          </article>
+          <article class="insight-card-pro">
+            <h4>Forecasted Month-End Savings</h4>
+            <p id="insightForecastedSavings">No data</p>
+          </article>
+          <article class="insight-card-pro">
+            <h4>Spending Efficiency</h4>
+            <p id="insightSpendingEfficiency">No data</p>
           </article>
           <article class="insight-card-pro">
             <h4>Spending Pattern</h4>
@@ -646,6 +694,7 @@
               <ul>
                 <li>Go to the Expenses page or click Add Expense.</li>
                 <li>Enter amount, category, date, payment method, and notes.</li>
+                <li>Upload a receipt image to auto-read expense details, then review before saving.</li>
                 <li>Save the transaction so dashboard cards and charts update automatically.</li>
               </ul>
             </div>

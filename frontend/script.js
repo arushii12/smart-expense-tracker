@@ -64,7 +64,11 @@ const totalEl = document.getElementById("total");
 
 const fromDateInput = document.getElementById("fromDate");
 const toDateInput = document.getElementById("toDate");
+const fromDatePickerInput = document.getElementById("fromDatePicker");
+const toDatePickerInput = document.getElementById("toDatePicker");
 const historyLabel = document.getElementById("historyLabel");
+const applyDateFilterBtn = document.getElementById("applyDateFilterBtn");
+const todayDateFilterBtn = document.getElementById("todayDateFilterBtn");
 const analysisModeInput = document.getElementById("analysisMode");
 const analysisDateInput = document.getElementById("analysisDate");
 const analysisMonthInput = document.getElementById("analysisMonth");
@@ -109,8 +113,13 @@ const budgetAllocationList = document.getElementById("budgetAllocationList");
 const insightTopCategoryEl = document.getElementById("insightTopCategory");
 const insightMonthlyTrendEl = document.getElementById("insightMonthlyTrend");
 const insightBudgetWarningEl = document.getElementById("insightBudgetWarning");
+const insightOverspendingAlertEl = document.getElementById("insightOverspendingAlert");
+const insightCategoryAlertEl = document.getElementById("insightCategoryAlert");
 const insightSavingsEl = document.getElementById("insightSavings");
+const insightForecastedSavingsEl = document.getElementById("insightForecastedSavings");
+const insightSpendingEfficiencyEl = document.getElementById("insightSpendingEfficiency");
 const insightPatternEl = document.getElementById("insightPattern");
+const insightMonthInput = document.getElementById("insightMonth");
 
 // ==============================
 // FORECAST DOM ELEMENTS
@@ -149,6 +158,8 @@ const dashboardForecastChipEl = document.getElementById("dashboardForecastChip")
 const dashboardMonthInput = document.getElementById("dashboardMonth");
 const dashboardPulseMonthEl = document.getElementById("dashboardPulseMonth");
 const dashboardHealthScoreEl = document.getElementById("dashboardHealthScore");
+const dashboardHealthGradeEl = document.getElementById("dashboardHealthGrade");
+const dashboardHealthStatusEl = document.getElementById("dashboardHealthStatus");
 const dashboardPulseBudgetUsedEl = document.getElementById("dashboardPulseBudgetUsed");
 const dashboardPulseStatusEl = document.getElementById("dashboardPulseStatus");
 const dashboardInsightBudgetEl = document.getElementById("dashboardInsightBudget");
@@ -221,6 +232,7 @@ function showDashboard() {
 function setActiveView(viewName, options = {}) {
   const { syncRoute = true } = options;
   const requestedView = document.getElementById(`view-${viewName}`) ? viewName : "dashboard";
+  clearTransientMessages({ clearToasts: true });
 
   pageViews.forEach(view => {
     view.classList.toggle("active", view.id === `view-${requestedView}`);
@@ -249,6 +261,10 @@ function setActiveView(viewName, options = {}) {
   if (requestedView === "dashboard") {
     updateDashboardKpis();
     loadForecast(getSelectedDashboardMonth());
+  }
+
+  if (requestedView === "insights") {
+    updateAiInsights(getSelectedInsightMonth());
   }
 
   setTimeout(() => {
@@ -281,16 +297,25 @@ function createToast(message, type = "info") {
   }, 4200);
 }
 
-function showStatus(message, type = "info") {
-  if (!message) {
-    if (appStatusEl) appStatusEl.className = "app-status hidden";
-    return;
+function clearTransientMessages(options = {}) {
+  const { clearToasts = false } = options;
+  if (appStatusEl) {
+    appStatusEl.textContent = "";
+    appStatusEl.className = "app-status hidden";
   }
 
-  if (appStatusEl) {
-    appStatusEl.textContent = message;
-    appStatusEl.className = `app-status ${type}`;
+  if (clearToasts && toastContainer) {
+    toastContainer.innerHTML = "";
   }
+
+  if (clearToasts && reportStatusEl) {
+    reportStatusEl.textContent = "";
+  }
+}
+
+function showStatus(message, type = "info") {
+  clearTransientMessages();
+  if (!message) return;
 
   createToast(message, type);
 }
@@ -305,6 +330,82 @@ function getTodayInputValue() {
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+const FILTER_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function formatFilterDate(dateStr) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr || "");
+  if (!match) return "";
+
+  const [, year, month, day] = match;
+  return `${day} ${FILTER_MONTHS[Number(month) - 1]} ${year}`;
+}
+
+function isValidIsoDate(dateStr) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr || "");
+  if (!match) return false;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+}
+
+function normalizeFilterDate(value) {
+  const trimmedValue = String(value || "").trim();
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmedValue);
+  if (isoMatch) return isValidIsoDate(trimmedValue) ? trimmedValue : "";
+
+  const displayMatch = /^(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})$/i.exec(trimmedValue);
+  if (!displayMatch) return "";
+
+  const [, day, monthName, year] = displayMatch;
+  const month = FILTER_MONTHS.findIndex(monthItem => monthItem.toLowerCase() === monthName.toLowerCase()) + 1;
+  const isoDate = `${year}-${String(month).padStart(2, "0")}-${String(Number(day)).padStart(2, "0")}`;
+  return isValidIsoDate(isoDate) ? isoDate : "";
+}
+
+function setFilterDateInput(input, dateStr) {
+  if (!input) return;
+
+  input.dataset.isoValue = dateStr;
+  input.value = formatFilterDate(dateStr);
+
+  const pickerInput = input === fromDateInput ? fromDatePickerInput : input === toDateInput ? toDatePickerInput : null;
+  if (pickerInput) pickerInput.value = dateStr;
+}
+
+function getFilterDateInputValue(input, fallbackDate) {
+  if (!input) return fallbackDate;
+
+  const normalizedDate = normalizeFilterDate(input.value) || input.dataset.isoValue || fallbackDate;
+  setFilterDateInput(input, normalizedDate);
+  return normalizedDate;
+}
+
+function openHistoryDatePicker(pickerInput) {
+  if (!pickerInput) return;
+
+  if (typeof pickerInput.showPicker === "function") {
+    try {
+      pickerInput.showPicker();
+      return;
+    } catch (error) {
+      // Fall through to focus/click for browsers that restrict showPicker.
+    }
+  }
+
+  pickerInput.focus();
+  pickerInput.click();
+}
+
+function bindHistoryDatePicker(displayInput, pickerInput) {
+  if (!displayInput || !pickerInput) return;
+
+  displayInput.addEventListener("click", () => openHistoryDatePicker(pickerInput));
+  pickerInput.addEventListener("change", () => setFilterDateInput(displayInput, pickerInput.value));
 }
 
 function getCurrentMonthInputValue() {
@@ -322,6 +423,10 @@ function getMonthDateRange(monthValue) {
 
 function getSelectedDashboardMonth() {
   return dashboardMonthInput?.value || getCurrentMonthInputValue();
+}
+
+function getSelectedInsightMonth() {
+  return insightMonthInput?.value || getCurrentMonthInputValue();
 }
 
 function formatDisplayText(value, fallback = "Not specified") {
@@ -540,6 +645,22 @@ function getExpenseTypeClass(expense) {
   return expense.isEssential === false ? "non-essential" : "essential";
 }
 
+function getCategoryColorClass(category) {
+  const normalized = String(category || "").trim().toLowerCase();
+  const categoryColorMap = {
+    "home": "category-home",
+    "food & groceries": "category-food",
+    "utilities & bills": "category-utilities",
+    "transport": "category-transport",
+    "entertainment": "category-entertainment",
+    "healthcare": "category-healthcare",
+    "education": "category-education",
+    "miscellaneous": "category-miscellaneous"
+  };
+
+  return categoryColorMap[normalized] || "category-default";
+}
+
 function getSelectedExpenseType() {
   return nonEssentialCheck?.checked ? false : true;
 }
@@ -619,12 +740,14 @@ async function fetchExpensesByDate(date) {
 
 function initializeDateFilters() {
   const today = getTodayInputValue();
-  if (fromDateInput && !fromDateInput.value) fromDateInput.value = today;
-  if (toDateInput && !toDateInput.value) toDateInput.value = today;
+  const currentMonthRange = getMonthDateRange(getCurrentMonthInputValue());
+  if (fromDateInput && !fromDateInput.dataset.isoValue) setFilterDateInput(fromDateInput, currentMonthRange.start);
+  if (toDateInput && !toDateInput.dataset.isoValue) setFilterDateInput(toDateInput, today);
   if (dateInput && !dateInput.value) dateInput.value = today;
   if (analysisDateInput && !analysisDateInput.value) analysisDateInput.value = today;
   if (analysisMonthInput && !analysisMonthInput.value) analysisMonthInput.value = getCurrentMonthInputValue();
   if (dashboardMonthInput && !dashboardMonthInput.value) dashboardMonthInput.value = getCurrentMonthInputValue();
+  if (insightMonthInput && !insightMonthInput.value) insightMonthInput.value = getCurrentMonthInputValue();
   if (!selectedBudgetMonth) selectedBudgetMonth = getCurrentMonthInputValue();
   if (budgetMonthInput && !budgetMonthInput.value) budgetMonthInput.value = selectedBudgetMonth;
   if (reportMonthInput && !reportMonthInput.value) reportMonthInput.value = getCurrentMonthInputValue();
@@ -633,8 +756,8 @@ function initializeDateFilters() {
 async function fetchExpensesByRange() {
   initializeDateFilters();
 
-  const from = fromDateInput?.value || getTodayInputValue();
-  const to = toDateInput?.value || from;
+  const from = getFilterDateInputValue(fromDateInput, getTodayInputValue());
+  const to = getFilterDateInputValue(toDateInput, from);
 
   if (from > to) {
     showStatus("From date cannot be after the to date.", "error");
@@ -652,8 +775,8 @@ async function fetchExpensesByRange() {
 
     expenses = await res.json();
     historyLabel.textContent = from === to
-      ? `Showing: ${formatFullDate(from)}`
-      : `Showing: ${formatFullDate(from)} to ${formatFullDate(to)}`;
+      ? `Showing: ${formatFilterDate(from)}`
+      : `Showing: ${formatFilterDate(from)} to ${formatFilterDate(to)}`;
     refreshUI();
   } catch (error) {
     console.error("Error fetching expenses by range:", error);
@@ -664,12 +787,23 @@ async function fetchExpensesByRange() {
 }
 
 if (fromDateInput && toDateInput) {
-  fromDateInput.addEventListener("change", fetchExpensesByRange);
-  toDateInput.addEventListener("change", fetchExpensesByRange);
+  bindHistoryDatePicker(fromDateInput, fromDatePickerInput);
+  bindHistoryDatePicker(toDateInput, toDatePickerInput);
+  fromDateInput.addEventListener("change", () => getFilterDateInputValue(fromDateInput, fromDateInput.dataset.isoValue || getTodayInputValue()));
+  toDateInput.addEventListener("change", () => getFilterDateInputValue(toDateInput, toDateInput.dataset.isoValue || getTodayInputValue()));
 }
 
+applyDateFilterBtn?.addEventListener("click", fetchExpensesByRange);
+
+todayDateFilterBtn?.addEventListener("click", () => {
+  const today = getTodayInputValue();
+  setFilterDateInput(fromDateInput, today);
+  setFilterDateInput(toDateInput, today);
+  fetchTodayExpenses();
+});
+
 function syncAnalysisControls() {
-  const mode = analysisModeInput?.value || "date";
+  const mode = analysisModeInput?.value || "month";
   analysisDateControl?.classList.toggle("hidden", mode !== "date");
   analysisMonthControl?.classList.toggle("hidden", mode !== "month");
 }
@@ -678,7 +812,7 @@ async function loadAnalysisExpenses() {
   initializeDateFilters();
   syncAnalysisControls();
 
-  const mode = analysisModeInput?.value || "date";
+  const mode = analysisModeInput?.value || "month";
   let from = analysisDateInput?.value || getTodayInputValue();
   let to = from;
   let label = `Showing spending for ${formatFullDate(from)}`;
@@ -725,6 +859,12 @@ if (dashboardMonthInput) {
   dashboardMonthInput.addEventListener("change", async () => {
     await updateDashboardKpis();
     await loadForecast(getSelectedDashboardMonth());
+  });
+}
+
+if (insightMonthInput) {
+  insightMonthInput.addEventListener("change", () => {
+    updateAiInsights(getSelectedInsightMonth());
   });
 }
 
@@ -893,7 +1033,7 @@ function refreshUI() {
   loadMonthlyTrend();
   loadCurrentBudget();
   loadBudgetAllocations();
-  updateAiInsights();
+  updateAiInsights(getSelectedInsightMonth());
   loadForecast(getSelectedDashboardMonth());
 }
 
@@ -966,7 +1106,7 @@ function renderExpenses() {
 
     li.innerHTML = `
       <span>${formatCurrency(exp.amount)}</span>
-      <span class="tag">${escapeHtml(formatDisplayText(exp.category))}</span>
+      <span class="tag ${getCategoryColorClass(exp.category)}">${escapeHtml(formatDisplayText(exp.category))}</span>
       <span class="expense-subcategory">${escapeHtml(formatDisplayText(exp.subcategory))}</span>
       <span class="type-badge ${getExpenseTypeClass(exp)}">${getExpenseTypeLabel(exp)}</span>
       <span class="expense-date">${dateText}</span>
@@ -1004,7 +1144,7 @@ function renderDashboardRecentExpenses() {
     return;
   }
 
-  expenses.slice(0, 5).forEach(exp => {
+  expenses.slice(0, 2).forEach(exp => {
     const item = document.createElement("li");
     const dateText = new Date(exp.date).toLocaleDateString("default", {
       day: "numeric",
@@ -1342,9 +1482,9 @@ function getMonthTrendText(currentTotal, previousTotal) {
 
   const diff = currentTotal - previousTotal;
   const percent = Math.round((Math.abs(diff) / previousTotal) * 100);
-  if (diff > 0) return `Up ${percent}% vs last month`;
-  if (diff < 0) return `Down ${percent}% vs last month`;
-  return "Flat vs last month";
+  if (diff > 0) return `Up ${percent}% from last month`;
+  if (diff < 0) return `Down ${percent}% from last month`;
+  return "Flat from last month";
 }
 
 function updateDashboardTopCategory(byCategory, currentTotal) {
@@ -1377,9 +1517,15 @@ function updateDashboardPulse({ month, budget, currentTotal, remaining, usedPerc
   const consistencyScore = currentTotal > 0 ? 10 : 5;
   const score = Math.max(0, Math.min(100, budgetScore + savingsScore + forecastScore + consistencyScore));
   const status = usedPercent >= 100 ? "Over Budget" : usedPercent >= 85 ? "Watch" : "On Track";
+  const healthGrade = getFinancialHealthGrade(score);
 
   if (dashboardPulseMonthEl) dashboardPulseMonthEl.textContent = formatMonth(month);
   if (dashboardHealthScoreEl) dashboardHealthScoreEl.textContent = `${score} / 100`;
+  if (dashboardHealthGradeEl) {
+    dashboardHealthGradeEl.textContent = healthGrade.grade;
+    dashboardHealthGradeEl.dataset.gradeColor = healthGrade.color;
+  }
+  if (dashboardHealthStatusEl) dashboardHealthStatusEl.textContent = healthGrade.status;
   if (dashboardPulseBudgetUsedEl) dashboardPulseBudgetUsedEl.textContent = budget ? `${usedPercent}%` : "No budget";
   if (dashboardPulseStatusEl) dashboardPulseStatusEl.textContent = status;
   if (dashboardInsightBudgetEl) {
@@ -1449,11 +1595,12 @@ function updatePieChart() {
         backgroundColor: colors.slice(0, labels.length),
         borderColor: "#ffffff",
         borderWidth: 4,
-        hoverOffset: 16
+        hoverOffset: 8
       }]
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       animation: {
         animateScale: true,
         animateRotate: true,
@@ -1864,10 +2011,23 @@ function renderMonthlyCategoryChart(monthlyData) {
           min: -0.5,
           max: labels.length - 0.5,
           grid: { display: false },
+          afterBuildTicks: axis => {
+            axis.ticks = labels.map((_, index) => ({ value: index }));
+          },
+          title: {
+            display: true,
+            text: "Month",
+            color: "#475467",
+            font: {
+              family: "Inter",
+              size: 12,
+              weight: "800"
+            }
+          },
           ticks: {
             ...getChartTickConfig(),
             stepSize: 1,
-            callback: value => labels[value] || ""
+            callback: value => labels[Math.round(value)] || ""
           }
         },
         y: {
@@ -2069,9 +2229,14 @@ async function loadBudgetAllocations() {
         <div class="budget-allocation-row">
           <span>${formatMonth(budget.month)}</span>
           <strong>${formatCurrency(budget.amount || 0)}</strong>
-          <button class="ghost-btn compact" type="button" onclick="editBudgetAllocation('${budget.month}', ${Number(budget.amount) || 0})">
-            <i data-lucide="pencil"></i>Update
-          </button>
+          <div class="budget-allocation-actions">
+            <button class="ghost-btn compact" type="button" onclick="editBudgetAllocation('${budget.month}', ${Number(budget.amount) || 0})">
+              <i data-lucide="pencil"></i>Update
+            </button>
+            <button class="delete-btn compact" type="button" onclick="deleteBudgetAllocation('${budget.month}')">
+              <i data-lucide="trash-2"></i>Delete
+            </button>
+          </div>
         </div>
       `).join("");
 
@@ -2090,6 +2255,38 @@ async function editBudgetAllocation(month, amount) {
     budgetValueInput.focus();
   }
   await loadCurrentBudget();
+}
+
+async function deleteBudgetAllocation(month) {
+  if (!month || !confirm(`Delete the budget for ${formatMonth(month)}?`)) return;
+
+  try {
+    setLoading(true, "Deleting budget...");
+    const res = await authFetch(`/budget/${encodeURIComponent(month)}`, {
+      method: "DELETE"
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to delete budget");
+    }
+
+    if (selectedBudgetMonth === month) {
+      if (budgetValueInput) budgetValueInput.value = "";
+      await loadCurrentBudget();
+    }
+
+    await loadBudgetAllocations();
+    await loadMonthlyTrend();
+    await updateDashboardKpis();
+    await updateAiInsights(getSelectedInsightMonth());
+    showStatus(`Budget deleted for ${formatMonth(month)}.`, "success");
+  } catch (error) {
+    console.error("Error deleting budget:", error);
+    showStatus("Unable to delete that budget right now.", "error");
+  } finally {
+    setLoading(false);
+  }
 }
     
 
@@ -2137,53 +2334,67 @@ async function exportMonthlyReport() {
 // SMART INSIGHTS LOGIC
 // ==============================
 
-async function updateAiInsights() {
+async function updateAiInsights(month = getSelectedInsightMonth()) {
   try {
-    const [expensesRes, monthlyRes, budgetRes] = await Promise.all([
-      authFetch("/expenses"),
-      authFetch("/expenses/monthly"),
-      authFetch("/budget/current")
-    ]);
-    const allExpenses = await expensesRes.json();
-    const monthlyData = await monthlyRes.json();
-    const budgetData = await budgetRes.json();
-
-    if (!allExpenses || allExpenses.length === 0) {
-      setEmptyAiInsights();
-      return;
+    const selectedMonth = month || getCurrentMonthInputValue();
+    if (insightMonthInput && insightMonthInput.value !== selectedMonth) {
+      insightMonthInput.value = selectedMonth;
     }
 
-    const now = new Date();
-    const currentMonthKey = `${now.getFullYear()}-${String(
-      now.getMonth() + 1
-    ).padStart(2, "0")}`;
-    const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const prevMonthKey = `${prevMonthDate.getFullYear()}-${String(
-      prevMonthDate.getMonth() + 1
-    ).padStart(2, "0")}`;
-    const currentMonth = monthlyData.find(d => d.month === currentMonthKey);
-    const prevMonth = monthlyData.find(d => d.month === prevMonthKey);
-    const currentTotal = currentMonth ? currentMonth.totalSpent : 0;
-    const prevTotal = prevMonth ? prevMonth.totalSpent : 0;
-    const currentMonthExpenses = allExpenses.filter(exp => {
-      const expDate = new Date(exp.date);
-      return (
-        expDate.getFullYear() === now.getFullYear() &&
-        expDate.getMonth() === now.getMonth()
-      );
+    const res = await authFetch(`/expenses/insights?month=${encodeURIComponent(selectedMonth)}`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to load insights");
+    }
+
+    renderInsightText(insightTopCategoryEl, data.topCategoryInsight || "No spending data yet.");
+    renderInsightText(insightMonthlyTrendEl, data.monthlyTrendInsight || "No monthly trend yet.");
+    renderInsightText(insightBudgetWarningEl, data.budgetWarningInsight || "No budget warning yet.", {
+      dangerNumbers: Boolean(data.isBudgetForecastOverrun)
     });
-
-    updateHighestCategoryInsight(currentMonthExpenses, currentTotal);
-    updateMonthlyTrendInsight(currentTotal, prevTotal);
-    updateBudgetWarningInsight(currentTotal, budgetData.budget || 0);
-    updateSavingsInsight(currentMonthExpenses);
-    updatePatternInsight(allExpenses);
-    if (dashboardTopInsightEl && insightTopCategoryEl) {
-      dashboardTopInsightEl.textContent = insightTopCategoryEl.textContent;
+    if (insightOverspendingAlertEl) {
+      renderInsightText(insightOverspendingAlertEl, data.overspendingAlert || "No overspending data yet.", {
+        dangerNumbers: Boolean(data.isOverspending)
+      });
     }
+    renderInsightText(insightCategoryAlertEl, data.categoryOverspendingAlert || "No category overspending alert yet.", {
+      dangerNumbers: Boolean(data.hasCategoryOverspendingAlert)
+    });
+    renderInsightText(insightSavingsEl, data.savingsInsight || "No savings recommendation yet.");
+    renderInsightText(insightForecastedSavingsEl, data.forecastedMonthEndSavingsInsight || "No forecasted savings insight yet.");
+    renderInsightText(insightSpendingEfficiencyEl, data.spendingEfficiencyInsight || "No spending efficiency insight yet.");
+    renderInsightText(insightPatternEl, data.patternInsight || "No spending pattern yet.");
+    if (dashboardTopInsightEl) dashboardTopInsightEl.textContent = data.topCategoryInsight || "No spending insights yet. Add expenses to unlock analysis.";
   } catch (error) {
     console.error("AI insights error:", error);
     setEmptyAiInsights();
+  }
+}
+
+function renderInsightText(element, text, options = {}) {
+  if (!element) return;
+
+  element.textContent = "";
+  const numberPattern = /(₹[\d,]+(?:\.\d+)?|[\d,]+(?:\.\d+)?%)/g;
+  const numberClass = options.dangerNumbers ? "insight-number danger" : "insight-number";
+  let lastIndex = 0;
+
+  String(text).replace(numberPattern, (match, _value, offset) => {
+    if (offset > lastIndex) {
+      element.appendChild(document.createTextNode(String(text).slice(lastIndex, offset)));
+    }
+
+    const numberEl = document.createElement("span");
+    numberEl.className = numberClass;
+    numberEl.textContent = match;
+    element.appendChild(numberEl);
+    lastIndex = offset + match.length;
+    return match;
+  });
+
+  if (lastIndex < String(text).length) {
+    element.appendChild(document.createTextNode(String(text).slice(lastIndex)));
   }
 }
 
@@ -2286,6 +2497,49 @@ function updatePatternInsight(allExpenses) {
   }
 }
 
+function getFinancialHealthGrade(score) {
+  if (score >= 90) {
+    return {
+      grade: "⭐ Excellent",
+      status: "Outstanding Financial Health",
+      color: "green"
+    };
+  }
+  if (score >= 80) {
+    return {
+      grade: "✅ Very Good",
+      status: "Healthy Financial Position",
+      color: "teal"
+    };
+  }
+  if (score >= 70) {
+    return {
+      grade: "👍 Good",
+      status: "Generally On Track",
+      color: "blue"
+    };
+  }
+  if (score >= 60) {
+    return {
+      grade: "⚠ Fair",
+      status: "Needs Attention",
+      color: "amber"
+    };
+  }
+  if (score >= 40) {
+    return {
+      grade: "🔶 At Risk",
+      status: "Budget Concerns",
+      color: "orange"
+    };
+  }
+  return {
+    grade: "🔴 Critical",
+    status: "Immediate Action Required",
+    color: "red"
+  };
+}
+
 function getCategoryTotals(expenseItems) {
   return expenseItems.reduce((totals, exp) => {
     totals[exp.category] = (totals[exp.category] || 0) + Number(exp.amount);
@@ -2297,7 +2551,13 @@ function setEmptyAiInsights() {
   if (insightTopCategoryEl) insightTopCategoryEl.textContent = "No spending data yet.";
   if (insightMonthlyTrendEl) insightMonthlyTrendEl.textContent = "No monthly trend yet.";
   if (insightBudgetWarningEl) insightBudgetWarningEl.textContent = "No budget warning yet.";
+  if (insightOverspendingAlertEl) {
+    insightOverspendingAlertEl.textContent = "No overspending data yet.";
+  }
+  if (insightCategoryAlertEl) insightCategoryAlertEl.textContent = "No category overspending alert yet.";
   if (insightSavingsEl) insightSavingsEl.textContent = "No savings recommendation yet.";
+  if (insightForecastedSavingsEl) insightForecastedSavingsEl.textContent = "No forecasted savings insight yet.";
+  if (insightSpendingEfficiencyEl) insightSpendingEfficiencyEl.textContent = "No spending efficiency insight yet.";
   if (insightPatternEl) insightPatternEl.textContent = "No spending pattern yet.";
   if (dashboardTopInsightEl) dashboardTopInsightEl.textContent = "No spending insights yet. Add expenses to unlock analysis.";
 }
@@ -2414,7 +2674,7 @@ async function setBudget() {
     await loadCurrentBudget();
     await loadBudgetAllocations();
     await loadMonthlyTrend();
-    await updateAiInsights();
+    await updateAiInsights(getSelectedInsightMonth());
     showStatus(`Budget saved for ${formatMonth(month)}.`, "success");
   } catch (error) {
     console.error("Error saving budget:", error);
