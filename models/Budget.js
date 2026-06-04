@@ -3,7 +3,7 @@ const fallbackDb = require("../fallbackDb");
 
 const budgetSchema = new mongoose.Schema({
   userId: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: mongoose.Schema.Types.Mixed,
     ref: "User",
     required: true
   },
@@ -30,10 +30,38 @@ function getBudgetModel() {
   return BudgetModel;
 }
 
+function normalizeUserId(value) {
+  if (global.__DB_FALLBACK__) {
+    return value;
+  }
+
+  if (typeof value === "string" && mongoose.Types.ObjectId.isValid(value)) {
+    return new mongoose.Types.ObjectId(value);
+  }
+
+  return value;
+}
+
+function normalizeUserIdFields(data) {
+  if (!data || data.userId === undefined) {
+    return data;
+  }
+
+  return {
+    ...data,
+    userId: normalizeUserId(data.userId)
+  };
+}
+
 module.exports = {
-  find: query => getBudgetModel().find(query),
-  findOne: async query => getBudgetModel().findOne(query),
+  find: query => getBudgetModel().find(normalizeUserIdFields(query)),
+  findOne: async query => getBudgetModel().findOne(normalizeUserIdFields(query)),
   findOneAndUpdate: async (filter, update, options) =>
-    getBudgetModel().findOneAndUpdate(filter, update, options),
-  findOneAndDelete: async filter => getBudgetModel().findOneAndDelete(filter)
+    getBudgetModel().findOneAndUpdate(
+      normalizeUserIdFields(filter),
+      normalizeUserIdFields(update),
+      options
+    ),
+  findOneAndDelete: async filter =>
+    getBudgetModel().findOneAndDelete(normalizeUserIdFields(filter))
 };

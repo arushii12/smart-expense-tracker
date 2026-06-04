@@ -94,6 +94,11 @@ router.get("/monthly", async (req, res) => {
 // =======================================
 router.post("/", async (req, res) => {
   try {
+    console.log("Budget save request:", {
+      body: req.body,
+      userId: req.user && req.user.id
+    });
+
     const { amount } = req.body;
     const month = req.body.month;
 
@@ -127,6 +132,12 @@ router.post("/", async (req, res) => {
       budget
     });
   } catch (error) {
+    console.error("Budget save failed:", error);
+    console.error("Budget save context:", {
+      body: req.body,
+      userId: req.user && req.user.id
+    });
+
     res.status(500).json({
       message: "Failed to save budget",
       error: error.message
