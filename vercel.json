@@ -12,7 +12,7 @@
   ],
   "routes": [
     {
-      "src": "/(health|auth|expenses|budget|forecast|report|api|profile|uploads)(.*)",
+      "src": "/(health|auth|expenses|budget|income|forecast|report|api|profile|uploads)(.*)",
       "dest": "/api/index.js"
     },
     {

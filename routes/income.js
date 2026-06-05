@@ -7,6 +7,26 @@ const router = express.Router();
 
 router.use(auth);
 
+function sendSuccess(res, status, payload) {
+  return res.status(status).json({
+    success: true,
+    ...payload
+  });
+}
+
+function sendError(res, status, message, error) {
+  const payload = {
+    success: false,
+    message
+  };
+
+  if (process.env.NODE_ENV !== "production" && error) {
+    payload.error = error.message || String(error);
+  }
+
+  return res.status(status).json(payload);
+}
+
 function isValidMonth(value) {
   if (!/^\d{4}-\d{2}$/.test(String(value || ""))) return false;
   const [, month] = String(value).split("-").map(Number);
@@ -39,18 +59,15 @@ router.get("/", async (req, res) => {
   try {
     const month = req.query.month;
     if (!isValidMonth(month)) {
-      return res.status(400).json({ message: "Please select a valid income month." });
+      return sendError(res, 400, "Please select a valid income month.");
     }
 
     const incomes = await Income.find({ userId: req.user.id, month }).sort({ date: 1 });
     const total = incomes.reduce((sum, income) => sum + Number(income.amount || 0), 0);
 
-    res.json({ month, total, incomes });
+    return sendSuccess(res, 200, { month, total, incomes });
   } catch (error) {
-    res.status(500).json({
-      message: "Failed to load additional income",
-      error: error.message
-    });
+    return sendError(res, 500, "Failed to load additional income", error);
   }
 });
 
@@ -61,18 +78,20 @@ router.post("/", async (req, res) => {
     const date = req.body.date;
 
     if (!isValidMonth(month)) {
-      return res.status(400).json({ message: "Please select a valid income month." });
+      return sendError(res, 400, "Please select a valid income month.");
     }
     if (!Number.isFinite(amount) || amount <= 0) {
-      return res.status(400).json({ message: "Income amount must be positive." });
+      return sendError(res, 400, "Income amount must be greater than 0.");
     }
     if (!isValidDate(date)) {
-      return res.status(400).json({ message: "Please select a valid income date." });
+      return sendError(res, 400, "Please select a valid income date.");
     }
     if (!isDateInMonth(date, month)) {
-      return res.status(400).json({
-        message: `Income date must be within ${month}. Select that month before saving income.`
-      });
+      return sendError(
+        res,
+        400,
+        `Income date must be within ${month}. Select that month before saving income.`
+      );
     }
 
     const income = await Income.create({
@@ -83,12 +102,12 @@ router.post("/", async (req, res) => {
       remarks: sanitizeRemarks(req.body.remarks)
     });
 
-    res.json({ message: "Additional income added successfully.", income });
-  } catch (error) {
-    res.status(500).json({
-      message: "Failed to add additional income",
-      error: error.message
+    return sendSuccess(res, 201, {
+      message: "Additional income added successfully.",
+      income
     });
+  } catch (error) {
+    return sendError(res, 500, "Failed to add additional income", error);
   }
 });
 
@@ -100,27 +119,29 @@ router.put("/:id", async (req, res) => {
     });
 
     if (!existingIncome) {
-      return res.status(404).json({ message: "Income entry not found." });
+      return sendError(res, 404, "Income entry not found.");
     }
 
     const amount = Number(req.body.amount);
     const date = req.body.date;
 
     if (!Number.isFinite(amount) || amount <= 0) {
-      return res.status(400).json({ message: "Income amount must be positive." });
+      return sendError(res, 400, "Income amount must be greater than 0.");
     }
     if (!isValidDate(date)) {
-      return res.status(400).json({ message: "Please select a valid income date." });
+      return sendError(res, 400, "Please select a valid income date.");
     }
 
     const nextMonth = req.body.month || getMonthFromDate(date);
     if (!isValidMonth(nextMonth)) {
-      return res.status(400).json({ message: "Please select a valid income month." });
+      return sendError(res, 400, "Please select a valid income month.");
     }
     if (!isDateInMonth(date, nextMonth)) {
-      return res.status(400).json({
-        message: `Income date must be within ${nextMonth}. Select that month before saving income.`
-      });
+      return sendError(
+        res,
+        400,
+        `Income date must be within ${nextMonth}. Select that month before saving income.`
+      );
     }
 
     const income = await Income.findOneAndUpdate(
@@ -134,12 +155,12 @@ router.put("/:id", async (req, res) => {
       { new: true }
     );
 
-    res.json({ message: "Additional income updated successfully.", income });
-  } catch (error) {
-    res.status(500).json({
-      message: "Failed to update additional income",
-      error: error.message
+    return sendSuccess(res, 200, {
+      message: "Additional income updated successfully.",
+      income
     });
+  } catch (error) {
+    return sendError(res, 500, "Failed to update additional income", error);
   }
 });
 
@@ -151,15 +172,15 @@ router.delete("/:id", async (req, res) => {
     });
 
     if (!deletedIncome) {
-      return res.status(404).json({ message: "Income entry not found." });
+      return sendError(res, 404, "Income entry not found.");
     }
 
-    res.json({ message: "Additional income deleted successfully.", income: deletedIncome });
-  } catch (error) {
-    res.status(500).json({
-      message: "Failed to delete additional income",
-      error: error.message
+    return sendSuccess(res, 200, {
+      message: "Additional income deleted successfully.",
+      income: deletedIncome
     });
+  } catch (error) {
+    return sendError(res, 500, "Failed to delete additional income", error);
   }
 });
 

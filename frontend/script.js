@@ -523,6 +523,27 @@ async function parseJsonResponse(res) {
   }
 }
 
+async function parseApiJsonResponse(res, fallbackMessage = "Request failed.") {
+  const text = await res.text();
+  let data = {};
+
+  if (!text) {
+    throw new Error(fallbackMessage || "The server returned an empty response.");
+  }
+
+  try {
+    data = JSON.parse(text);
+  } catch (error) {
+    throw new Error(fallbackMessage || "The server returned an invalid response.");
+  }
+
+  if (!res.ok) {
+    throw new Error(data.message || fallbackMessage);
+  }
+
+  return data;
+}
+
 async function login() {
   const email = loginEmailInput.value.trim();
   const password = loginPasswordInput.value;
@@ -2671,11 +2692,7 @@ async function loadAdditionalIncome(month = getSelectedBudgetMonth()) {
 
   try {
     const res = await authFetch(`/income?month=${encodeURIComponent(month)}`);
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.message || "Failed to load additional income");
-    }
+    const data = await parseApiJsonResponse(res, "Failed to load additional income.");
 
     renderAdditionalIncome(data.incomes || [], Number(data.total) || 0);
   } catch (error) {
@@ -2826,11 +2843,7 @@ async function saveIncome() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ amount, date, remarks, month })
     });
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.message || "Failed to save income");
-    }
+    await parseApiJsonResponse(res, "Failed to save income.");
 
     closeIncomeModal();
     await refreshAfterIncomeChange(month);
@@ -2847,17 +2860,13 @@ async function deleteIncome(id) {
   try {
     setLoading(true, "Deleting income...");
     const res = await authFetch(`/income/${encodeURIComponent(id)}`, { method: "DELETE" });
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.message || "Failed to delete income");
-    }
+    await parseApiJsonResponse(res, "Failed to delete income.");
 
     await refreshAfterIncomeChange(getSelectedBudgetMonth());
     showStatus("Additional income deleted.", "success");
   } catch (error) {
     console.error("Income delete error:", error);
-    showStatus("Unable to delete that income entry right now.", "error");
+    showStatus(error.message || "Unable to delete that income entry right now.", "error");
   } finally {
     setLoading(false);
   }
