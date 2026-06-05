@@ -8,6 +8,7 @@ let currentReceiptScan = null;
 let selectedReceiptFile = null;
 let expenseChart = null;
 let barChart = null;
+let monthlyExpenseProgressChart = null;
 let monthlyChart = null;
 let monthlyCategoryChart = null;
 let editingExpenseId = null;
@@ -75,6 +76,10 @@ const analysisMonthInput = document.getElementById("analysisMonth");
 const analysisDateControl = document.getElementById("analysisDateControl");
 const analysisMonthControl = document.getElementById("analysisMonthControl");
 const analysisLabel = document.getElementById("analysisLabel");
+const expenseChartEmptyEl = document.getElementById("expenseChartEmpty");
+const monthlyExpenseProgressWarningEl = document.getElementById("monthlyExpenseProgressWarning");
+const monthlyExpenseProgressLabelEl = document.getElementById("monthlyExpenseProgressLabel");
+const monthlyExpenseProgressUtilizationEl = document.getElementById("monthlyExpenseProgressUtilization");
 
 const authPage = document.getElementById("authPage");
 const dashboardPage = document.getElementById("dashboardPage");
@@ -135,6 +140,21 @@ const forecastRiskLevelEl = document.getElementById("forecastRiskLevel");
 const forecastExplanationEl = document.getElementById("forecastExplanation");
 
 // ==============================
+// FINANCIAL STATEMENT DOM ELEMENTS
+// ==============================
+
+const statementFromMonthInput = document.getElementById("statementFromMonth");
+const statementToMonthInput = document.getElementById("statementToMonth");
+const statementApplyBtn = document.getElementById("statementApplyBtn");
+const statementPdfBtn = document.getElementById("statementPdfBtn");
+const statementTotalBudgetEl = document.getElementById("statementTotalBudget");
+const statementTotalExpensesEl = document.getElementById("statementTotalExpenses");
+const statementTotalSavingsEl = document.getElementById("statementTotalSavings");
+const statementAverageSavingsEl = document.getElementById("statementAverageSavings");
+const statementTableBody = document.getElementById("statementTableBody");
+const statementEmptyStateEl = document.getElementById("statementEmptyState");
+
+// ==============================
 // APP SHELL DOM ELEMENTS
 // ==============================
 
@@ -167,6 +187,7 @@ const dashboardInsightLargestEl = document.getElementById("dashboardInsightLarge
 const dashboardInsightForecastEl = document.getElementById("dashboardInsightForecast");
 
 const pathViewMap = {
+  "/financial-statement": "financial-statement",
   "/workflow-guide": "workflow-guide",
   "/user-guide": "workflow-guide"
 };
@@ -252,7 +273,11 @@ function setActiveView(viewName, options = {}) {
   });
 
   if (syncRoute) {
-    const nextPath = requestedView === "workflow-guide" ? "/workflow-guide" : "/";
+    const nextPath = requestedView === "workflow-guide"
+      ? "/workflow-guide"
+      : requestedView === "financial-statement"
+        ? "/financial-statement"
+        : "/";
     if (window.location.pathname !== nextPath) {
       window.history.pushState({ view: requestedView }, "", nextPath);
     }
@@ -267,9 +292,14 @@ function setActiveView(viewName, options = {}) {
     updateAiInsights(getSelectedInsightMonth());
   }
 
+  if (requestedView === "financial-statement") {
+    loadFinancialStatement();
+  }
+
   setTimeout(() => {
     if (expenseChart) expenseChart.resize();
     if (barChart) barChart.resize();
+    if (monthlyExpenseProgressChart) monthlyExpenseProgressChart.resize();
     if (monthlyChart) monthlyChart.resize();
     if (monthlyCategoryChart) monthlyCategoryChart.resize();
     renderIcons();
@@ -751,6 +781,13 @@ function initializeDateFilters() {
   if (!selectedBudgetMonth) selectedBudgetMonth = getCurrentMonthInputValue();
   if (budgetMonthInput && !budgetMonthInput.value) budgetMonthInput.value = selectedBudgetMonth;
   if (reportMonthInput && !reportMonthInput.value) reportMonthInput.value = getCurrentMonthInputValue();
+  if (statementToMonthInput && !statementToMonthInput.value) statementToMonthInput.value = getCurrentMonthInputValue();
+  if (statementFromMonthInput && !statementFromMonthInput.value) {
+    const now = new Date();
+    const startMonth = new Date(now.getFullYear(), Math.max(now.getMonth() - 5, 0), 1);
+    statementFromMonthInput.value =
+      `${startMonth.getFullYear()}-${String(startMonth.getMonth() + 1).padStart(2, "0")}`;
+  }
 }
 
 async function fetchExpensesByRange() {
@@ -826,17 +863,48 @@ async function loadAnalysisExpenses() {
   }
 
   try {
-    const res = await authFetch(`/expenses/range?from=${from}&to=${to}`);
+    const chartMonth = mode === "month"
+      ? analysisMonthInput?.value || getCurrentMonthInputValue()
+      : String(from).slice(0, 7);
+    const progressRange = getMonthDateRange(chartMonth);
+    const analysisPath = `/expenses/range?from=${from}&to=${to}`;
+    const progressPath = `/expenses/range?from=${progressRange.start}&to=${progressRange.end}`;
+    const shouldFetchProgressSeparately = analysisPath !== progressPath;
+    const requests = [
+      authFetch(analysisPath),
+      authFetch(`/budget/current?month=${encodeURIComponent(chartMonth)}`)
+    ];
+
+    if (shouldFetchProgressSeparately) {
+      requests.push(authFetch(progressPath));
+    }
+
+    const [res, budgetRes, progressRes] = await Promise.all(requests);
 
     if (!res.ok) {
       const data = await res.json();
       throw new Error(data.message || "Failed to load analysis data");
     }
+    if (!budgetRes.ok) {
+      const data = await budgetRes.json();
+      throw new Error(data.message || "Failed to load budget data");
+    }
+    if (progressRes && !progressRes.ok) {
+      const data = await progressRes.json();
+      throw new Error(data.message || "Failed to load monthly progress data");
+    }
 
     analysisExpenses = await res.json();
+    const budgetData = await budgetRes.json();
+    const monthlyProgressExpenses = progressRes
+      ? await progressRes.json()
+      : analysisExpenses;
     if (analysisLabel) analysisLabel.textContent = label;
+    if (monthlyExpenseProgressLabelEl) {
+      monthlyExpenseProgressLabelEl.textContent = `Showing spending for ${formatMonth(chartMonth)}`;
+    }
     updatePieChart();
-    updateBarChart();
+    updateMonthlyExpenseProgressChart(chartMonth, monthlyProgressExpenses, Number(budgetData.budget) || 0);
   } catch (error) {
     console.error("Analysis chart error:", error);
     showStatus("Unable to load spending overview for that selection.", "error");
@@ -874,6 +942,24 @@ if (budgetMonthInput) {
     await loadCurrentBudget();
   });
 }
+
+if (statementApplyBtn) {
+  statementApplyBtn.addEventListener("click", loadFinancialStatement);
+}
+
+if (statementPdfBtn) {
+  statementPdfBtn.addEventListener("click", exportFinancialStatementPdf);
+}
+
+[statementFromMonthInput, statementToMonthInput].forEach(input => {
+  if (input) {
+    input.addEventListener("change", () => {
+      if (document.getElementById("view-financial-statement")?.classList.contains("active")) {
+        loadFinancialStatement();
+      }
+    });
+  }
+});
 
 bindExclusiveChecks(essentialCheck, nonEssentialCheck);
 
@@ -1601,8 +1687,13 @@ function updatePieChart() {
 
   if (data.length === 0) {
     if (expenseChart) expenseChart.destroy();
+    if (expenseChartEmptyEl) expenseChartEmptyEl.classList.remove("hidden");
+    canvas.classList.add("hidden");
     return;
   }
+
+  if (expenseChartEmptyEl) expenseChartEmptyEl.classList.add("hidden");
+  canvas.classList.remove("hidden");
 
   const colors = [
     "#0f766e",
@@ -1767,6 +1858,197 @@ function updatePieChart() {
   });
 }
 
+// ==============================
+// MONTHLY EXPENSE PROGRESS CHART
+// ==============================
+
+function updateMonthlyExpenseProgressChart(monthValue, monthExpenses = [], monthlyBudget = 0) {
+  const canvas = document.getElementById("monthlyExpenseProgressChart");
+  if (!canvas) return;
+
+  const month = /^\d{4}-\d{2}$/.test(monthValue || "")
+    ? monthValue
+    : getCurrentMonthInputValue();
+  const [year, monthNumber] = month.split("-").map(Number);
+  const daysInMonth = new Date(year, monthNumber, 0).getDate();
+  const today = new Date();
+  const selectedMonthStart = new Date(year, monthNumber - 1, 1);
+  const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const visibleExpenseDays = selectedMonthStart.getTime() === currentMonthStart.getTime()
+    ? today.getDate()
+    : selectedMonthStart < currentMonthStart
+      ? daysInMonth
+      : 0;
+  const labels = Array.from({ length: daysInMonth }, (_, index) => String(index + 1));
+  const dailyTotals = Array(daysInMonth).fill(0);
+
+  monthExpenses.forEach(exp => {
+    const dateKey = String(exp.date || "").slice(0, 10);
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
+    if (!match || `${match[1]}-${match[2]}` !== month) return;
+
+    const day = Number(match[3]);
+    if (day >= 1 && day <= daysInMonth) {
+      dailyTotals[day - 1] += Number(exp.amount) || 0;
+    }
+  });
+
+  let runningTotal = 0;
+  const cumulativeTotals = dailyTotals.map((amount, index) => {
+    if (index + 1 > visibleExpenseDays) return null;
+    runningTotal += amount;
+    return runningTotal;
+  });
+  const budget = Math.max(Number(monthlyBudget) || 0, 0);
+  const budgetLine = labels.map(() => budget);
+  const actualTotal = cumulativeTotals.reduce((latestTotal, total) =>
+    total === null ? latestTotal : Number(total) || 0, 0
+  );
+  const utilizationPercent = budget > 0 ? Math.round((actualTotal / budget) * 100) : 0;
+  const exceededDayIndex = budget > 0
+    ? cumulativeTotals.findIndex(total => Number(total) > budget)
+    : -1;
+
+  if (monthlyExpenseProgressUtilizationEl) {
+    monthlyExpenseProgressUtilizationEl.textContent =
+      `Actual ${formatCurrency(actualTotal)} / Budget ${formatCurrency(budget)} • ${utilizationPercent}% used`;
+  }
+
+  if (monthlyExpenseProgressWarningEl) {
+    monthlyExpenseProgressWarningEl.classList.toggle("hidden", exceededDayIndex === -1);
+    monthlyExpenseProgressWarningEl.textContent = exceededDayIndex === -1
+      ? "⚠ Budget crossed on Day X"
+      : `⚠ Budget crossed on Day ${exceededDayIndex + 1}`;
+  }
+
+  const ctx = canvas.getContext("2d");
+  const expenseGradient = ctx.createLinearGradient(0, 0, 0, 280);
+  expenseGradient.addColorStop(0, "rgba(15, 118, 110, 0.18)");
+  expenseGradient.addColorStop(1, "rgba(15, 118, 110, 0)");
+  const weeklyTicks = new Set([1, 7, 14, 21, 28, daysInMonth]);
+
+  if (monthlyExpenseProgressChart) monthlyExpenseProgressChart.destroy();
+
+  monthlyExpenseProgressChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Actual Expenses",
+          data: cumulativeTotals,
+          borderColor: "#0f766e",
+          backgroundColor: expenseGradient,
+          borderWidth: 3,
+          fill: true,
+          pointBackgroundColor: cumulativeTotals.map((_, index) =>
+            index === exceededDayIndex ? "#d97706" : "#0f766e"
+          ),
+          pointBorderColor: cumulativeTotals.map((_, index) =>
+            index === exceededDayIndex ? "#ffffff" : "#ffffff"
+          ),
+          pointBorderWidth: 2,
+          pointRadius: cumulativeTotals.map((total, index) =>
+            index === exceededDayIndex && total !== null ? 6 : 0
+          ),
+          pointHoverRadius: cumulativeTotals.map((total, index) =>
+            index === exceededDayIndex && total !== null ? 8 : 5
+          ),
+          stepped: "after",
+          tension: 0
+        },
+        {
+          label: "Monthly Budget",
+          data: budgetLine,
+          borderColor: "#1d4ed8",
+          borderDash: [8, 6],
+          borderWidth: 2,
+          fill: false,
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          tension: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+      animation: {
+        duration: 900,
+        easing: "easeOutQuart"
+      },
+      plugins: {
+        legend: getChartLegendConfig(),
+        tooltip: {
+          backgroundColor: "rgba(17, 24, 39, 0.94)",
+          titleColor: "#ffffff",
+          bodyColor: "#ffffff",
+          padding: 14,
+          cornerRadius: 10,
+          callbacks: {
+            title(items) {
+              const day = Number(items[0]?.label || 1);
+              const date = `${month}-${String(day).padStart(2, "0")}`;
+              return formatFullDate(date);
+            },
+            label(context) {
+              if (context.dataset.label === "Monthly Budget") {
+                return `Budget amount: ${formatCurrency(context.raw)}`;
+              }
+              return `Cumulative expense: ${formatCurrency(context.raw)}`;
+            }
+          }
+        }
+      },
+      layout: {
+        padding: {
+          top: 8,
+          right: 16,
+          bottom: 4,
+          left: 4
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          title: {
+            display: true,
+            text: "Day of month",
+            color: "#475467",
+            font: {
+              family: "Inter",
+              size: 12,
+              weight: "800"
+            }
+          },
+          ticks: {
+            ...getChartTickConfig(),
+            autoSkip: false,
+            maxRotation: 0,
+            callback: value => {
+              const day = Number(labels[value]);
+              return weeklyTicks.has(day) ? day : "";
+            }
+          }
+        },
+        y: {
+          beginAtZero: true,
+          border: { display: false },
+          grid: { color: "rgba(228, 231, 236, 0.9)" },
+          ticks: {
+            ...getChartTickConfig(),
+            callback: value => formatCurrency(value)
+          }
+        }
+      }
+    }
+  });
+}
+
 
 // ==============================
 // TOP CATEGORY
@@ -1828,6 +2110,30 @@ async function loadMonthlyTrend() {
     const savingTotals = latestMonths.map((month, index) =>
       Math.max((budgetTotals[index] || 0) - (expenseTotalsByMonth[month] || 0), 0)
     );
+    const isOverBudget = latestMonths.map((_, index) =>
+      budgetTotals[index] > 0 && expenseTotals[index] > budgetTotals[index]
+    );
+    const momChanges = expenseTotals.map((amount, index) => {
+      if (index === 0) return null;
+      const previousAmount = expenseTotals[index - 1];
+      if (previousAmount === 0) {
+        return amount === 0
+          ? { label: "0%", color: "#16a34a" }
+          : { label: "↑ 100%", color: isOverBudget[index] ? "#dc2626" : "#d97706" };
+      }
+
+      const percent = Math.round(((amount - previousAmount) / previousAmount) * 100);
+      if (percent <= 0) {
+        return { label: `↓ ${Math.abs(percent)}%`, color: "#16a34a" };
+      }
+      return {
+        label: `↑ ${percent}%`,
+        color: isOverBudget[index] ? "#dc2626" : "#d97706"
+      };
+    });
+    const monthlyTrendLabelPlugin = createMonthlyTrendLabelPlugin({
+      momChanges
+    });
 
     const canvas = document.getElementById("monthlyChart");
     if (!canvas) return;
@@ -1856,9 +2162,15 @@ async function loadMonthlyTrend() {
           {
             label: "Expenses",
             data: expenseTotals,
-            backgroundColor: "rgba(220, 38, 38, 0.78)",
-            borderColor: "#dc2626",
-            borderWidth: 1,
+            backgroundColor: expenseTotals.map((_, index) =>
+              isOverBudget[index] ? "rgba(220, 38, 38, 0.86)" : "rgba(217, 119, 6, 0.78)"
+            ),
+            borderColor: expenseTotals.map((_, index) =>
+              isOverBudget[index] ? "#dc2626" : "#d97706"
+            ),
+            borderWidth: expenseTotals.map((_, index) =>
+              isOverBudget[index] ? 2 : 1
+            ),
             borderRadius: 0,
             borderSkipped: false,
             categoryPercentage: 0.58,
@@ -1876,6 +2188,25 @@ async function loadMonthlyTrend() {
             categoryPercentage: 0.58,
             barPercentage: 0.72,
             maxBarThickness: 22
+          },
+          {
+            type: "line",
+            label: "Expense Trend",
+            data: expenseTotals,
+            borderColor: "#0f766e",
+            backgroundColor: "#0f766e",
+            borderDash: [3, 4],
+            borderWidth: 1.5,
+            pointBackgroundColor: expenseTotals.map((_, index) =>
+              isOverBudget[index] ? "#dc2626" : momChanges[index]?.color || "#0f766e"
+            ),
+            pointBorderColor: "#ffffff",
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            fill: false,
+            tension: 0,
+            order: 0
           }
         ]
       },
@@ -1888,6 +2219,9 @@ async function loadMonthlyTrend() {
         },
         plugins: {
           legend: getChartLegendConfig(),
+          monthlyTrendLabels: {
+            enabled: true
+          },
           tooltip: {
             backgroundColor: "rgba(17, 24, 39, 0.94)",
             titleColor: "#ffffff",
@@ -1895,13 +2229,24 @@ async function loadMonthlyTrend() {
             padding: 14,
             cornerRadius: 12,
             callbacks: {
-              label: ctx => `${ctx.dataset.label}: ${formatCurrency(ctx.raw)}`
+              label: ctx => {
+                const label = `${ctx.dataset.label}: ${formatCurrency(ctx.raw)}`;
+                if (ctx.dataset.label !== "Expenses") return label;
+                return isOverBudget[ctx.dataIndex]
+                  ? `${label} (Over budget)`
+                  : label;
+              },
+              afterBody(items) {
+                const item = items.find(ctx => ctx.dataset.label === "Expenses");
+                const mom = item ? momChanges[item.dataIndex] : null;
+                return mom ? [`MoM change: ${mom.label}`] : [];
+              }
             }
           }
         },
         layout: {
           padding: {
-            top: 14,
+            top: 46,
             right: 18,
             bottom: 6,
             left: 8
@@ -1915,7 +2260,8 @@ async function loadMonthlyTrend() {
             ticks: {
               ...getChartTickConfig(),
               callback: value => formatCurrency(value)
-            }
+            },
+            suggestedMax: Math.max(...budgetTotals, ...expenseTotals, ...savingTotals, 0) * 1.22
           },
           x: {
             border: { display: false },
@@ -1923,12 +2269,50 @@ async function loadMonthlyTrend() {
             ticks: getChartTickConfig()
           }
         }
-      }
+      },
+      plugins: [monthlyTrendLabelPlugin]
     });
 
   } catch (err) {
     console.error("Monthly trend error:", err);
   }
+}
+
+function createMonthlyTrendLabelPlugin({ momChanges }) {
+  return {
+    id: "monthlyTrendLabels",
+    afterDatasetsDraw(chart) {
+      const options = chart.options.plugins?.monthlyTrendLabels;
+      if (!options?.enabled) return;
+
+      const { ctx, chartArea } = chart;
+      const momFontSize = chart.width < 520 ? 9 : 10;
+
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+
+      const trendMeta = chart.getDatasetMeta(chart.data.datasets.findIndex(dataset => dataset.label === "Expense Trend"));
+      if (trendMeta && !trendMeta.hidden) {
+        ctx.font = `800 ${momFontSize}px Inter, sans-serif`;
+
+        trendMeta.data.forEach((point, dataIndex) => {
+          if (dataIndex === 0 || !momChanges[dataIndex]) return;
+
+          const previousPoint = trendMeta.data[dataIndex - 1];
+          if (!previousPoint) return;
+
+          const x = (previousPoint.x + point.x) / 2;
+          const y = Math.max(((previousPoint.y + point.y) / 2) - 8, chartArea.top + 10);
+
+          ctx.fillStyle = momChanges[dataIndex].color;
+          ctx.fillText(momChanges[dataIndex].label, x, y);
+        });
+      }
+
+      ctx.restore();
+    }
+  };
 }
 
 function renderMonthlyCategoryChart(monthlyData) {
@@ -2361,6 +2745,129 @@ async function exportMonthlyReport() {
 }
 
 // ==============================
+// FINANCIAL STATEMENT
+// ==============================
+
+function getFinancialStatementQuery() {
+  initializeDateFilters();
+  const fromMonth = statementFromMonthInput?.value || "";
+  const toMonth = statementToMonthInput?.value || "";
+  const params = new URLSearchParams();
+
+  if (fromMonth) params.set("fromMonth", fromMonth);
+  if (toMonth) params.set("toMonth", toMonth);
+
+  return params.toString();
+}
+
+async function loadFinancialStatement() {
+  if (!statementTableBody) return;
+
+  try {
+    const query = getFinancialStatementQuery();
+
+    if (statementFromMonthInput?.value && statementToMonthInput?.value &&
+      statementFromMonthInput.value > statementToMonthInput.value) {
+      showStatus("From month cannot be after the to month.", "error");
+      return;
+    }
+
+    setLoading(true, "Loading financial statement...");
+    const res = await authFetch(`/api/financial-statement${query ? `?${query}` : ""}`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to load financial statement");
+    }
+
+    renderFinancialStatement(data);
+  } catch (error) {
+    console.error("Financial statement error:", error);
+    showStatus("Unable to load financial statement right now.", "error");
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderStatementAmount(amount) {
+  const value = Number(amount) || 0;
+  const className = value < 0 ? "amount-negative" : value > 0 ? "amount-positive" : "amount-neutral";
+  return `<span class="${className}">${formatCurrency(value)}</span>`;
+}
+
+function renderFinancialStatement(data) {
+  const rows = data.rows || [];
+  const summary = data.summary || {};
+
+  if (statementTotalBudgetEl) statementTotalBudgetEl.textContent = formatCurrency(summary.totalBudget || 0);
+  if (statementTotalExpensesEl) statementTotalExpensesEl.textContent = formatCurrency(summary.totalExpenses || 0);
+  if (statementTotalSavingsEl) {
+    statementTotalSavingsEl.textContent = formatCurrency(summary.totalSavings || 0);
+    statementTotalSavingsEl.classList.toggle("statement-negative", Number(summary.totalSavings) < 0);
+  }
+  if (statementAverageSavingsEl) {
+    statementAverageSavingsEl.textContent = formatCurrency(summary.averageMonthlySavings || 0);
+    statementAverageSavingsEl.classList.toggle("statement-negative", Number(summary.averageMonthlySavings) < 0);
+  }
+
+  statementTableBody.innerHTML = rows.map(row => `
+    <tr class="${row.monthlySavings < 0 || row.cumulativeSavings < 0 ? "statement-row-warning" : ""}">
+      <td data-label="Month"><strong>${escapeHtml(row.monthLabel || formatMonth(row.month))}</strong></td>
+      <td data-label="Monthly Budget">${formatCurrency(row.monthlyBudget)}</td>
+      <td data-label="Monthly Expenses">${formatCurrency(row.monthlyExpenses)}</td>
+      <td data-label="Monthly Savings">${renderStatementAmount(row.monthlySavings)}</td>
+      <td data-label="Cumulative Budget">${formatCurrency(row.cumulativeBudget)}</td>
+      <td data-label="Cumulative Expenses">${formatCurrency(row.cumulativeExpenses)}</td>
+      <td data-label="Cumulative Savings">${renderStatementAmount(row.cumulativeSavings)}</td>
+    </tr>
+  `).join("");
+
+  if (statementEmptyStateEl) {
+    statementEmptyStateEl.classList.toggle("hidden", rows.length > 0);
+  }
+}
+
+async function exportFinancialStatementPdf() {
+  try {
+    const query = getFinancialStatementQuery();
+
+    if (statementFromMonthInput?.value && statementToMonthInput?.value &&
+      statementFromMonthInput.value > statementToMonthInput.value) {
+      showStatus("From month cannot be after the to month.", "error");
+      return;
+    }
+
+    setLoading(true, "Preparing financial statement PDF...");
+    const res = await authFetch(`/api/financial-statement/pdf${query ? `?${query}` : ""}`);
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.message || "Failed to export financial statement");
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const suffix = statementFromMonthInput?.value && statementToMonthInput?.value
+      ? `${statementFromMonthInput.value}-to-${statementToMonthInput.value}`
+      : getCurrentMonthInputValue();
+
+    link.href = url;
+    link.download = `financial-statement-${suffix}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    showStatus("Financial statement downloaded successfully.", "success");
+  } catch (error) {
+    console.error("Financial statement export error:", error);
+    showStatus("Unable to export financial statement right now.", "error");
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ==============================
 // SMART INSIGHTS LOGIC
 // ==============================
 
@@ -2763,6 +3270,7 @@ if (sidebarCollapseToggle) {
     setTimeout(() => {
       if (expenseChart) expenseChart.resize();
       if (barChart) barChart.resize();
+      if (monthlyExpenseProgressChart) monthlyExpenseProgressChart.resize();
       if (monthlyChart) monthlyChart.resize();
       if (monthlyCategoryChart) monthlyCategoryChart.resize();
     }, 240);

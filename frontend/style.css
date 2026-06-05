@@ -1202,6 +1202,18 @@ select:focus {
   height: 292px;
 }
 
+.chart-empty-state {
+  align-items: center;
+  color: var(--muted-strong);
+  display: flex;
+  font-size: 14px;
+  font-weight: 800;
+  height: 100%;
+  justify-content: center;
+  min-height: 180px;
+  text-align: center;
+}
+
 .trend-chart {
   height: 360px;
 }
@@ -1787,8 +1799,42 @@ select:focus {
 }
 
 .chart-panel h3 {
-  font-size: 15px;
-  margin-bottom: 14px;
+  font-size: 17px;
+  margin-bottom: 4px;
+}
+
+.chart-subtitle {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+  margin-bottom: 6px;
+}
+
+.chart-subtitle-bottom {
+  margin: 10px 0 0;
+  text-align: center;
+}
+
+.chart-utilization {
+  color: var(--muted-strong);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+  margin-bottom: 8px;
+}
+
+.budget-crossed-badge {
+  background: var(--warning-soft);
+  border: 1px solid rgba(217, 119, 6, 0.24);
+  border-radius: var(--radius);
+  color: var(--warning);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 10px;
+  padding: 8px 10px;
 }
 
 .wide-chart {
@@ -1797,6 +1843,103 @@ select:focus {
 
 .budget-stats {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.financial-statement-heading {
+  gap: 18px;
+}
+
+.financial-statement-heading p:not(.eyebrow) {
+  margin-top: 4px;
+}
+
+.statement-controls {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.statement-summary-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.statement-summary-grid .metric-card {
+  min-height: 148px;
+}
+
+.statement-summary-grid .metric-value {
+  font-size: clamp(24px, 2vw, 30px);
+}
+
+.statement-card {
+  padding: 22px;
+}
+
+.statement-table-wrap {
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.statement-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 980px;
+  width: 100%;
+}
+
+.statement-table th,
+.statement-table td {
+  border-bottom: 1px solid var(--border);
+  color: var(--muted-strong);
+  font-size: 13px;
+  padding: 14px 12px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.statement-table th {
+  background: var(--surface-soft);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 800;
+  position: sticky;
+  text-transform: uppercase;
+  top: 0;
+  z-index: 1;
+}
+
+.statement-table th:first-child,
+.statement-table td:first-child {
+  text-align: left;
+}
+
+.statement-table tbody tr:hover {
+  background: rgba(15, 118, 110, 0.04);
+}
+
+.statement-row-warning {
+  background: rgba(217, 119, 6, 0.06);
+}
+
+.amount-positive {
+  color: var(--success);
+  font-weight: 800;
+}
+
+.amount-negative,
+.statement-negative {
+  color: var(--error) !important;
+  font-weight: 800;
+}
+
+.amount-neutral {
+  color: var(--muted-strong);
+  font-weight: 800;
 }
 
 .budget-actions {
@@ -2273,35 +2416,52 @@ select:focus {
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
   display: grid;
-  gap: 10px;
+  gap: 18px;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   margin-bottom: 18px;
-  padding: 16px;
+  padding: 18px;
 }
 
-.workflow-strip div {
-  align-items: center;
+.workflow-step {
+  align-items: start;
   background: var(--surface-soft);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--muted-strong);
   display: grid;
-  gap: 8px;
-  justify-items: center;
-  min-height: 92px;
-  padding: 12px 8px;
+  gap: 7px;
+  justify-items: start;
+  min-height: 144px;
+  padding: 14px 12px;
   position: relative;
-  text-align: center;
+  text-align: left;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, background 0.18s ease;
+  width: 100%;
 }
 
-.workflow-strip div:not(:last-child)::after {
-  background: linear-gradient(90deg, var(--primary), var(--accent));
+.workflow-step:not(:last-child)::after {
+  border-bottom: 2px solid var(--accent);
+  border-right: 2px solid var(--accent);
   content: "";
-  height: 2px;
+  height: 12px;
   position: absolute;
-  right: -11px;
-  top: 46px;
+  right: -15px;
+  top: 64px;
+  transform: rotate(-45deg);
   width: 12px;
+  z-index: 2;
+}
+
+.workflow-step:hover {
+  background: #ffffff;
+  border-color: rgba(29, 78, 216, 0.26);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-3px);
+}
+
+.workflow-step:focus-visible {
+  outline: 3px solid rgba(15, 118, 110, 0.24);
+  outline-offset: 3px;
 }
 
 .workflow-strip svg,
@@ -2311,9 +2471,37 @@ select:focus {
   width: 22px;
 }
 
-.workflow-strip span {
+.workflow-step svg {
+  background: var(--accent-soft);
+  border-radius: var(--radius);
+  box-sizing: content-box;
+  padding: 8px;
+}
+
+.workflow-number {
+  align-items: center;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  border-radius: 999px;
+  color: #ffffff;
+  display: inline-flex;
   font-size: 12px;
   font-weight: 800;
+  height: 26px;
+  justify-content: center;
+  min-width: 26px;
+}
+
+.workflow-step strong {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.workflow-step small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 .guide-grid {
@@ -2742,7 +2930,7 @@ body.dark-mode .receipt-review-panel,
 body.dark-mode .receipt-preview-wrapper,
 body.dark-mode .receipt-raw-text,
 body.dark-mode .workflow-strip,
-body.dark-mode .workflow-strip div {
+body.dark-mode .workflow-step {
   background: var(--surface-soft);
   border-color: var(--border);
 }
@@ -2834,7 +3022,7 @@ body.dark-mode .guide-card-accent {
   background: var(--surface);
 }
 
-body.dark-mode .workflow-strip div {
+body.dark-mode .workflow-step {
   background: var(--surface-soft);
 }
 
@@ -2872,6 +3060,20 @@ body.dark-mode .forecast-stat-box:hover {
     0 20px 40px rgba(0, 0, 0, 0.34);
 }
 
+body.dark-mode .statement-table th,
+body.dark-mode .statement-table tbody tr:hover {
+  background: var(--surface-soft);
+}
+
+body.dark-mode .statement-table th,
+body.dark-mode .statement-table td {
+  border-color: var(--border);
+}
+
+body.dark-mode .statement-row-warning {
+  background: rgba(251, 191, 36, 0.08);
+}
+
 body.dark-mode .insight-number.danger {
   color: #fca5a5;
 }
@@ -2884,8 +3086,13 @@ body.dark-mode .guide-icon {
   background: var(--accent-soft);
 }
 
-body.dark-mode .workflow-strip div::after {
-  background: linear-gradient(90deg, #2dd4bf, #60a5fa);
+body.dark-mode .workflow-step:hover {
+  background: #111827;
+  border-color: rgba(147, 197, 253, 0.28);
+}
+
+body.dark-mode .workflow-step::after {
+  border-color: #60a5fa;
 }
 
 body.dark-mode .receipt-upload-box {
@@ -2993,7 +3200,8 @@ body.dark-mode .expense-list-scroll::-webkit-scrollbar-thumb:hover {
   .dashboard-grid,
   .content-grid,
   .guide-hero,
-  .guide-grid {
+  .guide-grid,
+  .statement-summary-grid {
     grid-auto-rows: auto;
     grid-template-columns: 1fr;
   }
@@ -3016,7 +3224,11 @@ body.dark-mode .expense-list-scroll::-webkit-scrollbar-thumb:hover {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .workflow-strip div:nth-child(4)::after {
+  .workflow-step {
+    min-height: 132px;
+  }
+
+  .workflow-step:nth-child(4)::after {
     display: none;
   }
 
@@ -3062,7 +3274,8 @@ body.dark-mode .expense-list-scroll::-webkit-scrollbar-thumb:hover {
   .topbar-actions,
   .analysis-controls,
   .history-controls,
-  .expense-actions {
+  .expense-actions,
+  .statement-controls {
     justify-content: flex-start;
   }
 
@@ -3093,9 +3306,68 @@ body.dark-mode .expense-list-scroll::-webkit-scrollbar-thumb:hover {
   .guide-grid,
   .charts-grid,
   .budget-stats,
-  .forecast-stats {
+  .forecast-stats,
+  .statement-summary-grid {
     grid-template-columns: 1fr;
     margin-top: 0;
+  }
+
+  .statement-controls .compact-field,
+  .statement-controls .primary-btn,
+  .statement-controls .ghost-btn {
+    width: 100%;
+  }
+
+  .statement-card {
+    padding: 18px;
+  }
+
+  .statement-table-wrap {
+    overflow-x: visible;
+  }
+
+  .statement-table {
+    min-width: 0;
+  }
+
+  .statement-table thead {
+    display: none;
+  }
+
+  .statement-table,
+  .statement-table tbody,
+  .statement-table tr,
+  .statement-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .statement-table tr {
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+    padding: 8px 0;
+  }
+
+  .statement-table td {
+    align-items: center;
+    border-bottom: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    text-align: right;
+    white-space: normal;
+  }
+
+  .statement-table td::before {
+    color: var(--muted);
+    content: attr(data-label);
+    font-size: 11px;
+    font-weight: 800;
+    margin-right: 12px;
+    text-align: left;
+    text-transform: uppercase;
   }
 
   .guide-hero {
@@ -3111,16 +3383,29 @@ body.dark-mode .expense-list-scroll::-webkit-scrollbar-thumb:hover {
     grid-template-columns: 1fr;
   }
 
-  .workflow-strip div {
+  .workflow-step {
     align-items: center;
-    grid-template-columns: 34px 1fr;
+    grid-template-columns: 34px 44px minmax(0, 1fr);
     justify-items: start;
-    min-height: 58px;
+    min-height: 86px;
     text-align: left;
   }
 
-  .workflow-strip div::after {
-    display: none;
+  .workflow-step small {
+    grid-column: 3;
+  }
+
+  .workflow-step:not(:last-child)::after {
+    border-bottom: 2px solid var(--accent);
+    border-right: 2px solid var(--accent);
+    bottom: -14px;
+    display: block;
+    height: 12px;
+    left: 50%;
+    right: auto;
+    top: auto;
+    transform: translateX(-50%) rotate(45deg);
+    width: 12px;
   }
 
   .guide-card {

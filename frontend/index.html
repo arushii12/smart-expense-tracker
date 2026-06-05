@@ -74,7 +74,8 @@
         <button class="sidebar-link" type="button" data-view="forecast" title="Forecast"><i data-lucide="trending-up"></i><span class="nav-number">05</span><span class="nav-label">Forecast</span></button>
         <button class="sidebar-link" type="button" data-view="reports" title="Reports"><i data-lucide="file-down"></i><span class="nav-number">06</span><span class="nav-label">Reports</span></button>
         <button class="sidebar-link" type="button" data-view="profile" title="Profile"><i data-lucide="circle-user-round"></i><span class="nav-number">07</span><span class="nav-label">Profile</span></button>
-        <button class="sidebar-link" type="button" data-view="workflow-guide" title="User Guide"><i data-lucide="info"></i><span class="nav-number">08</span><span class="nav-label">User Guide</span></button>
+        <button class="sidebar-link" type="button" data-view="financial-statement" title="Financial Statement"><i data-lucide="table-2"></i><span class="nav-number">08</span><span class="nav-label">Financial Statement</span></button>
+        <button class="sidebar-link" type="button" data-view="workflow-guide" title="User Guide"><i data-lucide="info"></i><span class="nav-number">09</span><span class="nav-label">User Guide</span></button>
       </nav>
 
       <div class="sidebar-footer">
@@ -434,19 +435,24 @@
               </label>
             </div>
           </div>
-          <p id="analysisLabel" class="analysis-label">Showing spending for today</p>
           <div class="charts-grid">
             <div class="chart-panel">
               <h3>Expense Distribution</h3>
+              <p id="analysisLabel" class="analysis-label">Showing spending for today</p>
               <div class="chart-frame compact-chart">
+                <p id="expenseChartEmpty" class="chart-empty-state hidden">No expense for this selection.</p>
                 <canvas id="expenseChart"></canvas>
               </div>
             </div>
             <div class="chart-panel">
-              <h3>Category Spending</h3>
+              <h3>Monthly Expense Progress</h3>
+              <p id="monthlyExpenseProgressLabel" class="analysis-label">Showing spending for selected month</p>
+              <p id="monthlyExpenseProgressUtilization" class="chart-utilization">Actual ₹0 / Budget ₹0 • 0% used</p>
+              <p id="monthlyExpenseProgressWarning" class="budget-crossed-badge hidden">⚠ Budget crossed on Day X</p>
               <div class="chart-frame compact-chart">
-                <canvas id="barChart"></canvas>
+                <canvas id="monthlyExpenseProgressChart"></canvas>
               </div>
+              <p class="chart-subtitle chart-subtitle-bottom">Track cumulative spending against your monthly budget.</p>
             </div>
             <div class="chart-panel wide-chart">
               <h3>Monthly Category Spending (Last 3 Months)</h3>
@@ -614,6 +620,77 @@
         </article>
       </section>
 
+      <section id="view-financial-statement" class="page-view" data-title="Financial Statement">
+        <div class="section-heading financial-statement-heading">
+          <div>
+            <p class="eyebrow">Statement</p>
+            <h2>Financial Statement</h2>
+            <p>Track month-wise budget, expenses, savings, and cumulative savings.</p>
+          </div>
+          <div class="statement-controls">
+            <label class="field compact-field">
+              <span>From Month</span>
+              <input type="month" id="statementFromMonth" />
+            </label>
+            <label class="field compact-field">
+              <span>To Month</span>
+              <input type="month" id="statementToMonth" />
+            </label>
+            <button id="statementApplyBtn" class="primary-btn compact" type="button"><i data-lucide="filter"></i>Apply</button>
+            <button id="statementPdfBtn" class="ghost-btn compact" type="button"><i data-lucide="download"></i>PDF</button>
+          </div>
+        </div>
+
+        <div class="statement-summary-grid">
+          <article class="metric-card success">
+            <i class="metric-icon" data-lucide="wallet-cards"></i>
+            <span class="metric-label">Total Budget</span>
+            <strong id="statementTotalBudget" class="metric-value">&#8377;0</strong>
+          </article>
+          <article class="metric-card danger">
+            <i class="metric-icon" data-lucide="receipt-text"></i>
+            <span class="metric-label">Total Expenses</span>
+            <strong id="statementTotalExpenses" class="metric-value">&#8377;0</strong>
+          </article>
+          <article class="metric-card savings">
+            <i class="metric-icon" data-lucide="piggy-bank"></i>
+            <span class="metric-label">Total Savings</span>
+            <strong id="statementTotalSavings" class="metric-value">&#8377;0</strong>
+          </article>
+          <article class="metric-card info">
+            <i class="metric-icon" data-lucide="trending-up"></i>
+            <span class="metric-label">Average Monthly Savings</span>
+            <strong id="statementAverageSavings" class="metric-value">&#8377;0</strong>
+          </article>
+        </div>
+
+        <article class="card statement-card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Month-wise</p>
+              <h2>Budget, Expenses, and Savings</h2>
+            </div>
+          </div>
+          <div class="statement-table-wrap">
+            <table class="statement-table">
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Monthly Budget</th>
+                  <th>Monthly Expenses</th>
+                  <th>Monthly Savings</th>
+                  <th>Cumulative Budget</th>
+                  <th>Cumulative Expenses</th>
+                  <th>Cumulative Savings</th>
+                </tr>
+              </thead>
+              <tbody id="statementTableBody"></tbody>
+            </table>
+          </div>
+          <p id="statementEmptyState" class="empty-state hidden">No financial statement data is available for this range.</p>
+        </article>
+      </section>
+
       <section id="view-profile" class="page-view" data-title="Profile">
         <article class="card profile-card">
           <div class="card-header">
@@ -663,13 +740,48 @@
         </section>
 
         <section class="workflow-strip" aria-label="Recommended monthly workflow">
-          <div><i data-lucide="wallet-cards"></i><span>Set Budget</span></div>
-          <div><i data-lucide="receipt-text"></i><span>Add Expenses</span></div>
-          <div><i data-lucide="bar-chart-3"></i><span>Track Spending</span></div>
-          <div><i data-lucide="sparkles"></i><span>Review Insights</span></div>
-          <div><i data-lucide="trending-up"></i><span>Check Forecast</span></div>
-          <div><i data-lucide="file-down"></i><span>Generate Report</span></div>
-          <div><i data-lucide="piggy-bank"></i><span>Improve Savings</span></div>
+          <button class="workflow-step" type="button" data-view-target="budget">
+            <span class="workflow-number">1</span>
+            <i data-lucide="wallet-cards"></i>
+            <strong>Set Budget</strong>
+            <small>Define the month’s spending limit.</small>
+          </button>
+          <button class="workflow-step" type="button" data-view-target="expenses">
+            <span class="workflow-number">2</span>
+            <i data-lucide="receipt-text"></i>
+            <strong>Add Expenses</strong>
+            <small>Record transactions as they happen.</small>
+          </button>
+          <button class="workflow-step" type="button" data-view-target="dashboard">
+            <span class="workflow-number">3</span>
+            <i data-lucide="bar-chart-3"></i>
+            <strong>Track Spending</strong>
+            <small>Review totals and budget usage.</small>
+          </button>
+          <button class="workflow-step" type="button" data-view-target="insights">
+            <span class="workflow-number">4</span>
+            <i data-lucide="sparkles"></i>
+            <strong>Review Insights</strong>
+            <small>Spot patterns and warnings.</small>
+          </button>
+          <button class="workflow-step" type="button" data-view-target="forecast">
+            <span class="workflow-number">5</span>
+            <i data-lucide="trending-up"></i>
+            <strong>Check Forecast</strong>
+            <small>See projected month-end spend.</small>
+          </button>
+          <button class="workflow-step" type="button" data-view-target="reports">
+            <span class="workflow-number">6</span>
+            <i data-lucide="file-down"></i>
+            <strong>Generate Report</strong>
+            <small>Download a monthly PDF summary.</small>
+          </button>
+          <button class="workflow-step" type="button" data-view-target="financial-statement">
+            <span class="workflow-number">7</span>
+            <i data-lucide="piggy-bank"></i>
+            <strong>Improve Savings</strong>
+            <small>Compare savings month by month.</small>
+          </button>
         </section>
 
         <section class="guide-grid">

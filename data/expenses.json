@@ -540,5 +540,21 @@
     "extractedMerchant": "",
     "extractedDate": "",
     "date": "2026-06-04T00:00:00.000Z"
+  },
+  {
+    "_id": "cb3beae5-6bac-4fac-b568-b52e95151896",
+    "createdAt": "2026-06-05T13:10:00.512Z",
+    "updatedAt": "2026-06-05T13:10:00.512Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 2000,
+    "category": "Entertainment",
+    "subcategory": "Movie",
+    "isEssential": false,
+    "receiptImageUrl": "",
+    "rawReceiptText": "",
+    "ocrConfidence": 0,
+    "extractedMerchant": "",
+    "extractedDate": "",
+    "date": "2026-06-05T00:00:00.000Z"
   }
 ]
