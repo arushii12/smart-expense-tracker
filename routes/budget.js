@@ -3,6 +3,7 @@ const router = express.Router();
 
 const Budget = require("../models/Budget");
 const Expense = require("../models/Expense");
+const Income = require("../models/Income");
 const auth = require("../middleware/auth");
 
 router.use(auth);
@@ -31,6 +32,23 @@ function getMonthRange(month) {
   };
 }
 
+async function getIncomeTotalsByMonth(userId, monthQuery = {}) {
+  const query = { userId };
+  if (monthQuery && Object.keys(monthQuery).length) {
+    query.month = monthQuery;
+  }
+
+  const incomes = await Income.find(query);
+  return incomes.reduce((totals, income) => {
+    totals[income.month] = (totals[income.month] || 0) + Number(income.amount || 0);
+    return totals;
+  }, {});
+}
+
+function getBaseBudgetAmount(budget) {
+  return budget ? Number(budget.amount) || 0 : 0;
+}
+
 // =======================================
 // GET /budget/current
 // =======================================
@@ -53,11 +71,20 @@ router.get("/current", async (req, res) => {
       userId: req.user.id,
       date: { $gte: start, $lte: end }
     });
+    const incomes = await Income.find({
+      userId: req.user.id,
+      month
+    });
     const spent = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
+    const additionalIncome = incomes.reduce((sum, income) => sum + Number(income.amount), 0);
+    const baseBudget = getBaseBudgetAmount(budget);
+    const availableBudget = baseBudget + additionalIncome;
 
     res.json({
       month,
-      budget: budget ? budget.amount : 0,
+      budget: availableBudget,
+      baseBudget,
+      additionalIncome,
       spent
     });
   } catch (error) {
@@ -73,14 +100,33 @@ router.get("/current", async (req, res) => {
 // =======================================
 router.get("/monthly", async (req, res) => {
   try {
+    const includeIncome = req.query.includeIncome === "true";
     const budgets = await Budget.find({ userId: req.user.id }).sort({
       month: 1
     });
+    const incomeTotalsByMonth = await getIncomeTotalsByMonth(req.user.id);
+    const monthKeys = new Set(budgets.map(budget => budget.month));
 
-    res.json(budgets.map(budget => ({
-      month: budget.month,
-      amount: budget.amount
-    })));
+    if (includeIncome) {
+      Object.keys(incomeTotalsByMonth).forEach(month => monthKeys.add(month));
+    }
+
+    const budgetByMonth = Object.fromEntries(budgets.map(budget => [budget.month, budget]));
+    const response = [];
+
+    for (const month of Array.from(monthKeys).sort()) {
+      const budget = budgetByMonth[month] || null;
+      const additionalIncome = incomeTotalsByMonth[month] || 0;
+      const baseBudget = getBaseBudgetAmount(budget);
+      response.push({
+        month,
+        amount: includeIncome ? baseBudget + additionalIncome : baseBudget,
+        baseBudget,
+        additionalIncome
+      });
+    }
+
+    res.json(response);
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch monthly budgets",
@@ -169,9 +215,23 @@ router.delete("/:month", async (req, res) => {
       });
     }
 
+    const incomes = await Income.find({
+      userId: req.user.id,
+      month
+    });
+    await Promise.all(
+      incomes.map(income =>
+        Income.findOneAndDelete({
+          _id: income._id,
+          userId: req.user.id
+        })
+      )
+    );
+
     res.json({
       message: "Budget deleted successfully",
-      month
+      month,
+      deletedIncomeCount: incomes.length
     });
   } catch (error) {
     res.status(500).json({

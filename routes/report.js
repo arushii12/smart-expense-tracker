@@ -5,6 +5,7 @@ const PDFDocument = require("pdfkit");
 const auth = require("../middleware/auth");
 const Budget = require("../models/Budget");
 const Expense = require("../models/Expense");
+const Income = require("../models/Income");
 const User = require("../models/User");
 
 const router = express.Router();
@@ -163,6 +164,17 @@ function drawSectionTitle(doc, title) {
   doc.moveDown(0.48);
 }
 
+async function getAvailableBudget(userId, month) {
+  const [budgetDoc, incomes] = await Promise.all([
+    Budget.findOne({ userId, month }),
+    Income.find({ userId, month })
+  ]);
+  const additionalIncome = incomes.reduce((sum, income) => sum + Number(income.amount || 0), 0);
+  const baseBudget = budgetDoc ? Number(budgetDoc.amount) || 0 : 0;
+
+  return baseBudget + additionalIncome;
+}
+
 function drawKeyValue(doc, label, value, options = {}) {
   const lineGap = options.lineGap || 0;
   const fontSize = 10;
@@ -196,7 +208,7 @@ router.get("/monthly", async (req, res) => {
     const startOfPreviousMonth = new Date(previousMonthDate.getFullYear(), previousMonthDate.getMonth(), 1);
     const endOfPreviousMonth = new Date(previousMonthDate.getFullYear(), previousMonthDate.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    const [userData, currentExpenses, previousExpenses, budgetDoc] =
+    const [userData, currentExpenses, previousExpenses, budget] =
       await Promise.all([
         User.findById(req.user.id),
         Expense.find({
@@ -207,14 +219,13 @@ router.get("/monthly", async (req, res) => {
           userId: req.user.id,
           date: { $gte: startOfPreviousMonth, $lte: endOfPreviousMonth }
         }),
-        Budget.findOne({ userId: req.user.id, month: monthKey })
+        getAvailableBudget(req.user.id, monthKey)
       ]);
 
     if (!userData) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const budget = budgetDoc ? budgetDoc.amount : 0;
     const totalSpending = currentExpenses.reduce(
       (sum, expense) => sum + Number(expense.amount),
       0

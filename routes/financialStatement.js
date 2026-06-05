@@ -5,6 +5,7 @@ const PDFDocument = require("pdfkit");
 const auth = require("../middleware/auth");
 const Budget = require("../models/Budget");
 const Expense = require("../models/Expense");
+const Income = require("../models/Income");
 
 const router = express.Router();
 
@@ -63,11 +64,15 @@ async function buildFinancialStatement(userId, filters = {}) {
   const { fromMonth, toMonth } = filters;
   const budgetQuery = { userId };
   const expenseQuery = { userId };
+  const incomeQuery = { userId };
 
   if (fromMonth || toMonth) {
     budgetQuery.month = {};
+    incomeQuery.month = {};
     if (fromMonth) budgetQuery.month.$gte = fromMonth;
     if (toMonth) budgetQuery.month.$lte = toMonth;
+    if (fromMonth) incomeQuery.month.$gte = fromMonth;
+    if (toMonth) incomeQuery.month.$lte = toMonth;
   }
 
   if (fromMonth && toMonth) {
@@ -80,25 +85,36 @@ async function buildFinancialStatement(userId, filters = {}) {
     expenseQuery.date = { $lte: getMonthRange(toMonth).end };
   }
 
-  const [budgets, expenses] = await Promise.all([
+  const [budgets, expenses, incomes] = await Promise.all([
     Budget.find(budgetQuery).sort({ month: 1 }),
-    Expense.find(expenseQuery).sort({ date: 1 })
+    Expense.find(expenseQuery).sort({ date: 1 }),
+    Income.find(incomeQuery).sort({ month: 1 })
   ]);
 
   const monthMap = new Map();
 
+  incomes.forEach(income => {
+    const month = income.month;
+    if (!monthMap.has(month)) {
+      monthMap.set(month, { month, monthlyBudget: 0, monthlyExpenses: 0, additionalIncome: 0 });
+    }
+    monthMap.get(month).additionalIncome += Number(income.amount) || 0;
+  });
+
   budgets.forEach(budget => {
     const month = budget.month;
     if (!monthMap.has(month)) {
-      monthMap.set(month, { month, monthlyBudget: 0, monthlyExpenses: 0 });
+      monthMap.set(month, { month, monthlyBudget: 0, monthlyExpenses: 0, additionalIncome: 0 });
     }
-    monthMap.get(month).monthlyBudget += Number(budget.amount) || 0;
+    const row = monthMap.get(month);
+    const savedBudget = Number(budget.amount) || 0;
+    row.monthlyBudget += savedBudget;
   });
 
   expenses.forEach(expense => {
     const month = getMonthKey(expense.date);
     if (!monthMap.has(month)) {
-      monthMap.set(month, { month, monthlyBudget: 0, monthlyExpenses: 0 });
+      monthMap.set(month, { month, monthlyBudget: 0, monthlyExpenses: 0, additionalIncome: 0 });
     }
     monthMap.get(month).monthlyExpenses += Number(expense.amount) || 0;
   });
@@ -108,7 +124,7 @@ async function buildFinancialStatement(userId, filters = {}) {
   const rows = Array.from(monthMap.values())
     .sort((a, b) => a.month.localeCompare(b.month))
     .map(row => {
-      const monthlyBudget = Number(row.monthlyBudget) || 0;
+      const monthlyBudget = (Number(row.monthlyBudget) || 0) + (Number(row.additionalIncome) || 0);
       const monthlyExpenses = Number(row.monthlyExpenses) || 0;
       const monthlySavings = monthlyBudget - monthlyExpenses;
       cumulativeBudget += monthlyBudget;
@@ -204,10 +220,10 @@ router.get("/pdf", async (req, res) => {
 
     const columns = [
       ["Month", 70],
-      ["Budget", 88],
+      ["Available Budget", 88],
       ["Expenses", 88],
       ["Monthly Savings", 104],
-      ["Cum. Budget", 100],
+      ["Cum. Avail. Budget", 100],
       ["Cum. Expenses", 104],
       ["Cum. Savings", 100]
     ];

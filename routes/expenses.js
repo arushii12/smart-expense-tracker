@@ -3,9 +3,21 @@ const router = express.Router();
 
 const Budget = require("../models/Budget");
 const Expense = require("../models/Expense");
+const Income = require("../models/Income");
 const auth = require("../middleware/auth");
 
 router.use(auth);
+
+async function getAvailableBudget(userId, month) {
+  const [budgetDoc, incomes] = await Promise.all([
+    Budget.findOne({ userId, month }),
+    Income.find({ userId, month })
+  ]);
+  const additionalIncome = incomes.reduce((sum, income) => sum + Number(income.amount || 0), 0);
+  const baseBudget = budgetDoc ? Number(budgetDoc.amount) || 0 : 0;
+
+  return baseBudget + additionalIncome;
+}
 
 // =====================================================
 // POST /expenses
@@ -163,7 +175,7 @@ router.get("/insights", async (req, res) => {
     const previousMonth = getPreviousMonth(month);
     const previousRange = getMonthRange(previousMonth);
 
-    const [currentExpenses, previousExpenses, budget] = await Promise.all([
+    const [currentExpenses, previousExpenses, budgetAmount] = await Promise.all([
       Expense.find({
         userId: req.user.id,
         date: { $gte: start, $lte: end }
@@ -172,15 +184,11 @@ router.get("/insights", async (req, res) => {
         userId: req.user.id,
         date: { $gte: previousRange.start, $lte: previousRange.end }
       }),
-      Budget.findOne({
-        userId: req.user.id,
-        month
-      })
+      getAvailableBudget(req.user.id, month)
     ]);
 
     const currentTotal = sumExpenses(currentExpenses);
     const previousTotal = sumExpenses(previousExpenses);
-    const budgetAmount = budget ? Number(budget.amount) : 0;
 
     res.json({
       month,

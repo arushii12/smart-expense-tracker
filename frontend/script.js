@@ -13,6 +13,7 @@ let monthlyChart = null;
 let monthlyCategoryChart = null;
 let editingExpenseId = null;
 let selectedBudgetMonth = "";
+let editingIncomeId = null;
 
 const API_BASE_URL =
   (
@@ -110,6 +111,21 @@ const budgetStatusEl = document.getElementById("budgetStatus");
 const budgetMonthInput = document.getElementById("budgetMonth");
 const budgetValueInput = document.getElementById("budgetValue");
 const budgetAllocationList = document.getElementById("budgetAllocationList");
+const budgetIncomeHelperEl = document.getElementById("budgetIncomeHelper");
+const addIncomeBtn = document.getElementById("addIncomeBtn");
+const incomePanelAddBtn = document.getElementById("incomePanelAddBtn");
+const incomeModal = document.getElementById("incomeModal");
+const incomeModalTitle = document.getElementById("incomeModalTitle");
+const closeIncomeModalBtn = document.getElementById("closeIncomeModalBtn");
+const cancelIncomeBtn = document.getElementById("cancelIncomeBtn");
+const saveIncomeBtn = document.getElementById("saveIncomeBtn");
+const incomeAmountInput = document.getElementById("incomeAmount");
+const incomeDateInput = document.getElementById("incomeDate");
+const incomeRemarksInput = document.getElementById("incomeRemarks");
+const incomeModalStatusEl = document.getElementById("incomeModalStatus");
+const incomeTotalThisMonthEl = document.getElementById("incomeTotalThisMonth");
+const incomeEntryCountEl = document.getElementById("incomeEntryCount");
+const incomeHistoryList = document.getElementById("incomeHistoryList");
 
 // ==============================
 // SMART INSIGHTS DOM ELEMENTS
@@ -939,6 +955,7 @@ if (insightMonthInput) {
 if (budgetMonthInput) {
   budgetMonthInput.addEventListener("change", async () => {
     selectedBudgetMonth = budgetMonthInput.value;
+    syncIncomeDateBounds();
     await loadCurrentBudget();
   });
 }
@@ -949,6 +966,31 @@ if (statementApplyBtn) {
 
 if (statementPdfBtn) {
   statementPdfBtn.addEventListener("click", exportFinancialStatementPdf);
+}
+
+[addIncomeBtn, incomePanelAddBtn].forEach(button => {
+  if (button) {
+    button.addEventListener("click", () => openIncomeModal());
+  }
+});
+
+if (saveIncomeBtn) saveIncomeBtn.addEventListener("click", saveIncome);
+if (closeIncomeModalBtn) closeIncomeModalBtn.addEventListener("click", closeIncomeModal);
+if (cancelIncomeBtn) cancelIncomeBtn.addEventListener("click", closeIncomeModal);
+if (incomeModal) {
+  incomeModal.addEventListener("click", event => {
+    if (event.target === incomeModal) closeIncomeModal();
+  });
+}
+if (incomeAmountInput) {
+  incomeAmountInput.addEventListener("keydown", event => {
+    if (event.key === "Enter") saveIncome();
+  });
+}
+if (incomeRemarksInput) {
+  incomeRemarksInput.addEventListener("keydown", event => {
+    if (event.key === "Enter") saveIncome();
+  });
 }
 
 [statementFromMonthInput, statementToMonthInput].forEach(input => {
@@ -1515,11 +1557,6 @@ async function updateDashboardKpis() {
     totalEl.textContent = formatCurrency(currentTotal);
     if (dashboardExpenseChipEl) {
       const trendText = getMonthTrendText(currentTotal, previousTotal);
-      dashboardExpenseChipEl.textContent = `${currentMonthExpenses.length} transaction${currentMonthExpenses.length === 1 ? "" : "s"} • ${daysRemaining} day${daysRemaining === 1 ? "" : "s"} left • ${trendText}`;
-    }
-
-    if (dashboardExpenseChipEl) {
-      const trendText = getMonthTrendText(currentTotal, previousTotal);
       const dayText = isCurrentDashboardMonth
         ? `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} left`
         : "Completed month";
@@ -2084,7 +2121,7 @@ async function loadMonthlyTrend() {
   try {
     const [expensesRes, budgetsRes] = await Promise.all([
       authFetch("/expenses/monthly"),
-      authFetch("/budget/monthly")
+      authFetch("/budget/monthly?includeIncome=true")
     ]);
     const data = await expensesRes.json();
     const budgetData = await budgetsRes.json();
@@ -2569,11 +2606,14 @@ function getSelectedBudgetMonth() {
     const data = await res.json();
 
     const budget = data.budget || 0;
+    const baseBudget = data.baseBudget ?? budget;
+    const additionalIncome = data.additionalIncome || 0;
     const spent = data.spent || 0;
     const remaining = Math.max(budget - spent, 0);
 
-    if (budgetValueInput) budgetValueInput.value = budget || "";
+    if (budgetValueInput) budgetValueInput.value = baseBudget || "";
     if (budgetAmountEl) budgetAmountEl.textContent = Math.round(budget).toLocaleString("en-IN");
+    if (budgetIncomeHelperEl) budgetIncomeHelperEl.textContent = `${formatCurrency(additionalIncome)} additional income`;
     if (budgetSpentEl) budgetSpentEl.textContent = Math.round(spent).toLocaleString("en-IN");
     if (budgetRemainingEl) budgetRemainingEl.textContent = Math.round(remaining).toLocaleString("en-IN");
     if (dashboardRemainingBudgetEl && month === getCurrentMonthInputValue()) {
@@ -2621,6 +2661,205 @@ budgetBarFill.style.background =
 
   } catch (error) {
     console.error("Error loading budget:", error);
+  } finally {
+    loadAdditionalIncome(getSelectedBudgetMonth());
+  }
+}
+
+async function loadAdditionalIncome(month = getSelectedBudgetMonth()) {
+  if (!incomeHistoryList && !incomeTotalThisMonthEl && !budgetIncomeHelperEl) return;
+
+  try {
+    const res = await authFetch(`/income?month=${encodeURIComponent(month)}`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to load additional income");
+    }
+
+    renderAdditionalIncome(data.incomes || [], Number(data.total) || 0);
+  } catch (error) {
+    console.error("Additional income error:", error);
+    renderAdditionalIncome([], 0);
+  }
+}
+
+function renderAdditionalIncome(incomes, total) {
+  if (budgetIncomeHelperEl) {
+    budgetIncomeHelperEl.textContent = `${formatCurrency(total)} additional income`;
+  }
+  if (incomeTotalThisMonthEl) {
+    incomeTotalThisMonthEl.textContent = formatCurrency(total);
+  }
+  if (incomeEntryCountEl) {
+    incomeEntryCountEl.textContent = incomes.length
+      ? `From ${incomes.length} ${incomes.length === 1 ? "entry" : "entries"}`
+      : "No income entries yet";
+  }
+  if (!incomeHistoryList) return;
+
+  if (!incomes.length) {
+    incomeHistoryList.innerHTML = `<p class="helper-text">No additional income recorded for this month.</p>`;
+    return;
+  }
+
+  incomeHistoryList.innerHTML = `
+    <div class="income-history-row income-history-head" aria-hidden="true">
+      <span>Date</span>
+      <span>Amount</span>
+      <span>Remarks</span>
+      <span>Actions</span>
+    </div>
+    ${incomes.map(income => {
+      const dateValue = new Date(income.date).toISOString().split("T")[0];
+      return `
+        <div class="income-history-row">
+          <span>${formatFullDate(dateValue)}</span>
+          <strong>${formatCurrency(income.amount)}</strong>
+          <span>${escapeHtml(income.remarks || "No remarks")}</span>
+          <div class="income-history-actions">
+            <button class="ghost-btn compact" type="button" onclick="openIncomeModal('${income._id}', ${Number(income.amount) || 0}, '${dateValue}', '${escapeJsString(income.remarks || "")}')">
+              <i data-lucide="pencil"></i>Edit
+            </button>
+            <button class="delete-btn compact" type="button" onclick="deleteIncome('${income._id}')">
+              <i data-lucide="trash-2"></i>Delete
+            </button>
+          </div>
+        </div>
+      `;
+    }).join("")}
+  `;
+  renderIcons();
+}
+
+function escapeJsString(value) {
+  return String(value || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'")
+    .replace(/"/g, "&quot;")
+    .replace(/\r?\n/g, " ");
+}
+
+function getIncomeDateBounds(month = getSelectedBudgetMonth()) {
+  const selectedMonth = /^\d{4}-\d{2}$/.test(month || "")
+    ? month
+    : getCurrentMonthInputValue();
+  const { start, end } = getMonthDateRange(selectedMonth);
+  return { month: selectedMonth, min: start, max: end };
+}
+
+function syncIncomeDateBounds() {
+  if (!incomeDateInput) return getIncomeDateBounds();
+
+  const bounds = getIncomeDateBounds();
+  incomeDateInput.min = bounds.min;
+  incomeDateInput.max = bounds.max;
+
+  if (!incomeDateInput.value || incomeDateInput.value < bounds.min || incomeDateInput.value > bounds.max) {
+    incomeDateInput.value = bounds.min;
+  }
+
+  return bounds;
+}
+
+function openIncomeModal(id = "", amount = "", date = "", remarks = "") {
+  editingIncomeId = id || null;
+  if (incomeModalTitle) incomeModalTitle.textContent = editingIncomeId ? "Edit Income" : "Add Income";
+  if (incomeAmountInput) incomeAmountInput.value = amount || "";
+  const bounds = syncIncomeDateBounds();
+  if (incomeDateInput) {
+    incomeDateInput.value = date && date >= bounds.min && date <= bounds.max
+      ? date
+      : bounds.min;
+  }
+  if (incomeRemarksInput) incomeRemarksInput.value = remarks || "";
+  if (incomeModalStatusEl) incomeModalStatusEl.textContent = "";
+  incomeModal?.classList.remove("hidden");
+  incomeAmountInput?.focus();
+  renderIcons();
+}
+
+function closeIncomeModal() {
+  incomeModal?.classList.add("hidden");
+  editingIncomeId = null;
+  if (incomeModalStatusEl) incomeModalStatusEl.textContent = "";
+}
+
+async function refreshAfterIncomeChange(month = getSelectedBudgetMonth()) {
+  await loadCurrentBudget();
+  await loadBudgetAllocations();
+  await loadMonthlyTrend();
+  await updateDashboardKpis();
+  await updateAiInsights(getSelectedInsightMonth());
+  await loadForecast(getSelectedDashboardMonth());
+  if (document.getElementById("view-financial-statement")?.classList.contains("active")) {
+    await loadFinancialStatement();
+  }
+}
+
+async function saveIncome() {
+  const amount = Number(incomeAmountInput?.value || 0);
+  const date = incomeDateInput?.value || "";
+  const remarks = incomeRemarksInput?.value || "";
+  const month = getSelectedBudgetMonth();
+
+  if (!amount || amount <= 0 || !date) {
+    if (incomeModalStatusEl) incomeModalStatusEl.textContent = "Amount and date are required.";
+    return;
+  }
+  const bounds = syncIncomeDateBounds();
+  if (date < bounds.min || date > bounds.max) {
+    if (incomeModalStatusEl) {
+      incomeModalStatusEl.textContent =
+        `Income date must be within ${formatMonth(bounds.month)}. Select another month at the top to enter older income.`;
+    }
+    return;
+  }
+
+  try {
+    const wasEditing = Boolean(editingIncomeId);
+    if (incomeModalStatusEl) incomeModalStatusEl.textContent = "Saving income...";
+    const path = editingIncomeId ? `/income/${encodeURIComponent(editingIncomeId)}` : "/income";
+    const method = editingIncomeId ? "PUT" : "POST";
+    const res = await authFetch(path, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount, date, remarks, month })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to save income");
+    }
+
+    closeIncomeModal();
+    await refreshAfterIncomeChange(month);
+    showStatus(wasEditing ? "Additional income updated." : "Additional income added.", "success");
+  } catch (error) {
+    console.error("Income save error:", error);
+    if (incomeModalStatusEl) incomeModalStatusEl.textContent = error.message || "Unable to save income.";
+  }
+}
+
+async function deleteIncome(id) {
+  if (!id || !confirm("Delete this additional income entry?")) return;
+
+  try {
+    setLoading(true, "Deleting income...");
+    const res = await authFetch(`/income/${encodeURIComponent(id)}`, { method: "DELETE" });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to delete income");
+    }
+
+    await refreshAfterIncomeChange(getSelectedBudgetMonth());
+    showStatus("Additional income deleted.", "success");
+  } catch (error) {
+    console.error("Income delete error:", error);
+    showStatus("Unable to delete that income entry right now.", "error");
+  } finally {
+    setLoading(false);
   }
 }
 
@@ -2672,7 +2911,7 @@ async function editBudgetAllocation(month, amount) {
 }
 
 async function deleteBudgetAllocation(month) {
-  if (!month || !confirm(`Delete the budget for ${formatMonth(month)}?`)) return;
+  if (!month || !confirm(`Delete the budget for ${formatMonth(month)}? Additional income entries for this month will also be deleted.`)) return;
 
   try {
     setLoading(true, "Deleting budget...");
@@ -2694,7 +2933,10 @@ async function deleteBudgetAllocation(month) {
     await loadMonthlyTrend();
     await updateDashboardKpis();
     await updateAiInsights(getSelectedInsightMonth());
-    showStatus(`Budget deleted for ${formatMonth(month)}.`, "success");
+    const incomeText = data.deletedIncomeCount
+      ? ` Removed ${data.deletedIncomeCount} income entr${data.deletedIncomeCount === 1 ? "y" : "ies"}.`
+      : "";
+    showStatus(`Budget deleted for ${formatMonth(month)}.${incomeText}`, "success");
   } catch (error) {
     console.error("Error deleting budget:", error);
     showStatus("Unable to delete that budget right now.", "error");
@@ -2813,10 +3055,10 @@ function renderFinancialStatement(data) {
   statementTableBody.innerHTML = rows.map(row => `
     <tr class="${row.monthlySavings < 0 || row.cumulativeSavings < 0 ? "statement-row-warning" : ""}">
       <td data-label="Month"><strong>${escapeHtml(row.monthLabel || formatMonth(row.month))}</strong></td>
-      <td data-label="Monthly Budget">${formatCurrency(row.monthlyBudget)}</td>
+      <td data-label="Monthly Available Budget">${formatCurrency(row.monthlyBudget)}</td>
       <td data-label="Monthly Expenses">${formatCurrency(row.monthlyExpenses)}</td>
       <td data-label="Monthly Savings">${renderStatementAmount(row.monthlySavings)}</td>
-      <td data-label="Cumulative Budget">${formatCurrency(row.cumulativeBudget)}</td>
+      <td data-label="Cumulative Available Budget">${formatCurrency(row.cumulativeBudget)}</td>
       <td data-label="Cumulative Expenses">${formatCurrency(row.cumulativeExpenses)}</td>
       <td data-label="Cumulative Savings">${renderStatementAmount(row.cumulativeSavings)}</td>
     </tr>

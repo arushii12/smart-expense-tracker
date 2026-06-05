@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Expense = require("../models/Expense");
 const Budget = require("../models/Budget");
+const Income = require("../models/Income");
 const auth = require("../middleware/auth");
 
 router.use(auth);
@@ -28,6 +29,17 @@ function getRiskLevel({ budget, projectedMonthEndSpending, isEarlyEstimate }) {
   if (ratio >= 1) return "High Risk";
   if (ratio >= 0.85) return "Moderate Risk";
   return "Low Risk";
+}
+
+async function getAvailableBudget(userId, month) {
+  const [budgetDoc, incomes] = await Promise.all([
+    Budget.findOne({ userId, month }),
+    Income.find({ userId, month })
+  ]);
+  const additionalIncome = incomes.reduce((sum, income) => sum + Number(income.amount || 0), 0);
+  const baseBudget = budgetDoc ? Number(budgetDoc.amount) || 0 : 0;
+
+  return baseBudget + additionalIncome;
 }
 
 router.get("/", async (req, res) => {
@@ -62,11 +74,7 @@ router.get("/", async (req, res) => {
       0
     );
 
-    const budgetDoc = await Budget.findOne({
-      userId: req.user.id,
-      month: monthKey
-    });
-    const budget = budgetDoc ? budgetDoc.amount : 0;
+    const budget = await getAvailableBudget(req.user.id, monthKey);
 
     if (spentSoFar === 0) {
       return res.json({

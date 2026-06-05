@@ -72,10 +72,10 @@
         <button class="sidebar-link" type="button" data-view="budget" title="Budget"><i data-lucide="wallet-cards"></i><span class="nav-number">03</span><span class="nav-label">Budget</span></button>
         <button class="sidebar-link" type="button" data-view="insights" title="Insights"><i data-lucide="sparkles"></i><span class="nav-number">04</span><span class="nav-label">Insights</span></button>
         <button class="sidebar-link" type="button" data-view="forecast" title="Forecast"><i data-lucide="trending-up"></i><span class="nav-number">05</span><span class="nav-label">Forecast</span></button>
-        <button class="sidebar-link" type="button" data-view="reports" title="Reports"><i data-lucide="file-down"></i><span class="nav-number">06</span><span class="nav-label">Reports</span></button>
-        <button class="sidebar-link" type="button" data-view="profile" title="Profile"><i data-lucide="circle-user-round"></i><span class="nav-number">07</span><span class="nav-label">Profile</span></button>
-        <button class="sidebar-link" type="button" data-view="financial-statement" title="Financial Statement"><i data-lucide="table-2"></i><span class="nav-number">08</span><span class="nav-label">Financial Statement</span></button>
-        <button class="sidebar-link" type="button" data-view="workflow-guide" title="User Guide"><i data-lucide="info"></i><span class="nav-number">09</span><span class="nav-label">User Guide</span></button>
+        <button class="sidebar-link" type="button" data-view="financial-statement" title="Financial Statement"><i data-lucide="table-2"></i><span class="nav-number">06</span><span class="nav-label">Financial Statement</span></button>
+        <button class="sidebar-link" type="button" data-view="reports" title="Reports"><i data-lucide="file-down"></i><span class="nav-number">07</span><span class="nav-label">Reports</span></button>
+        <button class="sidebar-link" type="button" data-view="workflow-guide" title="User Guide"><i data-lucide="info"></i><span class="nav-number">08</span><span class="nav-label">User Guide</span></button>
+        <button class="sidebar-link" type="button" data-view="profile" title="Profile"><i data-lucide="circle-user-round"></i><span class="nav-number">09</span><span class="nav-label">Profile</span></button>
       </nav>
 
       <div class="sidebar-footer">
@@ -480,14 +480,16 @@
                 <span>Budget Amount</span>
                 <input type="number" id="budgetValue" min="0" step="1" placeholder="Monthly budget" />
               </label>
+              <button id="addIncomeBtn" class="ghost-btn budget-btn" type="button"><i data-lucide="plus"></i>Add Income</button>
               <button class="primary-btn budget-btn" type="button" onclick="setBudget()"><i data-lucide="save"></i>Save Allocation</button>
             </div>
           </div>
 
           <div class="budget-stats">
             <div class="budget-box">
-              <span>Monthly Budget</span>
+              <span>Monthly Available Budget</span>
               <strong>&#8377;<span id="budgetAmount">0</span></strong>
+              <small id="budgetIncomeHelper">&#8377;0 additional income</small>
             </div>
             <div class="budget-box">
               <span>Expenses</span>
@@ -504,6 +506,21 @@
           </div>
           <div class="budget-status" id="budgetStatus"></div>
 
+          <div class="income-panel">
+            <div class="income-summary">
+              <p class="eyebrow">Additional Income This Month</p>
+              <strong id="incomeTotalThisMonth">&#8377;0</strong>
+              <small id="incomeEntryCount">No income entries yet</small>
+            </div>
+            <div class="income-history">
+              <div class="income-history-header">
+                <h3>Additional Income History</h3>
+                <button id="incomePanelAddBtn" class="ghost-btn compact" type="button"><i data-lucide="plus"></i>Add Income</button>
+              </div>
+              <div class="income-history-table" id="incomeHistoryList"></div>
+            </div>
+          </div>
+
           <div class="budget-allocation-panel">
             <div class="budget-allocation-header">
               <div>
@@ -514,6 +531,37 @@
             <div class="budget-allocation-list" id="budgetAllocationList"></div>
           </div>
         </article>
+
+        <div id="incomeModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="incomeModalTitle">
+          <div class="modal-card income-modal-card">
+            <div class="modal-header">
+              <div>
+                <p class="eyebrow">Additional Income</p>
+                <h3 id="incomeModalTitle">Add Income</h3>
+              </div>
+              <button id="closeIncomeModalBtn" class="icon-btn" type="button" aria-label="Close income dialog"><i data-lucide="x"></i></button>
+            </div>
+            <div class="income-form">
+              <label>
+                <span>Amount</span>
+                <input type="number" id="incomeAmount" min="1" step="1" placeholder="&#8377;0" />
+              </label>
+              <label>
+                <span>Date</span>
+                <input type="date" id="incomeDate" />
+              </label>
+              <label class="income-remarks-field">
+                <span>Remarks</span>
+                <input type="text" id="incomeRemarks" maxlength="160" placeholder="Freelance work, interest credit" />
+              </label>
+            </div>
+            <p id="incomeModalStatus" class="helper-text"></p>
+            <div class="modal-actions">
+              <button id="cancelIncomeBtn" class="ghost-btn compact" type="button">Cancel</button>
+              <button id="saveIncomeBtn" class="primary-btn compact" type="button"><i data-lucide="save"></i>Save Income</button>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section id="view-insights" class="page-view" data-title="Insights">
@@ -676,10 +724,10 @@
               <thead>
                 <tr>
                   <th>Month</th>
-                  <th>Monthly Budget</th>
+                  <th>Monthly Available Budget</th>
                   <th>Monthly Expenses</th>
                   <th>Monthly Savings</th>
-                  <th>Cumulative Budget</th>
+                  <th>Cumulative Available Budget</th>
                   <th>Cumulative Expenses</th>
                   <th>Cumulative Savings</th>
                 </tr>
