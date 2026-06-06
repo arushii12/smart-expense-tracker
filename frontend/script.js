@@ -14,6 +14,7 @@ let monthlyCategoryChart = null;
 let editingExpenseId = null;
 let selectedBudgetMonth = "";
 let editingIncomeId = null;
+let subcategorySuggestionsByCategory = {};
 
 const API_BASE_URL =
   (
@@ -42,6 +43,7 @@ const EXPENSE_CATEGORIES = [
 const amountInput = document.getElementById("amount");
 const categoryInput = document.getElementById("category");
 const subcategoryInput = document.getElementById("subcategory");
+const subcategorySuggestionsEl = document.getElementById("subcategorySuggestions");
 const essentialCheck = document.getElementById("essentialCheck");
 const nonEssentialCheck = document.getElementById("nonEssentialCheck");
 const dateInput = document.getElementById("date");
@@ -263,6 +265,7 @@ function showDashboard() {
   setActiveView(getRouteView(), { syncRoute: false });
   initializeDateFilters();
   loadProfile();
+  loadSubcategorySuggestions();
   fetchExpensesByRange();
 }
 
@@ -617,6 +620,8 @@ async function signup() {
 function logout() {
   clearToken();
   expenses = [];
+  subcategorySuggestionsByCategory = {};
+  syncSubcategorySuggestions();
   showAuth("login");
 }
 
@@ -726,6 +731,76 @@ function getCategoryColorClass(category) {
   };
 
   return categoryColorMap[normalized] || "category-default";
+}
+
+async function loadSubcategorySuggestions() {
+  if (!subcategoryInput && !expenseList) return;
+
+  try {
+    const res = await authFetch("/expenses/subcategories");
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to load subcategory suggestions");
+    }
+
+    subcategorySuggestionsByCategory = data.suggestions || {};
+    syncSubcategorySuggestions();
+  } catch (error) {
+    console.error("Subcategory suggestions error:", error);
+    subcategorySuggestionsByCategory = {};
+    syncSubcategorySuggestions();
+  }
+}
+
+function getSubcategorySuggestions(category) {
+  const selectedCategory = String(category || "").trim();
+  if (!selectedCategory) return [];
+
+  const exactSuggestions = subcategorySuggestionsByCategory[selectedCategory];
+  if (exactSuggestions) return exactSuggestions;
+
+  const normalizedCategory = selectedCategory.toLowerCase();
+  const matchedCategory = Object.keys(subcategorySuggestionsByCategory)
+    .find(key => key.toLowerCase() === normalizedCategory);
+
+  return matchedCategory ? subcategorySuggestionsByCategory[matchedCategory] : [];
+}
+
+function getSubcategoryOptionsMarkup(category) {
+  return getSubcategorySuggestions(category)
+    .map(subcategory => `<option value="${escapeHtml(subcategory)}"></option>`)
+    .join("");
+}
+
+function updateSubcategoryDatalist(datalistEl, category) {
+  if (!datalistEl) return;
+  datalistEl.innerHTML = getSubcategoryOptionsMarkup(category);
+}
+
+function syncSubcategorySuggestions() {
+  updateSubcategoryDatalist(subcategorySuggestionsEl, categoryInput?.value);
+}
+
+function rememberSubcategorySuggestion(category, subcategory) {
+  const selectedCategory = String(category || "").trim();
+  const value = String(subcategory || "").trim();
+
+  if (!selectedCategory || !value) return;
+
+  if (!subcategorySuggestionsByCategory[selectedCategory]) {
+    subcategorySuggestionsByCategory[selectedCategory] = [];
+  }
+
+  const exists = subcategorySuggestionsByCategory[selectedCategory]
+    .some(item => item.toLowerCase() === value.toLowerCase());
+
+  if (!exists) {
+    subcategorySuggestionsByCategory[selectedCategory].push(value);
+    subcategorySuggestionsByCategory[selectedCategory].sort((a, b) => a.localeCompare(b));
+  }
+
+  syncSubcategorySuggestions();
 }
 
 function getSelectedExpenseType() {
@@ -1026,6 +1101,11 @@ if (incomeRemarksInput) {
 
 bindExclusiveChecks(essentialCheck, nonEssentialCheck);
 
+if (categoryInput) {
+  categoryInput.addEventListener("change", syncSubcategorySuggestions);
+  syncSubcategorySuggestions();
+}
+
 // ==============================
 // ADD EXPENSE
 // ==============================
@@ -1063,11 +1143,13 @@ async function addExpense() {
       throw new Error(data.message || "Failed to add expense");
     }
 
+    rememberSubcategorySuggestion(data.expense?.category || category, data.expense?.subcategory || subcategory);
     await fetchExpensesByRange();
 
     amountInput.value = "";
     categoryInput.value = "Home";
     subcategoryInput.value = "";
+    syncSubcategorySuggestions();
     if (essentialCheck) essentialCheck.checked = true;
     if (nonEssentialCheck) nonEssentialCheck.checked = false;
     dateInput.value = "";
@@ -1100,6 +1182,7 @@ async function deleteExpense(id) {
     }
 
     expenses = expenses.filter(exp => exp._id !== id);
+    await loadSubcategorySuggestions();
     refreshUI();
     showStatus("Expense deleted.", "success");
   } catch (error) {
@@ -1158,6 +1241,7 @@ async function updateExpense(id) {
     }
 
     editingExpenseId = null;
+    rememberSubcategorySuggestion(data.expense?.category || category, data.expense?.subcategory || subcategory);
 
     await fetchExpensesByRange();
     showStatus("Expense updated successfully.", "success");
@@ -1211,7 +1295,10 @@ function renderExpenses() {
       li.innerHTML = `
         <input type="number" id="editAmount-${exp._id}" value="${exp.amount}" />
         ${getCategorySelectMarkup(`editCategory-${exp._id}`, exp.category)}
-        <input type="text" id="editSubcategory-${exp._id}" value="${escapeHtml(exp.subcategory || "")}" placeholder="Subcategory" />
+        <input type="text" id="editSubcategory-${exp._id}" value="${escapeHtml(exp.subcategory || "")}" list="editSubcategorySuggestions-${exp._id}" placeholder="Subcategory" />
+        <datalist id="editSubcategorySuggestions-${exp._id}">
+          ${getSubcategoryOptionsMarkup(exp.category)}
+        </datalist>
         <input type="date" id="editDate-${exp._id}" value="${inputDate}" />
         <div class="edit-type-controls">
           <label class="check-option">
@@ -1233,6 +1320,12 @@ function renderExpenses() {
         document.getElementById(`editEssential-${exp._id}`),
         document.getElementById(`editNonEssential-${exp._id}`)
       );
+
+      const editCategoryInput = document.getElementById(`editCategory-${exp._id}`);
+      const editSubcategorySuggestionsEl = document.getElementById(`editSubcategorySuggestions-${exp._id}`);
+      editCategoryInput?.addEventListener("change", () => {
+        updateSubcategoryDatalist(editSubcategorySuggestionsEl, editCategoryInput.value);
+      });
 
       li.querySelector(".save-btn").addEventListener("click", () => {
         updateExpense(exp._id);
@@ -1447,6 +1540,7 @@ function applyReceiptToExpenseForm() {
   if (amountInput) amountInput.value = receiptAmountInput?.value || "";
   if (categoryInput) categoryInput.value = receiptCategoryInput?.value || "Miscellaneous";
   if (subcategoryInput) subcategoryInput.value = "Not specified";
+  syncSubcategorySuggestions();
   if (dateInput) dateInput.value = receiptDateInput?.value || "";
   if (essentialCheck) essentialCheck.checked = true;
   if (nonEssentialCheck) nonEssentialCheck.checked = false;

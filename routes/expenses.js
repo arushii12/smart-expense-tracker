@@ -95,6 +95,46 @@ router.get("/", async (req, res) => {
 });
 
 // =====================================================
+// GET /expenses/subcategories
+// =====================================================
+router.get("/subcategories", async (req, res) => {
+  try {
+    const expenses = await Expense.find({ userId: req.user.id });
+    const suggestions = {};
+    const seen = {};
+
+    expenses.forEach(expense => {
+      const category = sanitizeOptionalText(expense.category);
+      const subcategory = sanitizeOptionalText(expense.subcategory);
+
+      if (!category || !subcategory) return;
+
+      if (!suggestions[category]) {
+        suggestions[category] = [];
+        seen[category] = new Set();
+      }
+
+      const normalized = subcategory.toLowerCase();
+      if (seen[category].has(normalized)) return;
+
+      seen[category].add(normalized);
+      suggestions[category].push(subcategory);
+    });
+
+    Object.keys(suggestions).forEach(category => {
+      suggestions[category].sort((a, b) => a.localeCompare(b));
+    });
+
+    res.json({ suggestions });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch subcategory suggestions",
+      error: error.message
+    });
+  }
+});
+
+// =====================================================
 // GET /expenses/summary
 // =====================================================
 router.get("/summary", async (req, res) => {
