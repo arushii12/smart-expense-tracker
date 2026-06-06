@@ -2063,6 +2063,11 @@ select:focus {
   justify-content: flex-end;
 }
 
+#analyticsApplyBtn {
+  position: relative;
+  top: -7px;
+}
+
 .analytics-grid {
   display: grid;
   gap: 16px;
