@@ -2264,6 +2264,25 @@ select:focus {
   color: #2563eb;
 }
 
+.analytics-performance-disclaimer {
+  align-items: flex-start;
+  color: var(--muted);
+  display: flex;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 7px;
+  line-height: 1.5;
+  margin-top: 10px;
+  text-align: left;
+}
+
+.analytics-performance-disclaimer svg {
+  flex: 0 0 auto;
+  height: 15px;
+  margin-top: 1px;
+  width: 15px;
+}
+
 .analytics-insights-card {
   display: grid;
   gap: 12px;

@@ -202,6 +202,7 @@ const analyticsPageDescriptionEl = document.getElementById("analyticsPageDescrip
 const analyticsContextBadgeEl = document.getElementById("analyticsContextBadge");
 const analyticsSummarySectionEl = document.getElementById("analyticsSummarySection");
 const analyticsSummaryStripEl = document.getElementById("analyticsSummaryStrip");
+const analyticsPerformanceDisclaimerEl = document.getElementById("analyticsPerformanceDisclaimer");
 const analyticsInsightsCardEl = document.getElementById("analyticsInsightsCard");
 const analyticsInsightsListEl = document.getElementById("analyticsInsightsList");
 const analyticsSummaryEls = {
@@ -3853,6 +3854,22 @@ function updateAnalyticsSummaryStrip(rows) {
   });
 }
 
+function setAnalyticsPerformanceDisclaimer(rows) {
+  if (!analyticsPerformanceDisclaimerEl || !rows.length) {
+    analyticsPerformanceDisclaimerEl?.classList.add("hidden");
+    return;
+  }
+
+  const currentMonth = getCurrentMonthInputValue();
+  const latestPeriod = rows[rows.length - 1]?.month || "";
+  const period = getAnalyticsPeriod();
+  const includesCurrentMonth = period === "quarterly"
+    ? latestPeriod === getQuarterKey(currentMonth)
+    : latestPeriod === currentMonth;
+
+  analyticsPerformanceDisclaimerEl.classList.toggle("hidden", !includesCurrentMonth);
+}
+
 function updateAnalyticsInsights(rows) {
   if (!analyticsInsightsCardEl || !analyticsInsightsListEl) return;
 
@@ -3919,12 +3936,14 @@ function renderAnalytics(rows) {
 
   if (!hasData) {
     setAnalyticsCurrentMonthNotes(false);
+    setAnalyticsPerformanceDisclaimer([]);
     updateAnalyticsSummaryStrip([]);
     updateAnalyticsInsights([]);
     return;
   }
 
   updateAnalyticsSummaryStrip(visibleRows);
+  setAnalyticsPerformanceDisclaimer(visibleRows);
   updateAnalyticsInsights(visibleRows);
 
   const labels = visibleRows.map(row => row.monthLabel || formatMonth(row.month));
@@ -4145,6 +4164,20 @@ function getTopAnalyticsBreakdownLines(breakdown = {}) {
   return lines;
 }
 
+function getAnalyticsQuarterMonths(label) {
+  const quarterMatch = /^Q([1-4])\s+(\d{4})$/.exec(String(label || "").trim());
+  if (!quarterMatch) return "";
+
+  const monthsByQuarter = {
+    1: "Jan, Feb, Mar",
+    2: "Apr, May, Jun",
+    3: "Jul, Aug, Sep",
+    4: "Oct, Nov, Dec"
+  };
+
+  return `Months: ${monthsByQuarter[quarterMatch[1]]}`;
+}
+
 function renderAnalyticsTrendChart(chartKey, canvasId, labels, rows, config) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
@@ -4288,6 +4321,12 @@ function getAnalyticsChartOptions(bounds, momChanges = null, currentMonthContext
         padding: 12,
         cornerRadius: 12,
         callbacks: {
+          beforeBody(items) {
+            if (getAnalyticsPeriod() !== "quarterly") return [];
+
+            const monthsLine = getAnalyticsQuarterMonths(items[0]?.label);
+            return monthsLine ? [monthsLine] : [];
+          },
           label: ctx => {
             if (currentMonthContext && ctx.datasetIndex === 0 && ctx.dataIndex === currentMonthContext.dataIndex) {
               return `${currentMonthContext.label}: ${formatCurrency(ctx.raw)}`;
