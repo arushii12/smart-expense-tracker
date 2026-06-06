@@ -43,6 +43,34 @@ const ExpenseSchema = new mongoose.Schema({
     type: String,
     default: ""
   },
+  source: {
+    type: String,
+    default: ""
+  },
+  notes: {
+    type: String,
+    default: ""
+  },
+  sourceStatementHash: {
+    type: String,
+    default: ""
+  },
+  sourceTransactionHashes: {
+    type: [String],
+    default: []
+  },
+  sourcePaytmTags: {
+    type: [String],
+    default: []
+  },
+  sourceTransactionDetails: {
+    type: [String],
+    default: []
+  },
+  sourceReferenceNumbers: {
+    type: [String],
+    default: []
+  },
   date: {
     type: Date,
     default: Date.now

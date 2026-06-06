@@ -844,5 +844,548 @@
     "extractedMerchant": "",
     "extractedDate": "",
     "date": "2026-04-20T00:00:00.000Z"
+  },
+  {
+    "_id": "3afe3fbd-3436-441f-bd89-b52098552e98",
+    "createdAt": "2026-06-06T18:47:00.712Z",
+    "updatedAt": "2026-06-06T18:47:00.712Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 1999,
+    "category": "Miscellaneous",
+    "subcategory": "UPI Transaction",
+    "isEssential": false,
+    "date": "2026-06-03T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "05913253924396070e13188b9836cf8c03e64d92c85b012eb2508963cafde33f",
+    "sourceTransactionHashes": [
+      "81e794db3f2a0e1712e91c3087a9316d2341c27ffc3ef78aa00dbb5e31314aed"
+    ],
+    "sourcePaytmTags": [
+      "Shopping"
+    ],
+    "sourceTransactionDetails": [
+      "Automatic payment of ₹1999 setup for OpenAI LLC"
+    ],
+    "sourceReferenceNumbers": [
+      "201583807423"
+    ]
+  },
+  {
+    "_id": "8e9e2a6b-9d36-4b23-8b2d-ab7c004021a9",
+    "createdAt": "2026-06-06T18:47:00.720Z",
+    "updatedAt": "2026-06-06T18:47:00.720Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 299,
+    "category": "Miscellaneous",
+    "subcategory": "UPI Transaction",
+    "isEssential": false,
+    "date": "2026-06-01T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "05913253924396070e13188b9836cf8c03e64d92c85b012eb2508963cafde33f",
+    "sourceTransactionHashes": [
+      "ee7d3340238f8068c185aeddf3c3c9318ebd5a8d89424cb3489c7ab3de2a1b85"
+    ],
+    "sourcePaytmTags": [
+      "Services"
+    ],
+    "sourceTransactionDetails": [
+      "Automatic payment for Google India Digital Services Pvt Ltd"
+    ],
+    "sourceReferenceNumbers": [
+      "877426001526"
+    ]
+  },
+  {
+    "_id": "cf52bfe1-bba4-42e2-9ae6-289cf0bffdd9",
+    "createdAt": "2026-06-06T18:47:00.724Z",
+    "updatedAt": "2026-06-06T18:47:00.724Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 2741.58,
+    "category": "Utilities & Bills",
+    "subcategory": "UPI Transaction",
+    "isEssential": true,
+    "date": "2026-06-01T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "05913253924396070e13188b9836cf8c03e64d92c85b012eb2508963cafde33f",
+    "sourceTransactionHashes": [
+      "1ff6f86f8f924ad23d8ff0c7e4e1f2b1ec11f8283ed71ed881b006a0c5ccce7d",
+      "d9c5f948c69f55c1bba029669c2cd1f7b91da7cfce5380c9e8f0155768ce8102"
+    ],
+    "sourcePaytmTags": [
+      "Bill Payments"
+    ],
+    "sourceTransactionDetails": [
+      "Bill Payment for Indraprastha Gas (IGL) 4000330984",
+      "Bill Payment for MTNL Delhi 21401325"
+    ],
+    "sourceReferenceNumbers": [
+      "207450737459",
+      "207450025391"
+    ]
+  },
+  {
+    "_id": "a40d6275-367b-4756-afe0-904153fa534e",
+    "createdAt": "2026-06-06T18:47:00.726Z",
+    "updatedAt": "2026-06-06T18:47:00.726Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 1500,
+    "category": "Food & Groceries",
+    "subcategory": "UPI Transaction",
+    "isEssential": true,
+    "date": "2026-05-31T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "05913253924396070e13188b9836cf8c03e64d92c85b012eb2508963cafde33f",
+    "sourceTransactionHashes": [
+      "d5748f4dcd802aaf3db9d724f662dd22b1d7468c62f72cf197659facfe7f997c"
+    ],
+    "sourcePaytmTags": [
+      "Groceries"
+    ],
+    "sourceTransactionDetails": [
+      "Paid to Beejapuri Dairy Pvt Ltd"
+    ],
+    "sourceReferenceNumbers": [
+      "307177458451"
+    ]
+  },
+  {
+    "_id": "1b8ab606-26be-443c-a2bd-20f749a5bedc",
+    "createdAt": "2026-06-06T18:47:00.729Z",
+    "updatedAt": "2026-06-06T18:47:00.729Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 299,
+    "category": "Miscellaneous",
+    "subcategory": "UPI Transaction",
+    "isEssential": false,
+    "date": "2026-05-29T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "05913253924396070e13188b9836cf8c03e64d92c85b012eb2508963cafde33f",
+    "sourceTransactionHashes": [
+      "797ef9c7e2b4997213381a59ac4f7648188599a4f79fca0dac592fa99be9c52a"
+    ],
+    "sourcePaytmTags": [
+      "Financial"
+    ],
+    "sourceTransactionDetails": [
+      "Automatic payment for E Eighteen Com Limited"
+    ],
+    "sourceReferenceNumbers": [
+      "109901695502"
+    ]
+  },
+  {
+    "_id": "032a2be4-73e5-48b3-b75e-a84e1cf8a28a",
+    "createdAt": "2026-06-06T18:47:00.732Z",
+    "updatedAt": "2026-06-06T18:47:00.732Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 209,
+    "category": "Transport",
+    "subcategory": "UPI Transaction",
+    "isEssential": true,
+    "date": "2026-05-29T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "05913253924396070e13188b9836cf8c03e64d92c85b012eb2508963cafde33f",
+    "sourceTransactionHashes": [
+      "6c65b5212a00321dd3ed0b41b09e2f329b55341df54fc4fb7f8ded8d663a2f85"
+    ],
+    "sourcePaytmTags": [
+      "Taxi"
+    ],
+    "sourceTransactionDetails": [
+      "Paid to Vikash Ravat"
+    ],
+    "sourceReferenceNumbers": [
+      "606995517244"
+    ]
+  },
+  {
+    "_id": "9605ca52-1381-47d1-87d3-296846e4d5f4",
+    "createdAt": "2026-06-06T18:47:00.735Z",
+    "updatedAt": "2026-06-06T18:47:00.735Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 1768.82,
+    "category": "Utilities & Bills",
+    "subcategory": "UPI Transaction",
+    "isEssential": true,
+    "date": "2026-05-28T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "05913253924396070e13188b9836cf8c03e64d92c85b012eb2508963cafde33f",
+    "sourceTransactionHashes": [
+      "7fe4e1a04bc68309fddbe75db517ccefdd74c22e3efbef2e6b674926939ee643"
+    ],
+    "sourcePaytmTags": [
+      "Bill Payments"
+    ],
+    "sourceTransactionDetails": [
+      "Paid to Air Fiber Payment 5G"
+    ],
+    "sourceReferenceNumbers": [
+      "614822337396"
+    ]
+  },
+  {
+    "_id": "0b5c6b09-fcd4-4c16-8ae1-067038f843c2",
+    "createdAt": "2026-06-06T18:47:00.738Z",
+    "updatedAt": "2026-06-06T18:47:00.738Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 902,
+    "category": "Utilities & Bills",
+    "subcategory": "UPI Transaction",
+    "isEssential": true,
+    "date": "2026-05-27T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "05913253924396070e13188b9836cf8c03e64d92c85b012eb2508963cafde33f",
+    "sourceTransactionHashes": [
+      "141bbc7c296b680534fbd81b69e1cd8d74e3218cf717634a49c8466727ec4cba"
+    ],
+    "sourcePaytmTags": [
+      "Bill Payments"
+    ],
+    "sourceTransactionDetails": [
+      "Recharge of Airtel Mobile 8604612790"
+    ],
+    "sourceReferenceNumbers": [
+      "207081121611"
+    ]
+  },
+  {
+    "_id": "8b5e06dc-af28-4a97-8fd3-9d47cb1092d1",
+    "createdAt": "2026-06-06T18:47:00.741Z",
+    "updatedAt": "2026-06-06T18:47:00.741Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 2725,
+    "category": "Food & Groceries",
+    "subcategory": "UPI Transaction",
+    "isEssential": true,
+    "date": "2026-05-25T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "05913253924396070e13188b9836cf8c03e64d92c85b012eb2508963cafde33f",
+    "sourceTransactionHashes": [
+      "f8dff8dfff6e2e55f25969bf3d5b94603df25596cea4f308997fcd6814fd8280",
+      "67f1a1237220eb1010bb7739172c6542f948fa49ea5c8be28c41821f2213e7a0",
+      "7a2d483edba53a081d9379eb1a1e0286fd11282db5a51d3d331c7bcf0247f65c"
+    ],
+    "sourcePaytmTags": [
+      "Food"
+    ],
+    "sourceTransactionDetails": [
+      "Paid to Castles Barbeque 1",
+      "Paid to Swiggy Diners"
+    ],
+    "sourceReferenceNumbers": [
+      "206967053380",
+      "306822448962",
+      "306810023878"
+    ]
+  },
+  {
+    "_id": "72dc7948-43b1-4125-8900-1d687a4ee02c",
+    "createdAt": "2026-06-06T18:47:00.744Z",
+    "updatedAt": "2026-06-06T18:47:00.744Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 2000,
+    "category": "Transport",
+    "subcategory": "UPI Transaction",
+    "isEssential": true,
+    "date": "2026-05-25T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "05913253924396070e13188b9836cf8c03e64d92c85b012eb2508963cafde33f",
+    "sourceTransactionHashes": [
+      "0f7710034b990603d7821973f998d2d8a4c091f2d7264353599846e13ade31ad"
+    ],
+    "sourcePaytmTags": [
+      "Fuel"
+    ],
+    "sourceTransactionDetails": [
+      "Paid to Ram Service Station"
+    ],
+    "sourceReferenceNumbers": [
+      "606787200510"
+    ]
+  },
+  {
+    "_id": "04018a0a-701b-4253-a5e7-420c81c81c21",
+    "createdAt": "2026-06-06T18:47:00.747Z",
+    "updatedAt": "2026-06-06T18:47:00.747Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 1500,
+    "category": "Food & Groceries",
+    "subcategory": "UPI Transaction",
+    "isEssential": true,
+    "date": "2026-05-21T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "05913253924396070e13188b9836cf8c03e64d92c85b012eb2508963cafde33f",
+    "sourceTransactionHashes": [
+      "63d0914b3264fb1385b6c61e1713f63d2ccf29a6ec207bf2c9b46f9127026e00"
+    ],
+    "sourcePaytmTags": [
+      "Groceries"
+    ],
+    "sourceTransactionDetails": [
+      "Paid to Country Delight"
+    ],
+    "sourceReferenceNumbers": [
+      "606526801230"
+    ]
+  },
+  {
+    "_id": "7a06db75-c3ac-4f60-ae6b-bdec9eab0fa6",
+    "createdAt": "2026-06-06T18:47:00.750Z",
+    "updatedAt": "2026-06-06T18:47:00.750Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 1309,
+    "category": "Food & Groceries",
+    "subcategory": "UPI Transaction",
+    "isEssential": true,
+    "date": "2026-05-19T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "05913253924396070e13188b9836cf8c03e64d92c85b012eb2508963cafde33f",
+    "sourceTransactionHashes": [
+      "9957117cb9bc8a393f3368c76fabaa241f9ec9d70baea37cc813bcced3d62c1a",
+      "527dbd4b4cfbb2540555e1dc6658e146b91ac2d826df394844fb666cc651c05d",
+      "872d67d114c161a8afdd97ebfb712f12fea8ee465dc00d28cd7bb8959e01ed45",
+      "13b7b8ad195545b930a005f956ae662314be18d4537367cad36b60cb1063c18d"
+    ],
+    "sourcePaytmTags": [
+      "Groceries",
+      "Food"
+    ],
+    "sourceTransactionDetails": [
+      "Paid to Blinkit",
+      "Paid to Swiggy Instamart",
+      "Paid to Pvr Inox Limited"
+    ],
+    "sourceReferenceNumbers": [
+      "606452395242",
+      "306452458861",
+      "306428086462",
+      "306426690374"
+    ]
+  },
+  {
+    "_id": "18b10192-2cf3-4037-933a-55a21e60bbfe",
+    "createdAt": "2026-06-06T18:47:00.752Z",
+    "updatedAt": "2026-06-06T18:47:00.752Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 70,
+    "category": "Miscellaneous",
+    "subcategory": "UPI Transaction",
+    "isEssential": false,
+    "date": "2026-05-14T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "05913253924396070e13188b9836cf8c03e64d92c85b012eb2508963cafde33f",
+    "sourceTransactionHashes": [
+      "7844175094d01ce63f1031e7afdc6c26016061757eeafdabdaeb6d702dabb06f"
+    ],
+    "sourcePaytmTags": [
+      "Services"
+    ],
+    "sourceTransactionDetails": [
+      "Paid to Manju Gupta"
+    ],
+    "sourceReferenceNumbers": [
+      "613454196392"
+    ]
+  },
+  {
+    "_id": "9fcd4ad9-6a77-46cf-9bf3-d01af8eac5b0",
+    "createdAt": "2026-06-06T18:47:00.756Z",
+    "updatedAt": "2026-06-06T18:47:00.756Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 899,
+    "category": "Utilities & Bills",
+    "subcategory": "UPI Transaction",
+    "isEssential": true,
+    "date": "2026-05-12T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "05913253924396070e13188b9836cf8c03e64d92c85b012eb2508963cafde33f",
+    "sourceTransactionHashes": [
+      "888a08980f63af7309aee8b58cd5a4f7c915330e82c5bf2339f098b4aa6f6c68"
+    ],
+    "sourcePaytmTags": [
+      "Bill Payments"
+    ],
+    "sourceTransactionDetails": [
+      "Paid to Jio Prepaid Recharges"
+    ],
+    "sourceReferenceNumbers": [
+      "205995054464"
+    ]
+  },
+  {
+    "_id": "85aecff4-9c0c-43e9-b378-18d343183be7",
+    "createdAt": "2026-06-06T18:47:00.759Z",
+    "updatedAt": "2026-06-06T18:47:00.759Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 308,
+    "category": "Miscellaneous",
+    "subcategory": "UPI Transaction",
+    "isEssential": false,
+    "date": "2026-05-09T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "05913253924396070e13188b9836cf8c03e64d92c85b012eb2508963cafde33f",
+    "sourceTransactionHashes": [
+      "ab63da710557b779f6b8e1f6d35b6df450101faabf8f797c543ed0592de11468"
+    ],
+    "sourcePaytmTags": [
+      "Services"
+    ],
+    "sourceTransactionDetails": [
+      "Paid to Urban Company Limited"
+    ],
+    "sourceReferenceNumbers": [
+      "604236536393"
+    ]
+  },
+  {
+    "_id": "56144110-56d2-47cd-a08e-ebcee798d27e",
+    "createdAt": "2026-06-06T18:47:00.762Z",
+    "updatedAt": "2026-06-06T18:47:00.762Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 1099,
+    "category": "Miscellaneous",
+    "subcategory": "UPI Transaction",
+    "isEssential": false,
+    "date": "2026-05-08T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "05913253924396070e13188b9836cf8c03e64d92c85b012eb2508963cafde33f",
+    "sourceTransactionHashes": [
+      "d12444fe099dbc9e92dba3113c41f7e4563cabeedf756f692e7939182c2af7e8",
+      "4cea187fffc77a578cfac1efe6e94a4825116c4053257b96a04b34a49f7486ca"
+    ],
+    "sourcePaytmTags": [
+      "Money Transfer",
+      "Shopping"
+    ],
+    "sourceTransactionDetails": [
+      "Money sent to Aryan Goswami",
+      "Automatic payment for Google Play"
+    ],
+    "sourceReferenceNumbers": [
+      "612826428336",
+      "454129681286"
+    ]
+  },
+  {
+    "_id": "9b628daf-2182-4451-8558-6512ca41626d",
+    "createdAt": "2026-06-06T18:47:00.764Z",
+    "updatedAt": "2026-06-06T18:47:00.764Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 2853.6,
+    "category": "Transport",
+    "subcategory": "UPI Transaction",
+    "isEssential": true,
+    "date": "2026-05-08T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "05913253924396070e13188b9836cf8c03e64d92c85b012eb2508963cafde33f",
+    "sourceTransactionHashes": [
+      "66be24d9713be6ae3a70f948c171fbb6c9d2929b0f312ba6184446f5a98450e5"
+    ],
+    "sourcePaytmTags": [
+      "Travel"
+    ],
+    "sourceTransactionDetails": [
+      "Paid to Indian Railways"
+    ],
+    "sourceReferenceNumbers": [
+      "604159514103"
+    ]
+  },
+  {
+    "_id": "3a7214e5-24ab-4a8c-9cd1-2e54be63f31f",
+    "createdAt": "2026-06-06T18:47:00.767Z",
+    "updatedAt": "2026-06-06T18:47:00.767Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 899,
+    "category": "Utilities & Bills",
+    "subcategory": "UPI Transaction",
+    "isEssential": true,
+    "date": "2026-05-08T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "05913253924396070e13188b9836cf8c03e64d92c85b012eb2508963cafde33f",
+    "sourceTransactionHashes": [
+      "145f2114c0e0eca4d93f10bf1a02ab98fe0a9ae43c081ebcf4b1651d4df467f4"
+    ],
+    "sourcePaytmTags": [
+      "Bill Payments"
+    ],
+    "sourceTransactionDetails": [
+      "Paid to Jio Prepaid Recharges"
+    ],
+    "sourceReferenceNumbers": [
+      "205660922020"
+    ]
+  },
+  {
+    "_id": "6774286b-a5ed-48df-b4a8-2923841dfff6",
+    "createdAt": "2026-06-06T18:47:00.771Z",
+    "updatedAt": "2026-06-06T18:47:00.771Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 2000,
+    "category": "Miscellaneous",
+    "subcategory": "UPI Transaction",
+    "isEssential": false,
+    "date": "2026-05-06T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "05913253924396070e13188b9836cf8c03e64d92c85b012eb2508963cafde33f",
+    "sourceTransactionHashes": [
+      "385789cebe1d32eb394b188848374c0033b6a1c5c08ef73b9a8b1056015e4b93",
+      "ce2f5f4a2597a3b0498c332053b58e605d9d9c2b35734ea4a580e68ed957455a"
+    ],
+    "sourcePaytmTags": [
+      "Money Transfer"
+    ],
+    "sourceTransactionDetails": [
+      "Money sent to Aryan Goswami"
+    ],
+    "sourceReferenceNumbers": [
+      "302090049645",
+      "612622485639"
+    ]
+  },
+  {
+    "_id": "37a68732-46a8-47b5-92a5-2b5939e1c8c6",
+    "createdAt": "2026-06-06T18:47:00.775Z",
+    "updatedAt": "2026-06-06T18:47:00.775Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 4648.6,
+    "category": "Transport",
+    "subcategory": "UPI Transaction",
+    "isEssential": true,
+    "date": "2026-05-06T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "05913253924396070e13188b9836cf8c03e64d92c85b012eb2508963cafde33f",
+    "sourceTransactionHashes": [
+      "fb309ede420b4c71b22dc5bd49235e3f16e71b6d3d8a73e0ca6ca0e40ac80161"
+    ],
+    "sourcePaytmTags": [
+      "Travel"
+    ],
+    "sourceTransactionDetails": [
+      "Paid to Indian Railways"
+    ],
+    "sourceReferenceNumbers": [
+      "302034610311"
+    ]
   }
 ]

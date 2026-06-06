@@ -6,6 +6,8 @@ let expenses = [];
 let analysisExpenses = [];
 let currentReceiptScan = null;
 let selectedReceiptFile = null;
+let selectedPaytmStatementFile = null;
+let currentPaytmPreview = null;
 let expenseChart = null;
 let barChart = null;
 let monthlyExpenseProgressChart = null;
@@ -65,6 +67,16 @@ const receiptRawTextEl = document.getElementById("receiptRawText");
 const receiptQualityEl = document.getElementById("receiptQuality");
 const autofillReceiptBtn = document.getElementById("autofillReceiptBtn");
 const saveReceiptExpenseBtn = document.getElementById("saveReceiptExpenseBtn");
+const paytmStatementUploadBtn = document.getElementById("paytmStatementUploadBtn");
+const paytmStatementInput = document.getElementById("paytmStatementInput");
+const paytmPreviewModal = document.getElementById("paytmPreviewModal");
+const paytmPreviewFileNameEl = document.getElementById("paytmPreviewFileName");
+const paytmPreviewSummaryEl = document.getElementById("paytmPreviewSummary");
+const paytmPreviewMessageEl = document.getElementById("paytmPreviewMessage");
+const paytmPreviewTableBody = document.getElementById("paytmPreviewTableBody");
+const closePaytmPreviewBtn = document.getElementById("closePaytmPreviewBtn");
+const cancelPaytmImportBtn = document.getElementById("cancelPaytmImportBtn");
+const confirmPaytmImportBtn = document.getElementById("confirmPaytmImportBtn");
 const expenseList = document.getElementById("expenseList");
 const totalEl = document.getElementById("total");
 
@@ -1778,6 +1790,204 @@ function getReceiptQualityText(confidence) {
   if (value >= 50) return `Medium confidence (${value}%)`;
   if (value > 0) return `Low confidence (${value}%)`;
   return "Manual review needed";
+}
+
+// ==============================
+// PAYTM STATEMENT IMPORT
+// ==============================
+
+async function handlePaytmStatementSelection() {
+  const file = paytmStatementInput?.files?.[0];
+  if (!file) return;
+
+  selectedPaytmStatementFile = file;
+  currentPaytmPreview = null;
+
+  try {
+    setPaytmUploadLoading(true);
+    const formData = new FormData();
+    formData.append("statement", file);
+    const res = await authFetch("/api/paytm-statements/preview", {
+      method: "POST",
+      body: formData
+    });
+    const data = await res.json();
+
+    if (!data.summary) {
+      throw new Error(data.message || "Unable to preview this Paytm statement.");
+    }
+
+    currentPaytmPreview = data;
+    renderPaytmPreview(data, res.ok ? "" : data.message);
+    paytmPreviewModal?.classList.remove("hidden");
+    renderIcons();
+  } catch (error) {
+    console.error("Paytm statement preview error:", error);
+    resetPaytmImport();
+    showStatus(error.message || "Unable to parse this Paytm statement.", "error");
+  } finally {
+    setPaytmUploadLoading(false);
+  }
+}
+
+function renderPaytmPreview(data, message = "") {
+  const summary = data.summary || {};
+  const groups = data.groups || [];
+
+  if (paytmPreviewFileNameEl) {
+    paytmPreviewFileNameEl.textContent = data.fileName || selectedPaytmStatementFile?.name || "";
+  }
+
+  if (paytmPreviewSummaryEl) {
+    paytmPreviewSummaryEl.innerHTML = `
+      ${getPaytmSummaryItem("Transactions Found", summary.totalTransactionsFound || 0)}
+      ${getPaytmSummaryItem("Ready to Import", summary.importableTransactions || 0)}
+      ${getPaytmSummaryItem("Grouped Expenses", summary.groupedExpenses || 0)}
+      ${getPaytmSummaryItem("Skipped", summary.skippedTransactions || 0)}
+      ${getPaytmSummaryItem("Duplicates", summary.duplicateTransactions || 0)}
+      ${getPaytmSummaryItem("Import Amount", formatPaytmCurrency(summary.totalAmountToImport || 0))}
+    `;
+  }
+
+  if (paytmPreviewTableBody) {
+    paytmPreviewTableBody.innerHTML = groups.length
+      ? groups.map(group => `
+          <tr>
+            <td>${escapeHtml(formatPaytmImportDate(group.date))}</td>
+            <td class="paytm-tags-list">${escapeHtml((group.paytmTags || []).join(", ") || "Unknown UPI Tag")}</td>
+            <td>${escapeHtml(group.category)}</td>
+            <td>${escapeHtml(group.subcategory)}</td>
+            <td>${formatPaytmCurrency(group.amount)}</td>
+            <td><span class="type-badge ${group.isEssential ? "essential" : "non-essential"}">${group.isEssential ? "Essential" : "Non-essential"}</span></td>
+          </tr>
+        `).join("")
+      : '<tr><td colspan="6">No new grouped expenses are available to import.</td></tr>';
+  }
+
+  showPaytmPreviewMessage(
+    message || (
+      summary.duplicateTransactions
+        ? `${summary.duplicateTransactions} duplicate transaction${summary.duplicateTransactions === 1 ? " was" : "s were"} excluded.`
+        : ""
+    ),
+    message ? "error" : "info"
+  );
+
+  if (confirmPaytmImportBtn) {
+    confirmPaytmImportBtn.disabled = !summary.importableTransactions;
+  }
+}
+
+function getPaytmSummaryItem(label, value) {
+  return `
+    <div class="paytm-summary-item">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(String(value))}</strong>
+    </div>
+  `;
+}
+
+function formatPaytmImportDate(value) {
+  if (!value) return "Unknown";
+  return new Date(`${value}T00:00:00`).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  });
+}
+
+function formatPaytmCurrency(value) {
+  const amount = Number(value) || 0;
+  return `\u20B9${amount.toLocaleString("en-IN", {
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    maximumFractionDigits: 2
+  })}`;
+}
+
+async function importPaytmStatement() {
+  if (!selectedPaytmStatementFile || !currentPaytmPreview?.summary?.importableTransactions) {
+    showPaytmPreviewMessage("Choose and preview a Paytm statement before importing.", "error");
+    return;
+  }
+
+  try {
+    setPaytmImportLoading(true);
+    const formData = new FormData();
+    formData.append("statement", selectedPaytmStatementFile);
+    const res = await authFetch("/api/paytm-statements/import", {
+      method: "POST",
+      body: formData
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || "Unable to import Paytm expenses.");
+    }
+
+    const importedDates = (currentPaytmPreview.groups || []).map(group => group.date).sort();
+    if (importedDates.length) {
+      setFilterDateInput(fromDateInput, importedDates[0]);
+      setFilterDateInput(toDateInput, importedDates[importedDates.length - 1]);
+    }
+
+    closePaytmPreview();
+    await fetchExpensesByRange();
+    await updateDashboardKpis();
+    showStatus(
+      `${data.importedExpenses} grouped Paytm expense${data.importedExpenses === 1 ? "" : "s"} imported successfully.`,
+      "success"
+    );
+  } catch (error) {
+    console.error("Paytm statement import error:", error);
+    showPaytmPreviewMessage(error.message || "Unable to import Paytm expenses.", "error");
+  } finally {
+    setPaytmImportLoading(false);
+  }
+}
+
+function showPaytmPreviewMessage(message, type = "info") {
+  if (!paytmPreviewMessageEl) return;
+
+  if (!message) {
+    paytmPreviewMessageEl.className = "receipt-status hidden";
+    paytmPreviewMessageEl.textContent = "";
+    return;
+  }
+
+  paytmPreviewMessageEl.className = `receipt-status ${type}`;
+  paytmPreviewMessageEl.textContent = message;
+}
+
+function setPaytmUploadLoading(isLoading) {
+  if (!paytmStatementUploadBtn) return;
+  paytmStatementUploadBtn.disabled = isLoading;
+  paytmStatementUploadBtn.innerHTML = isLoading
+    ? '<span class="button-spinner"></span>Parsing Statement'
+    : '<i data-lucide="file-up"></i>Upload Paytm UPI Statement';
+  renderIcons();
+}
+
+function setPaytmImportLoading(isLoading) {
+  if (!confirmPaytmImportBtn) return;
+  confirmPaytmImportBtn.disabled = isLoading;
+  confirmPaytmImportBtn.innerHTML = isLoading
+    ? '<span class="button-spinner"></span>Importing'
+    : '<i data-lucide="download"></i>Import Expenses';
+  renderIcons();
+}
+
+function closePaytmPreview() {
+  paytmPreviewModal?.classList.add("hidden");
+  resetPaytmImport();
+}
+
+function resetPaytmImport() {
+  selectedPaytmStatementFile = null;
+  currentPaytmPreview = null;
+  if (paytmStatementInput) paytmStatementInput.value = "";
+  if (paytmPreviewTableBody) paytmPreviewTableBody.innerHTML = "";
+  if (paytmPreviewSummaryEl) paytmPreviewSummaryEl.innerHTML = "";
+  showPaytmPreviewMessage("");
 }
 
 function clearReceiptScan(clearFile = true) {
@@ -4834,6 +5044,15 @@ if (autofillReceiptBtn) {
 if (saveReceiptExpenseBtn) {
   saveReceiptExpenseBtn.addEventListener("click", saveReceiptExpense);
 }
+
+paytmStatementUploadBtn?.addEventListener("click", () => paytmStatementInput?.click());
+paytmStatementInput?.addEventListener("change", handlePaytmStatementSelection);
+confirmPaytmImportBtn?.addEventListener("click", importPaytmStatement);
+closePaytmPreviewBtn?.addEventListener("click", closePaytmPreview);
+cancelPaytmImportBtn?.addEventListener("click", closePaytmPreview);
+paytmPreviewModal?.addEventListener("click", event => {
+  if (event.target === paytmPreviewModal) closePaytmPreview();
+});
 
 if (getToken()) {
   showDashboard();

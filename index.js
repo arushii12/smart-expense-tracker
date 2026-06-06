@@ -26,6 +26,7 @@ const profileRoutes = require("./routes/profile");
 const financialStatementRoutes = require("./routes/financialStatement");
 const analyticsRoutes = require("./routes/analytics");
 const incomeRoutes = require("./routes/income");
+const paytmStatementRoutes = require("./routes/paytmStatements");
 
 // ==============================
 // App setup
@@ -65,6 +66,7 @@ app.use("/report", reportRoutes);
 app.use("/api/financial-statement", financialStatementRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/receipts", receiptRoutes);
+app.use("/api/paytm-statements", paytmStatementRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/profile", profileRoutes);
 app.use("/uploads", express.static(uploadsPath));
