@@ -2047,25 +2047,187 @@ select:focus {
   font-weight: 800;
 }
 
-.analytics-heading {
+.analytics-page-header,
+.analytics-summary-section,
+.analytics-insights-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.analytics-page-header {
+  display: grid;
   gap: 18px;
+  margin-bottom: 16px;
+  padding: 22px;
+}
+
+.analytics-heading {
+  gap: 0;
+}
+
+.analytics-heading h2 {
+  color: var(--title-blue);
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.12;
 }
 
 .analytics-heading p:not(.eyebrow) {
-  margin-top: 4px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.45;
+  margin-top: 8px;
+  max-width: 860px;
+}
+
+.analytics-toolbar {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
 }
 
 .analytics-controls {
   align-items: end;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: flex-end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(190px, 1.1fr) minmax(180px, 1fr) minmax(180px, 1fr) auto;
 }
 
 #analyticsApplyBtn {
-  position: relative;
-  top: -6px;
+  min-height: 52px;
+}
+
+.analytics-context-badge {
+  align-items: center;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  border-radius: 999px;
+  color: #1d4ed8;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 800;
+  justify-self: start;
+  margin: 0;
+  padding: 7px 12px;
+}
+
+.analytics-summary-section {
+  margin-bottom: 16px;
+  padding: 16px;
+}
+
+.analytics-summary-heading {
+  align-items: baseline;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.analytics-summary-heading h3 {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.analytics-summary-strip {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.analytics-summary-card {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-height: 64px;
+  padding: 10px 12px;
+}
+
+.analytics-summary-card span {
+  color: var(--muted-strong);
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.analytics-summary-card strong {
+  color: var(--muted);
+  display: block;
+  font-size: 15px;
+  line-height: 1.2;
+  margin-top: 6px;
+}
+
+.analytics-summary-card.positive strong {
+  color: #16a34a;
+}
+
+.analytics-summary-card.negative strong {
+  color: #d97706;
+}
+
+.analytics-summary-card.neutral strong {
+  color: #2563eb;
+}
+
+.analytics-insights-card {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 18px;
+}
+
+.analytics-insights-card h3 {
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.analytics-insights-card ul {
+  display: grid;
+  column-gap: 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  row-gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.analytics-insights-card li {
+  align-items: center;
+  color: var(--muted-strong);
+  display: flex;
+  font-size: 14px;
+  font-weight: 700;
+  gap: 8px;
+}
+
+.analytics-insights-card li::before {
+  align-items: center;
+  border-radius: 999px;
+  content: "✓";
+  display: inline-flex;
+  flex: 0 0 20px;
+  font-size: 12px;
+  font-weight: 900;
+  height: 20px;
+  justify-content: center;
+  width: 20px;
+}
+
+.analytics-insights-card li.positive::before {
+  background: rgba(22, 163, 74, 0.12);
+  color: #16a34a;
+}
+
+.analytics-insights-card li.concern::before {
+  background: rgba(217, 119, 6, 0.14);
+  color: #d97706;
+  content: "!";
 }
 
 .analytics-grid {
@@ -2445,6 +2607,24 @@ select:focus {
 .budget-allocation-actions svg {
   height: 14px;
   width: 14px;
+}
+
+.budget-allocation-toggle {
+  background: transparent;
+  border: 0;
+  color: #0b3d91;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 800;
+  margin-top: 12px;
+  padding: 0;
+}
+
+.budget-allocation-toggle:hover {
+  color: #082f75;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .forecast-stat-box,
@@ -3451,6 +3631,14 @@ body.dark-mode .budget-allocation-actions .delete-btn {
   color: #fca5a5;
 }
 
+body.dark-mode .budget-allocation-toggle {
+  color: #93c5fd;
+}
+
+body.dark-mode .budget-allocation-toggle:hover {
+  color: #bfdbfe;
+}
+
 body.dark-mode .budget-allocation-actions .ghost-btn:hover,
 body.dark-mode .budget-allocation-actions .delete-btn:hover {
   background: #0f172a;
@@ -3562,6 +3750,26 @@ body.dark-mode .receipt-warnings {
   color: #fde68a;
 }
 
+body.dark-mode .analytics-context-badge {
+  background: rgba(37, 99, 235, 0.18);
+  border-color: rgba(96, 165, 250, 0.28);
+  color: #bfdbfe;
+}
+
+body.dark-mode .analytics-summary-card {
+  background: var(--surface-soft);
+}
+
+body.dark-mode .analytics-insights-card li.positive::before {
+  background: rgba(22, 163, 74, 0.18);
+  color: #86efac;
+}
+
+body.dark-mode .analytics-insights-card li.concern::before {
+  background: rgba(217, 119, 6, 0.22);
+  color: #fbbf24;
+}
+
 body.dark-mode .check-option {
   background: #111827;
   border-color: var(--border);
@@ -3657,6 +3865,18 @@ body.dark-mode .income-history-table::-webkit-scrollbar-thumb:hover {
   .statement-summary-grid {
     grid-auto-rows: auto;
     grid-template-columns: 1fr;
+  }
+
+  .analytics-summary-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .analytics-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #analyticsApplyBtn {
+    width: 100%;
   }
 
   .dashboard-month-control .compact-field {
@@ -3759,6 +3979,7 @@ body.dark-mode .income-history-table::-webkit-scrollbar-thumb:hover {
   .profile-form,
   .guide-grid,
   .charts-grid,
+  .analytics-summary-strip,
   .analytics-grid,
   .budget-stats,
   .forecast-stats,
@@ -3808,6 +4029,20 @@ body.dark-mode .income-history-table::-webkit-scrollbar-thumb:hover {
   .statement-controls .primary-btn,
   .statement-controls .ghost-btn {
     width: 100%;
+  }
+
+  .analytics-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-page-header,
+  .analytics-summary-section,
+  .analytics-insights-card {
+    padding: 16px;
+  }
+
+  .analytics-insights-card ul {
+    grid-template-columns: 1fr;
   }
 
   .analytics-chart-card {

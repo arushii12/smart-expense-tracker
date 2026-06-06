@@ -535,6 +535,7 @@
               </div>
             </div>
             <div class="budget-allocation-list" id="budgetAllocationList"></div>
+            <button id="budgetAllocationToggleBtn" class="budget-allocation-toggle" type="button">View All Budgets</button>
           </div>
         </article>
 
@@ -746,37 +747,91 @@
       </section>
 
       <section id="view-analytics" class="page-view" data-title="Analytics">
-        <div class="section-heading analytics-heading">
-          <div>
-            <p class="eyebrow">Analytics</p>
-            <h2>Analytics</h2>
-            <p>Analyze month-wise budget, income, expenses, savings, needs, and wants.</p>
+        <div class="analytics-page-header">
+          <div class="section-heading analytics-heading">
+            <div>
+              <h2>Financial Analytics</h2>
+              <p id="analyticsPageDescription">Analyze month-to-month changes across budget, income, expenses, savings, needs, and wants.</p>
+            </div>
           </div>
-          <div class="analytics-controls">
-            <label class="field compact-field">
-              <span>From Month</span>
-              <input type="month" id="analyticsFromMonth" />
-            </label>
-            <label class="field compact-field">
-              <span>To Month</span>
-              <input type="month" id="analyticsToMonth" />
-            </label>
-            <button id="analyticsApplyBtn" class="primary-btn compact" type="button"><i data-lucide="filter"></i>Apply</button>
+
+          <div class="analytics-toolbar">
+            <div class="analytics-controls">
+              <label class="field compact-field">
+                <span>Analysis Period</span>
+                <select id="analyticsPeriodSelect">
+                  <option value="monthly">Monthly Trend</option>
+                  <option value="quarterly">Quarterly Trend</option>
+                  <option value="yearly">Year-over-Year Trend</option>
+                </select>
+              </label>
+              <label class="field compact-field">
+                <span>From Month</span>
+                <input type="month" id="analyticsFromMonth" />
+              </label>
+              <label class="field compact-field">
+                <span>To Month</span>
+                <input type="month" id="analyticsToMonth" />
+              </label>
+              <button id="analyticsApplyBtn" class="primary-btn compact" type="button"><i data-lucide="filter"></i>Apply</button>
+            </div>
+            <p id="analyticsContextBadge" class="analytics-context-badge">MoM Analysis - Latest 4 months</p>
           </div>
         </div>
 
         <p id="analyticsEmptyState" class="empty-state hidden">No analytics data is available for this range.</p>
 
+        <div id="analyticsSummarySection" class="analytics-summary-section hidden">
+          <div class="analytics-summary-heading">
+            <p class="eyebrow">Performance Summary</p>
+            <h3>Latest Change</h3>
+          </div>
+          <div id="analyticsSummaryStrip" class="analytics-summary-strip">
+            <article class="analytics-summary-card" data-summary-key="budget">
+              <span>Budget Change</span>
+              <strong id="analyticsSummaryBudget">Insufficient data</strong>
+            </article>
+            <article class="analytics-summary-card" data-summary-key="income">
+              <span>Income Change</span>
+              <strong id="analyticsSummaryIncome">Insufficient data</strong>
+            </article>
+            <article class="analytics-summary-card" data-summary-key="expenses">
+              <span>Expense Change</span>
+              <strong id="analyticsSummaryExpenses">Insufficient data</strong>
+            </article>
+            <article class="analytics-summary-card" data-summary-key="savings">
+              <span>Savings Change</span>
+              <strong id="analyticsSummarySavings">Insufficient data</strong>
+            </article>
+            <article class="analytics-summary-card" data-summary-key="needs">
+              <span>Needs Change</span>
+              <strong id="analyticsSummaryNeeds">Insufficient data</strong>
+            </article>
+            <article class="analytics-summary-card" data-summary-key="wants">
+              <span>Wants Change</span>
+              <strong id="analyticsSummaryWants">Insufficient data</strong>
+            </article>
+          </div>
+        </div>
+
+        <article id="analyticsInsightsCard" class="analytics-insights-card hidden">
+          <div>
+            <p class="eyebrow">Analysis</p>
+            <h3>Key Insights</h3>
+          </div>
+          <ul id="analyticsInsightsList"></ul>
+        </article>
+
         <div class="analytics-grid">
           <article class="chart-panel analytics-chart-card">
-            <h3>Budget Trend</h3>
+            <h3>Monthly Available Budget Trend</h3>
             <p class="analysis-label">Monthly Available Budget</p>
             <div class="chart-frame analytics-chart-frame">
               <canvas id="analyticsBudgetChart"></canvas>
             </div>
           </article>
           <article class="chart-panel analytics-chart-card">
-            <h3>Additional Income Trend</h3>
+            <h3>Additional Income Growth</h3>
             <p class="analysis-label">Additional income received each month</p>
             <div class="chart-frame analytics-chart-frame">
               <canvas id="analyticsIncomeChart"></canvas>
@@ -791,7 +846,7 @@
             </div>
           </article>
           <article class="chart-panel analytics-chart-card">
-            <h3>Savings Trend</h3>
+            <h3>Savings Performance</h3>
             <p class="analysis-label">Monthly savings after expenses</p>
             <p id="analyticsSavingsCurrentNote" class="analytics-current-note hidden">Current month savings are provisional and may change as additional expenses are recorded.</p>
             <div class="chart-frame analytics-chart-frame">
@@ -799,14 +854,14 @@
             </div>
           </article>
           <article class="chart-panel analytics-chart-card">
-            <h3>Needs Expense Trend</h3>
+            <h3>Needs Spending Trend</h3>
             <p class="analysis-label">Essential expenses only</p>
             <div class="chart-frame analytics-chart-frame">
               <canvas id="analyticsNeedsChart"></canvas>
             </div>
           </article>
           <article class="chart-panel analytics-chart-card">
-            <h3>Wants Expense Trend</h3>
+            <h3>Wants Spending Trend</h3>
             <p class="analysis-label">Non-essential expenses only</p>
             <div class="chart-frame analytics-chart-frame">
               <canvas id="analyticsWantsChart"></canvas>

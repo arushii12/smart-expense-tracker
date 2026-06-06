@@ -16,6 +16,7 @@ let editingExpenseId = null;
 let selectedBudgetMonth = "";
 let editingIncomeId = null;
 let subcategorySuggestionsByCategory = {};
+let showAllBudgetAllocations = false;
 
 const API_BASE_URL =
   (
@@ -114,6 +115,7 @@ const budgetStatusEl = document.getElementById("budgetStatus");
 const budgetMonthInput = document.getElementById("budgetMonth");
 const budgetValueInput = document.getElementById("budgetValue");
 const budgetAllocationList = document.getElementById("budgetAllocationList");
+const budgetAllocationToggleBtn = document.getElementById("budgetAllocationToggleBtn");
 const budgetIncomeHelperEl = document.getElementById("budgetIncomeHelper");
 const addIncomeBtn = document.getElementById("addIncomeBtn");
 const incomePanelAddBtn = document.getElementById("incomePanelAddBtn");
@@ -179,9 +181,24 @@ const statementEmptyStateEl = document.getElementById("statementEmptyState");
 
 const analyticsFromMonthInput = document.getElementById("analyticsFromMonth");
 const analyticsToMonthInput = document.getElementById("analyticsToMonth");
+const analyticsPeriodSelect = document.getElementById("analyticsPeriodSelect");
 const analyticsApplyBtn = document.getElementById("analyticsApplyBtn");
 const analyticsEmptyStateEl = document.getElementById("analyticsEmptyState");
 const analyticsGridEl = document.querySelector(".analytics-grid");
+const analyticsPageDescriptionEl = document.getElementById("analyticsPageDescription");
+const analyticsContextBadgeEl = document.getElementById("analyticsContextBadge");
+const analyticsSummarySectionEl = document.getElementById("analyticsSummarySection");
+const analyticsSummaryStripEl = document.getElementById("analyticsSummaryStrip");
+const analyticsInsightsCardEl = document.getElementById("analyticsInsightsCard");
+const analyticsInsightsListEl = document.getElementById("analyticsInsightsList");
+const analyticsSummaryEls = {
+  budget: document.getElementById("analyticsSummaryBudget"),
+  income: document.getElementById("analyticsSummaryIncome"),
+  expenses: document.getElementById("analyticsSummaryExpenses"),
+  savings: document.getElementById("analyticsSummarySavings"),
+  needs: document.getElementById("analyticsSummaryNeeds"),
+  wants: document.getElementById("analyticsSummaryWants")
+};
 const analyticsExpenseCurrentNoteEl = document.getElementById("analyticsExpenseCurrentNote");
 const analyticsSavingsCurrentNoteEl = document.getElementById("analyticsSavingsCurrentNote");
 
@@ -1167,6 +1184,13 @@ if (budgetMonthInput) {
   });
 }
 
+if (budgetAllocationToggleBtn) {
+  budgetAllocationToggleBtn.addEventListener("click", () => {
+    showAllBudgetAllocations = !showAllBudgetAllocations;
+    loadBudgetAllocations();
+  });
+}
+
 if (statementApplyBtn) {
   statementApplyBtn.addEventListener("click", loadFinancialStatement);
 }
@@ -1177,6 +1201,16 @@ if (statementPdfBtn) {
 
 if (analyticsApplyBtn) {
   analyticsApplyBtn.addEventListener("click", loadAnalytics);
+}
+
+if (analyticsPeriodSelect) {
+  analyticsPeriodSelect.addEventListener("change", () => {
+    setAnalyticsPeriodDefaults(analyticsPeriodSelect.value);
+    updateAnalyticsHeaderContext();
+    if (document.getElementById("view-analytics")?.classList.contains("active")) {
+      loadAnalytics();
+    }
+  });
 }
 
 [addIncomeBtn, incomePanelAddBtn].forEach(button => {
@@ -3106,12 +3140,16 @@ async function loadBudgetAllocations() {
 
     if (!data || data.length === 0) {
       budgetAllocationList.innerHTML = `<p class="helper-text">No monthly budgets saved yet.</p>`;
+      if (budgetAllocationToggleBtn) budgetAllocationToggleBtn.classList.add("hidden");
       return;
     }
 
-    budgetAllocationList.innerHTML = data
+    const sortedBudgets = data
       .slice()
-      .sort((a, b) => String(a.month).localeCompare(String(b.month)))
+      .sort((a, b) => String(b.month).localeCompare(String(a.month)));
+    const visibleBudgets = showAllBudgetAllocations ? sortedBudgets : sortedBudgets.slice(0, 4);
+
+    budgetAllocationList.innerHTML = visibleBudgets
       .map(budget => `
         <div class="budget-allocation-row">
           <span>${formatMonth(budget.month)}</span>
@@ -3126,6 +3164,12 @@ async function loadBudgetAllocations() {
           </div>
         </div>
       `).join("");
+
+    if (budgetAllocationToggleBtn) {
+      const shouldShowToggle = sortedBudgets.length > 4;
+      budgetAllocationToggleBtn.classList.toggle("hidden", !shouldShowToggle);
+      budgetAllocationToggleBtn.textContent = showAllBudgetAllocations ? "Show Less" : "View All Budgets";
+    }
 
     renderIcons();
   } catch (error) {
@@ -3226,22 +3270,95 @@ async function exportMonthlyReport() {
 
 function getAnalyticsQuery() {
   initializeDateFilters();
-  const fromMonth = analyticsFromMonthInput?.value || "";
-  const toMonth = analyticsToMonthInput?.value || "";
+  const { fetchFromMonth, fetchToMonth } = getAnalyticsFetchRange();
   const params = new URLSearchParams();
 
-  if (fromMonth) params.set("fromMonth", fromMonth);
-  if (toMonth) params.set("toMonth", toMonth);
+  if (fetchFromMonth) params.set("fromMonth", fetchFromMonth);
+  if (fetchToMonth) params.set("toMonth", fetchToMonth);
 
   return params.toString();
+}
+
+function getAnalyticsPeriod() {
+  return analyticsPeriodSelect?.value || "monthly";
+}
+
+function getAnalyticsSelectedRange() {
+  initializeDateFilters();
+  return {
+    fromMonth: analyticsFromMonthInput?.value || "",
+    toMonth: analyticsToMonthInput?.value || ""
+  };
+}
+
+function getAnalyticsFetchRange() {
+  const { fromMonth, toMonth } = getAnalyticsSelectedRange();
+  const period = getAnalyticsPeriod();
+
+  if (period === "yearly" && fromMonth) {
+    return {
+      fetchFromMonth: shiftMonthInputValue(fromMonth, -12),
+      fetchToMonth: toMonth
+    };
+  }
+
+  return {
+    fetchFromMonth: fromMonth,
+    fetchToMonth: toMonth
+  };
+}
+
+function getQuarterIndex(month) {
+  const [, monthNumber] = month.split("-").map(Number);
+  return Math.floor((monthNumber - 1) / 3) + 1;
+}
+
+function getQuarterKey(month) {
+  const [year] = month.split("-").map(Number);
+  return `${year}-Q${getQuarterIndex(month)}`;
+}
+
+function getQuarterLabel(month) {
+  const [year] = month.split("-").map(Number);
+  return `Q${getQuarterIndex(month)} ${year}`;
+}
+
+function getQuarterStartMonth(month) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const quarterStart = Math.floor((monthNumber - 1) / 3) * 3 + 1;
+  return `${year}-${String(quarterStart).padStart(2, "0")}`;
+}
+
+function getQuarterEndMonth(month) {
+  return shiftMonthInputValue(getQuarterStartMonth(month), 2);
+}
+
+function getLatestFourQuarterRange() {
+  const currentQuarterStart = getQuarterStartMonth(getCurrentMonthInputValue());
+  const fromMonth = shiftMonthInputValue(currentQuarterStart, -9);
+  const toMonth = getQuarterEndMonth(currentQuarterStart);
+  return { fromMonth, toMonth };
+}
+
+function setAnalyticsPeriodDefaults(period = getAnalyticsPeriod()) {
+  if (period === "quarterly") {
+    const range = getLatestFourQuarterRange();
+    if (analyticsFromMonthInput) analyticsFromMonthInput.value = range.fromMonth;
+    if (analyticsToMonthInput) analyticsToMonthInput.value = range.toMonth;
+    return;
+  }
+
+  const currentMonth = getCurrentMonthInputValue();
+  if (analyticsToMonthInput) analyticsToMonthInput.value = currentMonth;
+  if (analyticsFromMonthInput) analyticsFromMonthInput.value = shiftMonthInputValue(currentMonth, -3);
 }
 
 async function loadAnalytics() {
   if (!analyticsGridEl) return;
 
   try {
-    const fromMonth = analyticsFromMonthInput?.value || "";
-    const toMonth = analyticsToMonthInput?.value || "";
+    updateAnalyticsHeaderContext();
+    const { fromMonth, toMonth } = getAnalyticsSelectedRange();
 
     if (fromMonth && toMonth && fromMonth > toMonth) {
       showStatus("From month cannot be after the to month.", "error");
@@ -3284,29 +3401,285 @@ function hasAnalyticsActivity(rows) {
   );
 }
 
+function getAnalyticsVisibleRows(rows) {
+  const period = getAnalyticsPeriod();
+  const { fromMonth, toMonth } = getAnalyticsSelectedRange();
+  const sortedRows = [...rows].sort((a, b) => String(a.month || "").localeCompare(String(b.month || "")));
+
+  if (period === "quarterly") {
+    return aggregateAnalyticsRowsByQuarter(
+      sortedRows.filter(row => (!fromMonth || row.month >= fromMonth) && (!toMonth || row.month <= toMonth))
+    );
+  }
+
+  if (period === "yearly") {
+    return buildAnalyticsYearOverYearRows(sortedRows, fromMonth, toMonth);
+  }
+
+  return sortedRows.filter(row => (!fromMonth || row.month >= fromMonth) && (!toMonth || row.month <= toMonth));
+}
+
+function createEmptyAnalyticsAggregate(id, label) {
+  return {
+    month: id,
+    monthLabel: label,
+    originalBudget: 0,
+    additionalIncome: 0,
+    availableBudget: 0,
+    expenses: 0,
+    savings: 0,
+    needs: 0,
+    wants: 0,
+    wantsByCategory: {}
+  };
+}
+
+function mergeAnalyticsBreakdown(target = {}, source = {}) {
+  Object.entries(source || {}).forEach(([category, amount]) => {
+    target[category] = (target[category] || 0) + (Number(amount) || 0);
+  });
+  return target;
+}
+
+function aggregateAnalyticsRowsByQuarter(rows) {
+  const quarterMap = new Map();
+
+  rows.forEach(row => {
+    const key = getQuarterKey(row.month);
+    if (!quarterMap.has(key)) {
+      quarterMap.set(key, createEmptyAnalyticsAggregate(key, getQuarterLabel(row.month)));
+    }
+
+    const aggregate = quarterMap.get(key);
+    aggregate.originalBudget += Number(row.originalBudget) || 0;
+    aggregate.additionalIncome += Number(row.additionalIncome) || 0;
+    aggregate.availableBudget += Number(row.availableBudget) || 0;
+    aggregate.expenses += Number(row.expenses) || 0;
+    aggregate.savings += Number(row.savings) || 0;
+    aggregate.needs += Number(row.needs) || 0;
+    aggregate.wants += Number(row.wants) || 0;
+    mergeAnalyticsBreakdown(aggregate.wantsByCategory, row.wantsByCategory);
+  });
+
+  return Array.from(quarterMap.values());
+}
+
+function buildAnalyticsYearOverYearRows(rows, fromMonth, toMonth) {
+  const rowMap = new Map(rows.map(row => [row.month, row]));
+
+  return rows
+    .filter(row => (!fromMonth || row.month >= fromMonth) && (!toMonth || row.month <= toMonth))
+    .map(row => {
+      const comparisonMonth = shiftMonthInputValue(row.month, -12);
+      const comparison = rowMap.get(comparisonMonth) || null;
+      return {
+        ...row,
+        comparison,
+        comparisonMonth,
+        monthLabel: formatMonthName(row.month)
+      };
+    });
+}
+
+function getAnalyticsChangePeriodLabel() {
+  const period = getAnalyticsPeriod();
+  if (period === "quarterly") return "QoQ";
+  if (period === "yearly") return "YoY";
+  return "MoM";
+}
+
+function updateAnalyticsHeaderContext() {
+  const period = getAnalyticsPeriod();
+  const content = {
+    monthly: {
+      description: "Analyze month-to-month changes across budget, income, expenses, savings, needs, and wants.",
+      badge: "MoM Analysis - Latest 4 months"
+    },
+    quarterly: {
+      description: "Review quarter-over-quarter performance and identify longer-term spending patterns.",
+      badge: "QoQ Analysis - Latest 4 quarters"
+    },
+    yearly: {
+      description: "Compare current performance against the same period last year to measure financial growth and stability.",
+      badge: "YoY Analysis - Same months compared with previous year"
+    }
+  }[period] || {};
+
+  if (analyticsPageDescriptionEl) analyticsPageDescriptionEl.textContent = content.description || "";
+  if (analyticsContextBadgeEl) analyticsContextBadgeEl.textContent = content.badge || "";
+}
+
+function getAnalyticsMetricChange(rows, key, positiveIsGood = true) {
+  const period = getAnalyticsPeriod();
+  if (!rows.length) return null;
+
+  if (period === "yearly") {
+    const latestRow = rows[rows.length - 1];
+    return calculateAnalyticsPercentChange(
+      Number(latestRow[key]) || 0,
+      latestRow.comparison ? Number(latestRow.comparison[key]) || 0 : null,
+      positiveIsGood,
+      true
+    );
+  }
+
+  if (rows.length < 2) return null;
+  return calculateAnalyticsPercentChange(
+    Number(rows[rows.length - 1][key]) || 0,
+    Number(rows[rows.length - 2][key]) || 0,
+    positiveIsGood
+  );
+}
+
+function calculateAnalyticsPercentChange(currentValue, previousValue, positiveIsGood = true, requirePrevious = false) {
+  if (previousValue === null || previousValue === undefined) {
+    return requirePrevious ? { label: "Insufficient data", tone: "neutral", insufficient: true } : null;
+  }
+
+  if (previousValue === 0) {
+    if (currentValue === 0) return null;
+    const percent = currentValue > 0 ? 100 : -100;
+    const improved = positiveIsGood ? percent >= 0 : percent <= 0;
+    return {
+      label: percent > 0 ? `\u2191 ${percent}%` : `\u2193 ${Math.abs(percent)}%`,
+      color: improved ? "#16a34a" : "#d97706",
+      tone: improved ? "positive" : "negative"
+    };
+  }
+
+  const changeAmount = currentValue - previousValue;
+  const percent = Math.round((changeAmount / Math.abs(previousValue)) * 100);
+  const improved = positiveIsGood ? percent >= 0 : percent <= 0;
+
+  return {
+    label: percent > 0 ? `\u2191 ${percent}%` : percent < 0 ? `\u2193 ${Math.abs(percent)}%` : "0%",
+    color: improved ? "#16a34a" : "#d97706",
+    tone: improved ? "positive" : "negative"
+  };
+}
+
+function getAnalyticsMetricChanges(rows) {
+  return {
+    budget: getAnalyticsMetricChange(rows, "availableBudget", true),
+    income: getAnalyticsMetricChange(rows, "additionalIncome", true),
+    expenses: getAnalyticsMetricChange(rows, "expenses", false),
+    savings: getAnalyticsMetricChange(rows, "savings", true),
+    needs: getAnalyticsMetricChange(rows, "needs", false),
+    wants: getAnalyticsMetricChange(rows, "wants", false)
+  };
+}
+
+function updateAnalyticsSummaryStrip(rows) {
+  if (!analyticsSummaryStripEl) return;
+
+  const changeLabel = getAnalyticsChangePeriodLabel();
+  const changes = getAnalyticsMetricChanges(rows);
+
+  analyticsSummaryStripEl.classList.toggle("hidden", !rows.length);
+
+  Object.entries(changes).forEach(([summaryKey, change]) => {
+    const element = analyticsSummaryEls[summaryKey];
+    const card = element?.closest(".analytics-summary-card");
+    if (!element || !card) return;
+
+    card.classList.remove("positive", "negative", "neutral");
+
+    if (!change) {
+      element.textContent = "Insufficient data";
+      card.classList.add("neutral");
+      return;
+    }
+
+    element.textContent = change.insufficient ? "Insufficient data" : `${change.label} ${changeLabel}`;
+    card.classList.add(change.tone || "neutral");
+  });
+}
+
+function updateAnalyticsInsights(rows) {
+  if (!analyticsInsightsCardEl || !analyticsInsightsListEl) return;
+
+  const changes = getAnalyticsMetricChanges(rows);
+  const changeLabel = getAnalyticsChangePeriodLabel();
+  const insights = [];
+
+  if (changes.expenses && !changes.expenses.insufficient) {
+    insights.push({
+      tone: changes.expenses.tone === "positive" ? "positive" : "concern",
+      text: changes.expenses.tone === "positive"
+        ? `Expenses decreased compared to the previous ${changeLabel} period.`
+        : `Expenses increased compared to the previous ${changeLabel} period.`
+    });
+  }
+
+  if (changes.savings && !changes.savings.insufficient) {
+    insights.push({
+      tone: changes.savings.tone === "positive" ? "positive" : "concern",
+      text: changes.savings.tone === "positive"
+        ? `Savings improved compared to the previous ${changeLabel} period.`
+        : `Savings declined compared to the previous ${changeLabel} period.`
+    });
+  }
+
+  if (changes.wants && !changes.wants.insufficient) {
+    insights.push({
+      tone: changes.wants.tone === "positive" ? "positive" : "concern",
+      text: changes.wants.tone === "positive"
+        ? "Wants spending reduced, which supports stronger savings."
+        : "Wants spending increased and may need review."
+    });
+  }
+
+  if (changes.income && !changes.income.insufficient && changes.income.tone === "positive") {
+    insights.push({
+      tone: "positive",
+      text: "Additional income improved this period."
+    });
+  }
+
+  if (!insights.length) {
+    insights.push({
+      tone: "concern",
+      text: "Insufficient comparison data for reliable insights."
+    });
+  }
+
+  analyticsInsightsListEl.innerHTML = insights.slice(0, 4)
+    .map(insight => `<li class="${insight.tone}">${escapeHtml(insight.text)}</li>`)
+    .join("");
+  analyticsInsightsCardEl.classList.toggle("hidden", !rows.length);
+}
+
 function renderAnalytics(rows) {
   destroyAnalyticsCharts();
 
-  const hasData = rows.length > 0 && hasAnalyticsActivity(rows);
+  const visibleRows = getAnalyticsVisibleRows(rows);
+  const hasData = visibleRows.length > 0 && hasAnalyticsActivity(visibleRows);
   if (analyticsEmptyStateEl) analyticsEmptyStateEl.classList.toggle("hidden", hasData);
   if (analyticsGridEl) analyticsGridEl.classList.toggle("hidden", !hasData);
+  if (analyticsSummarySectionEl) analyticsSummarySectionEl.classList.toggle("hidden", !hasData);
+  if (analyticsInsightsCardEl) analyticsInsightsCardEl.classList.toggle("hidden", !hasData);
 
   if (!hasData) {
     setAnalyticsCurrentMonthNotes(false);
+    updateAnalyticsSummaryStrip([]);
+    updateAnalyticsInsights([]);
     return;
   }
 
-  const labels = rows.map(row => row.monthLabel || formatMonth(row.month));
+  updateAnalyticsSummaryStrip(visibleRows);
+  updateAnalyticsInsights(visibleRows);
+
+  const labels = visibleRows.map(row => row.monthLabel || formatMonth(row.month));
   const currentMonth = getCurrentMonthInputValue();
-  const latestDisplayedMonth = rows[rows.length - 1]?.month || "";
-  const currentMonthIndex = latestDisplayedMonth === currentMonth
-    ? rows.findIndex(row => row.month === currentMonth)
+  const latestDisplayedMonth = visibleRows[visibleRows.length - 1]?.month || "";
+  const currentMonthIndex = getAnalyticsPeriod() === "monthly" && latestDisplayedMonth === currentMonth
+    ? visibleRows.findIndex(row => row.month === currentMonth)
     : -1;
   const hasCurrentMonth = currentMonthIndex >= 0;
 
   setAnalyticsCurrentMonthNotes(hasCurrentMonth);
 
-  renderAnalyticsTrendChart("budget", "analyticsBudgetChart", labels, rows, {
+  renderAnalyticsTrendChart("budget", "analyticsBudgetChart", labels, visibleRows, {
     label: "Monthly Available Budget",
     key: "availableBudget",
     barColor: "rgba(29, 78, 216, 0.82)",
@@ -3314,7 +3687,7 @@ function renderAnalytics(rows) {
     lineColor: "#0f766e",
     positiveIsGood: true
   });
-  renderAnalyticsTrendChart("income", "analyticsIncomeChart", labels, rows, {
+  renderAnalyticsTrendChart("income", "analyticsIncomeChart", labels, visibleRows, {
     label: "Additional Income",
     key: "additionalIncome",
     barColor: "rgba(20, 184, 166, 0.78)",
@@ -3322,7 +3695,7 @@ function renderAnalytics(rows) {
     lineColor: "#2563eb",
     positiveIsGood: true
   });
-  renderAnalyticsTrendChart("expenses", "analyticsExpenseChart", labels, rows, {
+  renderAnalyticsTrendChart("expenses", "analyticsExpenseChart", labels, visibleRows, {
     label: "Expenses",
     key: "expenses",
     barColor: "rgba(217, 119, 6, 0.78)",
@@ -3332,17 +3705,17 @@ function renderAnalytics(rows) {
     currentMonthIndex,
     currentMonthKind: "expenses"
   });
-  renderAnalyticsTrendChart("savings", "analyticsSavingsChart", labels, rows, {
+  renderAnalyticsTrendChart("savings", "analyticsSavingsChart", labels, visibleRows, {
     label: "Savings",
     key: "savings",
-    barColor: rows.map(row => Number(row.savings || 0) < 0 ? "rgba(220, 38, 38, 0.78)" : "rgba(22, 163, 74, 0.78)"),
-    borderColor: rows.map(row => Number(row.savings || 0) < 0 ? "#dc2626" : "#16a34a"),
+    barColor: visibleRows.map(row => Number(row.savings || 0) < 0 ? "rgba(220, 38, 38, 0.78)" : "rgba(22, 163, 74, 0.78)"),
+    borderColor: visibleRows.map(row => Number(row.savings || 0) < 0 ? "#dc2626" : "#16a34a"),
     lineColor: "#2563eb",
     positiveIsGood: true,
     currentMonthIndex,
     currentMonthKind: "savings"
   });
-  renderAnalyticsTrendChart("needs", "analyticsNeedsChart", labels, rows, {
+  renderAnalyticsTrendChart("needs", "analyticsNeedsChart", labels, visibleRows, {
     label: "Needs",
     key: "needs",
     barColor: "rgba(37, 99, 235, 0.72)",
@@ -3350,7 +3723,7 @@ function renderAnalytics(rows) {
     lineColor: "#0f766e",
     positiveIsGood: false
   });
-  renderAnalyticsTrendChart("wants", "analyticsWantsChart", labels, rows, {
+  renderAnalyticsTrendChart("wants", "analyticsWantsChart", labels, visibleRows, {
     label: "Wants",
     key: "wants",
     barColor: "rgba(124, 58, 237, 0.70)",
@@ -3359,7 +3732,7 @@ function renderAnalytics(rows) {
     positiveIsGood: false,
     tooltipBreakdownKey: "wantsByCategory"
   });
-  renderAnalyticsNeedsWantsChart(labels, rows);
+  renderAnalyticsNeedsWantsChart(labels, visibleRows);
 }
 
 function setAnalyticsCurrentMonthNotes(show) {
@@ -3378,32 +3751,32 @@ function getAnalyticsScaleBounds(values) {
   };
 }
 
-function getAnalyticsMomChanges(values, positiveIsGood = true) {
-  return values.map((value, index) => {
-    if (index === 0) return null;
+function getAnalyticsTrendChanges(rows, key, positiveIsGood = true) {
+  const period = getAnalyticsPeriod();
 
-    const currentValue = Number(value) || 0;
-    const previousValue = Number(values[index - 1]) || 0;
+  return rows.map((row, index) => {
+    const currentValue = Number(row[key]) || 0;
 
-    if (previousValue === 0) {
-      if (currentValue === 0) return null;
-      return {
-        label: "New",
-        color: positiveIsGood ? "#16a34a" : "#d97706"
-      };
+    if (period === "yearly") {
+      return calculateAnalyticsPercentChange(
+        currentValue,
+        row.comparison ? Number(row.comparison[key]) || 0 : null,
+        positiveIsGood,
+        true
+      );
     }
 
-    const percent = Math.round(((currentValue - previousValue) / previousValue) * 100);
-    const improved = positiveIsGood ? percent >= 0 : percent <= 0;
+    if (index === 0) return null;
 
-    return {
-      label: percent > 0 ? `↑ ${percent}%` : percent < 0 ? `↓ ${Math.abs(percent)}%` : "0%",
-      color: improved ? "#16a34a" : "#d97706"
-    };
+    return calculateAnalyticsPercentChange(
+      currentValue,
+      Number(rows[index - 1][key]) || 0,
+      positiveIsGood
+    );
   });
 }
 
-function createAnalyticsMomLabelPlugin(momChanges) {
+function createAnalyticsMomLabelPlugin(momChanges, datasetIndex = 0) {
   return {
     id: `analyticsMomLabels-${Math.random().toString(36).slice(2)}`,
     afterDatasetsDraw(chart) {
@@ -3411,7 +3784,7 @@ function createAnalyticsMomLabelPlugin(momChanges) {
       if (!options?.enabled) return;
 
       const { ctx, chartArea, scales } = chart;
-      const barMeta = chart.getDatasetMeta(0);
+      const barMeta = chart.getDatasetMeta(options.datasetIndex ?? datasetIndex);
       const fontSize = chart.width < 520 ? 9 : 10;
 
       ctx.save();
@@ -3423,13 +3796,16 @@ function createAnalyticsMomLabelPlugin(momChanges) {
         const change = momChanges[dataIndex];
         if (!change) return;
 
-        const rawValue = Number(chart.data.datasets[0].data[dataIndex]) || 0;
+        if (change.insufficient) return;
+
+        const targetDataset = chart.data.datasets[options.datasetIndex ?? datasetIndex];
+        const rawValue = Number(targetDataset?.data?.[dataIndex]) || 0;
         const zeroY = scales.y.getPixelForValue(0);
         const labelY = rawValue < 0
           ? Math.min(zeroY - 6, chartArea.bottom - 6)
           : Math.max(bar.y - 8, chartArea.top + fontSize + 2);
 
-        ctx.fillStyle = change.color;
+        ctx.fillStyle = change.color || "#64748b";
         ctx.fillText(change.label, bar.x, labelY);
       });
 
@@ -3515,9 +3891,14 @@ function renderAnalyticsTrendChart(chartKey, canvasId, labels, rows, config) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
 
+  if (getAnalyticsPeriod() === "yearly") {
+    renderAnalyticsYearlyGroupedChart(chartKey, canvasId, labels, rows, config);
+    return;
+  }
+
   const values = rows.map(row => Number(row[config.key]) || 0);
   const bounds = getAnalyticsScaleBounds(values);
-  const momChanges = getAnalyticsMomChanges(values, config.positiveIsGood !== false);
+  const momChanges = getAnalyticsTrendChanges(rows, config.key, config.positiveIsGood !== false);
   const momLabelPlugin = createAnalyticsMomLabelPlugin(momChanges);
   const colors = getAnalyticsDatasetColors(config, values);
 
@@ -3557,9 +3938,75 @@ function renderAnalyticsTrendChart(chartKey, canvasId, labels, rows, config) {
     },
     options: getAnalyticsChartOptions(bounds, momChanges, colors.currentContext, {
       rows,
-      breakdownKey: config.tooltipBreakdownKey
+      breakdownKey: config.tooltipBreakdownKey,
+      changeLabel: getAnalyticsChangePeriodLabel()
     }),
     plugins: [momLabelPlugin]
+  });
+}
+
+function getAnalyticsBarColorForIndex(colorConfig, index, fallback) {
+  return Array.isArray(colorConfig) ? colorConfig[index] || fallback : colorConfig || fallback;
+}
+
+function renderAnalyticsYearlyGroupedChart(chartKey, canvasId, labels, rows, config) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+
+  const currentValues = rows.map(row => Number(row[config.key]) || 0);
+  const previousValues = rows.map(row =>
+    row.comparison ? Number(row.comparison[config.key]) || 0 : null
+  );
+  const bounds = getAnalyticsScaleBounds([
+    ...currentValues,
+    ...previousValues.map(value => value === null ? 0 : value)
+  ]);
+  const yoyChanges = getAnalyticsTrendChanges(rows, config.key, config.positiveIsGood !== false);
+  const yoyLabelPlugin = createAnalyticsMomLabelPlugin(yoyChanges, 1);
+  const currentBackgroundColor = currentValues.map((_, index) =>
+    getAnalyticsBarColorForIndex(config.barColor, index, "rgba(37, 99, 235, 0.74)")
+  );
+  const currentBorderColor = currentValues.map((_, index) =>
+    getAnalyticsBarColorForIndex(config.borderColor, index, "#2563eb")
+  );
+
+  analyticsCharts[chartKey] = new Chart(canvas.getContext("2d"), {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Previous Year",
+          data: previousValues,
+          backgroundColor: "rgba(148, 163, 184, 0.58)",
+          borderColor: "#94a3b8",
+          borderWidth: 1,
+          borderRadius: 0,
+          borderSkipped: false,
+          categoryPercentage: 0.56,
+          barPercentage: 0.9,
+          maxBarThickness: 26
+        },
+        {
+          label: "Current Year",
+          data: currentValues,
+          backgroundColor: currentBackgroundColor,
+          borderColor: currentBorderColor,
+          borderWidth: 1,
+          borderRadius: 0,
+          borderSkipped: false,
+          categoryPercentage: 0.56,
+          barPercentage: 0.9,
+          maxBarThickness: 26
+        }
+      ]
+    },
+    options: getAnalyticsYearlyChartOptions(bounds, yoyChanges, {
+      rows,
+      key: config.key,
+      breakdownKey: config.tooltipBreakdownKey
+    }),
+    plugins: [yoyLabelPlugin]
   });
 }
 
@@ -3612,7 +4059,7 @@ function getAnalyticsChartOptions(bounds, momChanges = null, currentMonthContext
             if (!momChanges) return lines;
             const change = item ? momChanges[item.dataIndex] : null;
             if (change) {
-              lines.push(`MoM: ${change.label}`);
+              lines.push(`${tooltipConfig.changeLabel || "MoM"}: ${change.label}`);
             }
 
             return lines;
@@ -3623,6 +4070,100 @@ function getAnalyticsChartOptions(bounds, momChanges = null, currentMonthContext
     layout: {
       padding: {
         top: momChanges ? 28 : 0
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        suggestedMin: bounds.suggestedMin,
+        suggestedMax: bounds.suggestedMax,
+        border: { display: false },
+        grid: { color: "rgba(228, 231, 236, 0.72)" },
+        ticks: {
+          ...getChartTickConfig(),
+          callback: value => formatCurrency(value)
+        }
+      },
+      x: {
+        border: { display: false },
+        grid: { display: false },
+        ticks: getChartTickConfig()
+      }
+    }
+  };
+}
+
+function getAnalyticsYearlyChartOptions(bounds, yoyChanges = null, tooltipConfig = {}) {
+  const legendConfig = getChartLegendConfig();
+  legendConfig.labels.usePointStyle = false;
+  legendConfig.labels.boxWidth = 12;
+
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: {
+      duration: 800,
+      easing: "easeOutQuart"
+    },
+    interaction: {
+      mode: "index",
+      intersect: false
+    },
+    plugins: {
+      legend: legendConfig,
+      analyticsMomLabels: {
+        enabled: Boolean(yoyChanges),
+        datasetIndex: 1
+      },
+      tooltip: {
+        backgroundColor: "rgba(17, 24, 39, 0.94)",
+        titleColor: "#ffffff",
+        bodyColor: "#ffffff",
+        padding: 12,
+        cornerRadius: 12,
+        callbacks: {
+          title(items) {
+            const item = items[0];
+            const row = tooltipConfig.rows?.[item?.dataIndex];
+            if (!row) return item?.label || "";
+            return `${formatMonth(row.comparisonMonth)} vs ${formatMonth(row.month)}`;
+          },
+          label(ctx) {
+            const row = tooltipConfig.rows?.[ctx.dataIndex];
+            if (ctx.datasetIndex === 0 && !row?.comparison) {
+              return "Previous Year value: Insufficient data";
+            }
+
+            const value = ctx.raw === null || ctx.raw === undefined ? 0 : Number(ctx.raw) || 0;
+            return `${ctx.dataset.label} value: ${formatCurrency(value)}`;
+          },
+          afterBody(items) {
+            const item = items.find(ctx => ctx.datasetIndex === 1) || items[0];
+            const lines = [];
+            const row = tooltipConfig.rows?.[item?.dataIndex];
+            const change = item ? yoyChanges?.[item.dataIndex] : null;
+
+            if (tooltipConfig.breakdownKey && row) {
+              lines.push(...getTopAnalyticsBreakdownLines(row[tooltipConfig.breakdownKey] || {}));
+            }
+
+            if (!row?.comparison) {
+              lines.push("YoY: Insufficient data");
+              return lines;
+            }
+
+            if (change) {
+              lines.push(`YoY: ${change.label}`);
+            }
+
+            return lines;
+          }
+        }
+      }
+    },
+    layout: {
+      padding: {
+        top: yoyChanges ? 28 : 0
       }
     },
     scales: {
@@ -4049,6 +4590,13 @@ function formatMonth(monthStr) {
   return new Date(year, month - 1).toLocaleString("default", {
     month: "short",
     year: "numeric"
+  });
+}
+
+function formatMonthName(monthStr) {
+  const [, month] = monthStr.split("-");
+  return new Date(2000, month - 1).toLocaleString("default", {
+    month: "short"
   });
 }
 

@@ -448,9 +448,9 @@
   {
     "_id": "e0d5d827-e8e8-46ec-bace-837ac4c10f2c",
     "createdAt": "2026-06-02T14:28:05.728Z",
-    "updatedAt": "2026-06-02T14:28:05.728Z",
+    "updatedAt": "2026-06-06T14:59:33.039Z",
     "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
-    "amount": 5000,
+    "amount": 15000,
     "category": "Utilities & Bills",
     "subcategory": "Electricity bill",
     "isEssential": true,
