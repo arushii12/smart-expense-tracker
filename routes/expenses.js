@@ -3,6 +3,7 @@ const router = express.Router();
 
 const Budget = require("../models/Budget");
 const Expense = require("../models/Expense");
+const IgnoredSubcategorySuggestion = require("../models/IgnoredSubcategorySuggestion");
 const Income = require("../models/Income");
 const auth = require("../middleware/auth");
 
@@ -17,6 +18,29 @@ async function getAvailableBudget(userId, month) {
   const baseBudget = budgetDoc ? Number(budgetDoc.amount) || 0 : 0;
 
   return baseBudget + additionalIncome;
+}
+
+function getSuggestionKey(value) {
+  return sanitizeOptionalText(value).toLowerCase();
+}
+
+function getIgnoredSuggestionFilter(userId, category, subcategory) {
+  return {
+    userId,
+    categoryKey: getSuggestionKey(category),
+    subcategoryKey: getSuggestionKey(subcategory)
+  };
+}
+
+async function restoreSubcategorySuggestion(userId, category, subcategory) {
+  const cleanCategory = sanitizeOptionalText(category);
+  const cleanSubcategory = sanitizeOptionalText(subcategory);
+
+  if (!cleanCategory || !cleanSubcategory) return;
+
+  await IgnoredSubcategorySuggestion.findOneAndDelete(
+    getIgnoredSuggestionFilter(userId, cleanCategory, cleanSubcategory)
+  );
 }
 
 // =====================================================
@@ -64,6 +88,8 @@ router.post("/", async (req, res) => {
       date: date ? new Date(date) : new Date()
     });
 
+    await restoreSubcategorySuggestion(req.user.id, savedExpense.category, savedExpense.subcategory);
+
     res.json({
       message: "Expense added successfully",
       expense: savedExpense
@@ -99,7 +125,15 @@ router.get("/", async (req, res) => {
 // =====================================================
 router.get("/subcategories", async (req, res) => {
   try {
-    const expenses = await Expense.find({ userId: req.user.id });
+    const expenses = await Expense.find({ userId: req.user.id }).sort({
+      date: -1,
+      updatedAt: -1,
+      createdAt: -1
+    });
+    const ignoredSuggestions = await IgnoredSubcategorySuggestion.find({ userId: req.user.id });
+    const ignoredKeys = new Set(
+      ignoredSuggestions.map(item => `${item.categoryKey}|${item.subcategoryKey}`)
+    );
     const suggestions = {};
     const seen = {};
 
@@ -115,20 +149,58 @@ router.get("/subcategories", async (req, res) => {
       }
 
       const normalized = subcategory.toLowerCase();
+      if (ignoredKeys.has(`${category.toLowerCase()}|${normalized}`)) return;
       if (seen[category].has(normalized)) return;
+      if (suggestions[category].length >= 5) return;
 
       seen[category].add(normalized);
       suggestions[category].push(subcategory);
-    });
-
-    Object.keys(suggestions).forEach(category => {
-      suggestions[category].sort((a, b) => a.localeCompare(b));
     });
 
     res.json({ suggestions });
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch subcategory suggestions",
+      error: error.message
+    });
+  }
+});
+
+// =====================================================
+// POST /expenses/subcategories/ignore
+// =====================================================
+router.post("/subcategories/ignore", async (req, res) => {
+  try {
+    const category = sanitizeOptionalText(req.body.category);
+    const subcategory = sanitizeOptionalText(req.body.subcategory);
+
+    if (!category || !subcategory) {
+      return res.status(400).json({
+        message: "Category and subcategory are required"
+      });
+    }
+
+    const filter = getIgnoredSuggestionFilter(req.user.id, category, subcategory);
+    const existing = await IgnoredSubcategorySuggestion.findOne(filter);
+
+    if (!existing) {
+      await IgnoredSubcategorySuggestion.create({
+        userId: req.user.id,
+        category,
+        categoryKey: filter.categoryKey,
+        subcategory,
+        subcategoryKey: filter.subcategoryKey
+      });
+    }
+
+    res.json({
+      message: "Subcategory suggestion removed",
+      category,
+      subcategory
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to remove subcategory suggestion",
       error: error.message
     });
   }
@@ -419,6 +491,8 @@ router.put("/:id", async (req, res) => {
         message: "Expense not found"
       });
     }
+
+    await restoreSubcategorySuggestion(req.user.id, expense.category, expense.subcategory);
 
     res.json({
       message: "Expense updated successfully",

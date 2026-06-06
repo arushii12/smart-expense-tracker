@@ -264,8 +264,10 @@
               </label>
               <label>
                 <span>Subcategory</span>
-                <input type="text" id="subcategory" list="subcategorySuggestions" placeholder="Yogurt, rent, fuel, medicine" />
-                <datalist id="subcategorySuggestions"></datalist>
+                <div class="subcategory-input-wrap">
+                  <input type="text" id="subcategory" placeholder="Yogurt, rent, fuel, medicine" autocomplete="off" />
+                  <div id="subcategorySuggestions" class="subcategory-suggestion-menu hidden"></div>
+                </div>
               </label>
               <label>
                 <span>Date</span>

@@ -767,19 +767,101 @@ function getSubcategorySuggestions(category) {
   return matchedCategory ? subcategorySuggestionsByCategory[matchedCategory] : [];
 }
 
-function getSubcategoryOptionsMarkup(category) {
+function getVisibleSubcategorySuggestions(category, typedValue = "") {
+  const query = String(typedValue || "").trim().toLowerCase();
   return getSubcategorySuggestions(category)
-    .map(subcategory => `<option value="${escapeHtml(subcategory)}"></option>`)
-    .join("");
+    .filter(subcategory => !query || subcategory.toLowerCase().includes(query))
+    .slice(0, 5);
 }
 
-function updateSubcategoryDatalist(datalistEl, category) {
-  if (!datalistEl) return;
-  datalistEl.innerHTML = getSubcategoryOptionsMarkup(category);
+function renderSubcategorySuggestionMenu(menuEl, category, inputEl) {
+  if (!menuEl || !inputEl) return;
+
+  const suggestions = getVisibleSubcategorySuggestions(category, inputEl.value);
+
+  if (!suggestions.length) {
+    menuEl.innerHTML = "";
+    menuEl.classList.add("hidden");
+    return;
+  }
+
+  menuEl.innerHTML = suggestions
+    .map(subcategory => `
+      <button class="subcategory-suggestion-option" type="button" data-value="${escapeHtml(subcategory)}">
+        <span>${escapeHtml(subcategory)}</span>
+        <span class="subcategory-suggestion-remove" data-remove-value="${escapeHtml(subcategory)}" role="button" aria-label="Remove ${escapeHtml(subcategory)} suggestion">&times;</span>
+      </button>
+    `)
+    .join("");
+  menuEl.classList.remove("hidden");
+}
+
+function hideSubcategorySuggestionMenu(menuEl) {
+  menuEl?.classList.add("hidden");
+}
+
+function bindSubcategorySuggestionMenu(inputEl, categoryEl, menuEl) {
+  if (!inputEl || !categoryEl || !menuEl) return;
+
+  const showSuggestions = () => {
+    renderSubcategorySuggestionMenu(menuEl, categoryEl.value, inputEl);
+  };
+
+  inputEl.addEventListener("focus", showSuggestions);
+  inputEl.addEventListener("input", showSuggestions);
+  categoryEl.addEventListener("change", showSuggestions);
+
+  menuEl.addEventListener("click", async event => {
+    const removeButton = event.target.closest(".subcategory-suggestion-remove");
+    if (removeButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      await removeSubcategorySuggestion(categoryEl.value, removeButton.dataset.removeValue || "", menuEl, inputEl);
+      return;
+    }
+
+    const option = event.target.closest(".subcategory-suggestion-option");
+    if (!option) return;
+
+    inputEl.value = option.dataset.value || "";
+    hideSubcategorySuggestionMenu(menuEl);
+    inputEl.focus();
+  });
+}
+
+async function removeSubcategorySuggestion(category, subcategory, menuEl, inputEl) {
+  const selectedCategory = String(category || "").trim();
+  const value = String(subcategory || "").trim();
+
+  if (!selectedCategory || !value) return;
+
+  try {
+    const res = await authFetch("/expenses/subcategories/ignore", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        category: selectedCategory,
+        subcategory: value
+      })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to remove suggestion");
+    }
+
+    await loadSubcategorySuggestions();
+    renderSubcategorySuggestionMenu(menuEl, selectedCategory, inputEl);
+  } catch (error) {
+    console.error("Subcategory suggestion remove error:", error);
+    showStatus("Unable to remove that suggestion right now.", "error");
+  }
 }
 
 function syncSubcategorySuggestions() {
-  updateSubcategoryDatalist(subcategorySuggestionsEl, categoryInput?.value);
+  if (document.activeElement === subcategoryInput || document.activeElement === categoryInput) {
+    renderSubcategorySuggestionMenu(subcategorySuggestionsEl, categoryInput?.value, subcategoryInput);
+  }
 }
 
 function rememberSubcategorySuggestion(category, subcategory) {
@@ -792,13 +874,12 @@ function rememberSubcategorySuggestion(category, subcategory) {
     subcategorySuggestionsByCategory[selectedCategory] = [];
   }
 
-  const exists = subcategorySuggestionsByCategory[selectedCategory]
-    .some(item => item.toLowerCase() === value.toLowerCase());
+  subcategorySuggestionsByCategory[selectedCategory] = subcategorySuggestionsByCategory[selectedCategory]
+    .filter(item => item.toLowerCase() !== value.toLowerCase());
 
-  if (!exists) {
-    subcategorySuggestionsByCategory[selectedCategory].push(value);
-    subcategorySuggestionsByCategory[selectedCategory].sort((a, b) => a.localeCompare(b));
-  }
+  subcategorySuggestionsByCategory[selectedCategory].unshift(value);
+  subcategorySuggestionsByCategory[selectedCategory] =
+    subcategorySuggestionsByCategory[selectedCategory].slice(0, 5);
 
   syncSubcategorySuggestions();
 }
@@ -1102,9 +1183,16 @@ if (incomeRemarksInput) {
 bindExclusiveChecks(essentialCheck, nonEssentialCheck);
 
 if (categoryInput) {
-  categoryInput.addEventListener("change", syncSubcategorySuggestions);
-  syncSubcategorySuggestions();
+  bindSubcategorySuggestionMenu(subcategoryInput, categoryInput, subcategorySuggestionsEl);
 }
+
+document.addEventListener("click", event => {
+  if (event.target.closest(".subcategory-input-wrap")) return;
+
+  document.querySelectorAll(".subcategory-suggestion-menu").forEach(menu => {
+    hideSubcategorySuggestionMenu(menu);
+  });
+});
 
 // ==============================
 // ADD EXPENSE
@@ -1295,10 +1383,10 @@ function renderExpenses() {
       li.innerHTML = `
         <input type="number" id="editAmount-${exp._id}" value="${exp.amount}" />
         ${getCategorySelectMarkup(`editCategory-${exp._id}`, exp.category)}
-        <input type="text" id="editSubcategory-${exp._id}" value="${escapeHtml(exp.subcategory || "")}" list="editSubcategorySuggestions-${exp._id}" placeholder="Subcategory" />
-        <datalist id="editSubcategorySuggestions-${exp._id}">
-          ${getSubcategoryOptionsMarkup(exp.category)}
-        </datalist>
+        <div class="subcategory-input-wrap">
+          <input type="text" id="editSubcategory-${exp._id}" value="${escapeHtml(exp.subcategory || "")}" placeholder="Subcategory" autocomplete="off" />
+          <div id="editSubcategorySuggestions-${exp._id}" class="subcategory-suggestion-menu hidden"></div>
+        </div>
         <input type="date" id="editDate-${exp._id}" value="${inputDate}" />
         <div class="edit-type-controls">
           <label class="check-option">
@@ -1322,10 +1410,9 @@ function renderExpenses() {
       );
 
       const editCategoryInput = document.getElementById(`editCategory-${exp._id}`);
+      const editSubcategoryInput = document.getElementById(`editSubcategory-${exp._id}`);
       const editSubcategorySuggestionsEl = document.getElementById(`editSubcategorySuggestions-${exp._id}`);
-      editCategoryInput?.addEventListener("change", () => {
-        updateSubcategoryDatalist(editSubcategorySuggestionsEl, editCategoryInput.value);
-      });
+      bindSubcategorySuggestionMenu(editSubcategoryInput, editCategoryInput, editSubcategorySuggestionsEl);
 
       li.querySelector(".save-btn").addEventListener("click", () => {
         updateExpense(exp._id);
