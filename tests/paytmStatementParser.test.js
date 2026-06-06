@@ -4,6 +4,7 @@ const test = require("node:test");
 const {
   groupTransactions,
   mapPaytmTag,
+  parseIncomeTransactionBlock,
   parseTransactionBlock
 } = require("../services/paytmStatementParser");
 
@@ -83,6 +84,93 @@ test("skips self transfers, incoming payments, and masked dates", () => {
   assert.equal(selfTransfer.reason, "Self Transfer ignored");
   assert.equal(refund.reason, "Incoming payment or refund ignored");
   assert.equal(masked.reason, "Missing or unreadable date");
+});
+
+test("parses positive Paytm transactions as additional income", () => {
+  const result = parseIncomeTransactionBlock(
+    [
+      "10 May",
+      "12:26 PM",
+      "Refund from Indian Railways",
+      "UPI Ref No: 613001265327",
+      "Tag:",
+      "# Refund",
+      "ICICI Bank - 62",
+      "+ Rs.4,560"
+    ].join("\n"),
+    context
+  );
+
+  assert.equal(result.incomeTransaction.date, "2026-05-10");
+  assert.equal(result.incomeTransaction.month, "2026-05");
+  assert.equal(result.incomeTransaction.amount, 4560);
+  assert.equal(result.incomeTransaction.paytmTag, "Refund");
+  assert.equal(result.incomeTransaction.remarks, "Paytm UPI - Refund");
+  assert.equal(result.incomeTransaction.referenceNumber, "613001265327");
+});
+
+test("uses Money Received remarks for positive transactions without a tag", () => {
+  const result = parseIncomeTransactionBlock(
+    [
+      "05 Jun",
+      "1:00 PM",
+      "Money received from Example",
+      "UPI Ref No: 123456789012",
+      "ICICI Bank - 62",
+      "+ Rs.500"
+    ].join("\n"),
+    context
+  );
+
+  assert.equal(result.incomeTransaction.remarks, "Paytm UPI - Money Received");
+});
+
+test("does not treat self transfers as additional income", () => {
+  const result = parseIncomeTransactionBlock(
+    [
+      "05 Jun",
+      "1:00 PM",
+      "Transferred to Self",
+      "Tag:",
+      "# Self Transfer",
+      "+ Rs.500"
+    ].join("\n"),
+    context
+  );
+
+  assert.equal(result.reason, "Self Transfer ignored");
+});
+
+test("uses separate hashes for income and expense records with the same reference", () => {
+  const expense = parseTransactionBlock(
+    [
+      "05 Jun",
+      "1:00 PM",
+      "Paid to Example",
+      "UPI Ref No: 123456789012",
+      "Tag:",
+      "# Food",
+      "- Rs.500"
+    ].join("\n"),
+    context
+  );
+  const income = parseIncomeTransactionBlock(
+    [
+      "05 Jun",
+      "2:00 PM",
+      "Refund from Example",
+      "UPI Ref No: 123456789012",
+      "Tag:",
+      "# Refund",
+      "+ Rs.500"
+    ].join("\n"),
+    context
+  );
+
+  assert.notEqual(
+    expense.transaction.transactionHash,
+    income.incomeTransaction.transactionHash
+  );
 });
 
 test("groups transactions by date and final category", () => {

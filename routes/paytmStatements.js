@@ -3,6 +3,7 @@ const multer = require("multer");
 
 const auth = require("../middleware/auth");
 const Expense = require("../models/Expense");
+const Income = require("../models/Income");
 const {
   groupTransactions,
   parsePaytmStatement
@@ -27,11 +28,11 @@ router.use(auth);
 router.post("/preview", handlePdfUpload, async (req, res) => {
   try {
     const preview = await buildPreview(req.user.id, req.file);
-    if (!preview.summary.importableTransactions) {
+    if (!hasImportableRecords(preview.summary)) {
       return res.status(422).json({
-        message: preview.summary.duplicateTransactions
-          ? "All valid outgoing transactions in this statement were already imported."
-          : "No valid outgoing Paytm transactions were found in this statement.",
+        message: hasDuplicateRecords(preview.summary)
+          ? "All valid Paytm expenses and income entries in this statement were already imported."
+          : "No valid Paytm expenses or additional income entries were found in this statement.",
         ...preview
       });
     }
@@ -45,11 +46,11 @@ router.post("/preview", handlePdfUpload, async (req, res) => {
 router.post("/import", handlePdfUpload, async (req, res) => {
   try {
     const preview = await buildPreview(req.user.id, req.file);
-    if (!preview.summary.importableTransactions) {
+    if (!hasImportableRecords(preview.summary)) {
       return res.status(422).json({
-        message: preview.summary.duplicateTransactions
+        message: hasDuplicateRecords(preview.summary)
           ? "This Paytm statement has already been imported."
-          : "No valid outgoing Paytm transactions were found to import.",
+          : "No valid Paytm expenses or additional income entries were found to import.",
         ...preview
       });
     }
@@ -74,14 +75,36 @@ router.post("/import", handlePdfUpload, async (req, res) => {
       savedExpenses.push(expense);
     }
 
+    const savedIncomes = [];
+    for (const incomeTransaction of preview.incomeTransactions) {
+      const income = await Income.create({
+        userId: req.user.id,
+        month: incomeTransaction.month,
+        amount: incomeTransaction.amount,
+        date: new Date(`${incomeTransaction.date}T00:00:00.000Z`),
+        remarks: incomeTransaction.remarks,
+        source: "Paytm UPI Statement",
+        sourceStatementHash: preview.statementHash,
+        sourceTransactionHash: incomeTransaction.transactionHash,
+        sourcePaytmTag: incomeTransaction.paytmTag,
+        sourceTransactionDetails: incomeTransaction.details,
+        sourceReferenceNumber: incomeTransaction.referenceNumber
+      });
+      savedIncomes.push(income);
+    }
+
     res.status(201).json({
-      message: `${savedExpenses.length} grouped expense${savedExpenses.length === 1 ? "" : "s"} imported successfully.`,
+      message: buildImportMessage(savedExpenses.length, savedIncomes.length),
       importedExpenses: savedExpenses.length,
       importedTransactions: preview.summary.importableTransactions,
       duplicateTransactions: preview.summary.duplicateTransactions,
+      importedIncomeEntries: savedIncomes.length,
+      duplicateIncomeTransactions: preview.summary.duplicateIncomeTransactions,
       skippedTransactions: preview.summary.skippedTransactions,
       totalAmountImported: preview.summary.totalAmountToImport,
-      expenses: savedExpenses
+      totalIncomeAmountImported: preview.summary.totalIncomeAmountToImport,
+      expenses: savedExpenses,
+      incomes: savedIncomes
     });
   } catch (error) {
     handleParseError(res, error);
@@ -102,19 +125,37 @@ async function buildPreview(userId, file) {
     parsed.validTransactions.length - importableTransactions.length;
   const groups = groupTransactions(importableTransactions);
   const totalAmountToImport = groups.reduce((sum, group) => sum + group.amount, 0);
+  const existingIncomeHashes = await getExistingIncomeTransactionHashes(userId);
+  const seenIncomeHashes = new Set(existingIncomeHashes);
+  const importableIncomeTransactions = parsed.incomeTransactions.filter(transaction => {
+    if (seenIncomeHashes.has(transaction.transactionHash)) return false;
+    seenIncomeHashes.add(transaction.transactionHash);
+    return true;
+  });
+  const duplicateIncomeTransactions =
+    parsed.incomeTransactions.length - importableIncomeTransactions.length;
+  const totalIncomeAmountToImport = importableIncomeTransactions.reduce(
+    (sum, transaction) => sum + transaction.amount,
+    0
+  );
 
   return {
     fileName: file.originalname,
     statementHash: parsed.statementHash,
     groups,
+    incomeTransactions: importableIncomeTransactions,
     summary: {
       totalTransactionsFound: parsed.totalTransactionsFound,
       validOutgoingTransactions: parsed.validTransactions.length,
       importableTransactions: importableTransactions.length,
       groupedExpenses: groups.length,
+      validIncomeTransactions: parsed.incomeTransactions.length,
+      importableIncomeTransactions: importableIncomeTransactions.length,
       skippedTransactions: parsed.skipped.length,
       duplicateTransactions,
-      totalAmountToImport: Math.round(totalAmountToImport * 100) / 100
+      duplicateIncomeTransactions,
+      totalAmountToImport: Math.round(totalAmountToImport * 100) / 100,
+      totalIncomeAmountToImport: Math.round(totalIncomeAmountToImport * 100) / 100
     }
   };
 }
@@ -128,6 +169,40 @@ async function getExistingTransactionHashes(userId) {
         : []
     )
   );
+}
+
+async function getExistingIncomeTransactionHashes(userId) {
+  const incomes = await Income.find({ userId });
+  return new Set(
+    incomes
+      .map(income => income.sourceTransactionHash)
+      .filter(Boolean)
+  );
+}
+
+function hasImportableRecords(summary) {
+  return Boolean(
+    summary.importableTransactions ||
+    summary.importableIncomeTransactions
+  );
+}
+
+function hasDuplicateRecords(summary) {
+  return Boolean(
+    summary.duplicateTransactions ||
+    summary.duplicateIncomeTransactions
+  );
+}
+
+function buildImportMessage(expenseCount, incomeCount) {
+  const parts = [];
+  if (expenseCount) {
+    parts.push(`${expenseCount} grouped expense${expenseCount === 1 ? "" : "s"}`);
+  }
+  if (incomeCount) {
+    parts.push(`${incomeCount} additional income entr${incomeCount === 1 ? "y" : "ies"}`);
+  }
+  return `${parts.join(" and ")} imported successfully.`;
 }
 
 function handlePdfUpload(req, res, next) {

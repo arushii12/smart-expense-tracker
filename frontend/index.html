@@ -289,9 +289,12 @@
             </div>
             <button class="primary-btn add-btn" type="button" onclick="addExpense()"><i data-lucide="plus"></i>Add Expense</button>
             <div class="paytm-upload-action">
-              <button id="paytmStatementUploadBtn" class="ghost-btn compact" type="button">
-                <i data-lucide="file-up"></i>
-                Upload Paytm UPI Statement
+              <button id="paytmStatementUploadBtn" class="paytm-upload-card" type="button">
+                <span class="paytm-upload-icon"><i data-lucide="circle-arrow-up"></i></span>
+                <span class="paytm-upload-copy">
+                  <strong>Upload Paytm UPI Statement</strong>
+                  <small>Upload PDF statement</small>
+                </span>
               </button>
               <input id="paytmStatementInput" type="file" accept="application/pdf,.pdf" />
             </div>
@@ -481,7 +484,7 @@
             <div class="modal-header">
               <div>
                 <p class="eyebrow">Paytm Import</p>
-                <h3 id="paytmPreviewTitle">Review Statement Expenses</h3>
+                <h3 id="paytmPreviewTitle">Review Statement Import</h3>
                 <p id="paytmPreviewFileName" class="helper-text"></p>
               </div>
               <button id="closePaytmPreviewBtn" class="icon-btn" type="button" aria-label="Close Paytm statement preview">
@@ -492,27 +495,47 @@
             <div id="paytmPreviewSummary" class="paytm-preview-summary"></div>
             <div id="paytmPreviewMessage" class="receipt-status hidden" role="status"></div>
 
-            <div class="paytm-preview-table-wrap">
-              <table class="paytm-preview-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Paytm Tags Included</th>
-                    <th>Mapped Category</th>
-                    <th>Subcategory</th>
-                    <th>Amount</th>
-                    <th>Type</th>
-                  </tr>
-                </thead>
-                <tbody id="paytmPreviewTableBody"></tbody>
-              </table>
+            <div class="paytm-preview-section">
+              <h4>Expenses to Import</h4>
+              <div class="paytm-preview-table-wrap">
+                <table class="paytm-preview-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Paytm Tags Included</th>
+                      <th>Mapped Category</th>
+                      <th>Subcategory</th>
+                      <th>Amount</th>
+                      <th>Type</th>
+                    </tr>
+                  </thead>
+                  <tbody id="paytmPreviewTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="paytm-preview-section">
+              <h4>Additional Income to Import</h4>
+              <div class="paytm-preview-table-wrap">
+                <table class="paytm-preview-table paytm-income-preview-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Paytm Tag</th>
+                      <th>Remarks</th>
+                      <th>Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody id="paytmIncomePreviewTableBody"></tbody>
+                </table>
+              </div>
             </div>
 
             <div class="modal-actions">
               <button id="cancelPaytmImportBtn" class="ghost-btn compact" type="button">Cancel</button>
               <button id="confirmPaytmImportBtn" class="primary-btn compact" type="button">
                 <i data-lucide="download"></i>
-                Import Expenses
+                Import Statement
               </button>
             </div>
           </div>

@@ -49,6 +49,7 @@ async function parsePaytmStatement(buffer, fileName = "") {
   const statementEndMonth = inferStatementEndMonth(fileName);
   const blocks = splitTransactionBlocks(text);
   const validTransactions = [];
+  const incomeTransactions = [];
   const skipped = [];
 
   blocks.forEach((block, index) => {
@@ -58,6 +59,18 @@ async function parsePaytmStatement(buffer, fileName = "") {
     });
 
     if (!parsed.transaction) {
+      if (parsed.reason === "Incoming payment or refund ignored") {
+        const incomeParsed = parseIncomeTransactionBlock(block, {
+          statementYear,
+          statementEndMonth
+        });
+
+        if (incomeParsed.incomeTransaction) {
+          incomeTransactions.push(incomeParsed.incomeTransaction);
+          return;
+        }
+      }
+
       skipped.push({
         index,
         reason: parsed.reason
@@ -79,6 +92,7 @@ async function parsePaytmStatement(buffer, fileName = "") {
     pageCount: parsedPdf.numpages || 0,
     totalTransactionsFound: blocks.length,
     validTransactions,
+    incomeTransactions,
     skipped
   };
 }
@@ -160,6 +174,63 @@ function parseTransactionBlock(block, context) {
       category: mapping.category,
       subcategory: mapping.subcategory,
       isEssential: ESSENTIAL_CATEGORIES.has(mapping.category),
+      details,
+      referenceNumber,
+      transactionHash
+    }
+  };
+}
+
+function parseIncomeTransactionBlock(block, context) {
+  const dateMatch = block.match(/^(\d{2})\s+([A-Za-z]{3})/);
+  if (!dateMatch) {
+    return { reason: "Missing or unreadable date" };
+  }
+
+  const tag = extractTag(block);
+  if (normalizeTag(tag) === "self transfer") {
+    return { reason: "Self Transfer ignored" };
+  }
+
+  const amountMatch = block.match(/\+\s*Rs\.\s*([\d,]+(?:\.\d{1,2})?)/i);
+  if (!amountMatch) {
+    return { reason: "Not a positive Paytm transaction" };
+  }
+
+  const month = MONTH_INDEX[dateMatch[2].toLowerCase()];
+  const day = Number(dateMatch[1]);
+  if (!month || day < 1 || day > 31) {
+    return { reason: "Missing or unreadable date" };
+  }
+
+  const year = resolveTransactionYear(month, context.statementYear, context.statementEndMonth);
+  const date = toIsoDate(year, month, day);
+  if (!date) {
+    return { reason: "Invalid transaction date" };
+  }
+
+  const amount = Number(amountMatch[1].replace(/,/g, ""));
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { reason: "Missing or unreadable amount" };
+  }
+
+  const details = extractTransactionDetails(block);
+  const referenceNumber = block.match(/UPI Ref No:\s*([A-Za-z0-9-]+)/i)?.[1] || "";
+  const transactionHash = buildIncomeTransactionHash({
+    date,
+    amount,
+    tag,
+    details,
+    referenceNumber
+  });
+
+  return {
+    incomeTransaction: {
+      date,
+      month: date.slice(0, 7),
+      amount,
+      paytmTag: tag,
+      remarks: `Paytm UPI - ${tag || "Money Received"}`,
       details,
       referenceNumber,
       transactionHash
@@ -291,6 +362,20 @@ function buildTransactionHash(transaction) {
   return crypto.createHash("sha256").update(stableValue).digest("hex");
 }
 
+function buildIncomeTransactionHash(transaction) {
+  const stableValue = transaction.referenceNumber
+    ? `paytm-income-ref|${transaction.referenceNumber}`
+    : [
+        "paytm-income",
+        transaction.date,
+        Number(transaction.amount).toFixed(2),
+        normalizeTag(transaction.tag),
+        String(transaction.details || "").replace(/\s+/g, " ").trim().toLowerCase()
+      ].join("|");
+
+  return crypto.createHash("sha256").update(stableValue).digest("hex");
+}
+
 function inferStatementYear(fileName, info = {}) {
   const fileYears = Array.from(String(fileName || "").matchAll(/(?:'|\b)(\d{2}|\d{4})(?=\D|$)/g))
     .map(match => normalizeYear(match[1]))
@@ -337,6 +422,7 @@ function toIsoDate(year, month, day) {
 module.exports = {
   groupTransactions,
   mapPaytmTag,
+  parseIncomeTransactionBlock,
   parsePaytmStatement,
   parseTransactionBlock,
   splitTransactionBlocks

@@ -1387,5 +1387,88 @@
     "sourceReferenceNumbers": [
       "302034610311"
     ]
+  },
+  {
+    "_id": "6047a553-32d8-4c6d-9c5f-fca9e42246c6",
+    "createdAt": "2026-06-06T19:22:47.262Z",
+    "updatedAt": "2026-06-06T19:22:47.262Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 19,
+    "category": "Utilities & Bills",
+    "subcategory": "UPI Transaction",
+    "isEssential": true,
+    "date": "2026-06-03T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "30897767b9105ea9a34c7183b79a276217206bf71afc311cfbe30ba2c78dfc84",
+    "sourceTransactionHashes": [
+      "910127aace988764c73ff189726d02f80a71337ce396f40c3401fb83574ebb57"
+    ],
+    "sourcePaytmTags": [
+      "Bill Payments"
+    ],
+    "sourceTransactionDetails": [
+      "Recharge of Jio Mobile 7982703025"
+    ],
+    "sourceReferenceNumbers": [
+      "207571127252"
+    ]
+  },
+  {
+    "_id": "7c71da1e-daf4-4143-95bb-b84c5984f9ff",
+    "createdAt": "2026-06-06T19:22:47.268Z",
+    "updatedAt": "2026-06-06T19:22:47.268Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 1999,
+    "category": "Miscellaneous",
+    "subcategory": "UPI Transaction",
+    "isEssential": false,
+    "date": "2026-06-01T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "30897767b9105ea9a34c7183b79a276217206bf71afc311cfbe30ba2c78dfc84",
+    "sourceTransactionHashes": [
+      "0fdde0fe0d82c03a3ee101bef7ffdb862a1137354daed060e07decc6ed13006e"
+    ],
+    "sourcePaytmTags": [
+      "Shopping"
+    ],
+    "sourceTransactionDetails": [
+      "Automatic payment of ₹1999 setup for OpenAI LLC"
+    ],
+    "sourceReferenceNumbers": [
+      "771937483761"
+    ]
+  },
+  {
+    "_id": "19abeeb6-43fe-4863-86d5-b563b49aa486",
+    "createdAt": "2026-06-06T19:22:47.272Z",
+    "updatedAt": "2026-06-06T19:22:47.272Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "amount": 83,
+    "category": "Utilities & Bills",
+    "subcategory": "UPI Transaction",
+    "isEssential": true,
+    "date": "2026-06-01T00:00:00.000Z",
+    "source": "Paytm UPI Statement",
+    "notes": "Imported from Paytm UPI Statement",
+    "sourceStatementHash": "30897767b9105ea9a34c7183b79a276217206bf71afc311cfbe30ba2c78dfc84",
+    "sourceTransactionHashes": [
+      "cc65ad447355581b6c0b2d03fadd6bec256a1864592b832baf88da02585d6630",
+      "8c2c8955d10ada94d585c3d22a19215d08ca1df00f010063ceb893ce49d74e3b",
+      "30719aacea39620449950018f2e9a011b2303eb206c51ab45b5b9fa72cdfdc8a"
+    ],
+    "sourcePaytmTags": [
+      "Bill Payments"
+    ],
+    "sourceTransactionDetails": [
+      "Recharge of Jio Mobile 7982703025",
+      "Purchase of Delhi Metro QR Tickets"
+    ],
+    "sourceReferenceNumbers": [
+      "615238954077",
+      "207434557684",
+      "615259840748"
+    ]
   }
 ]

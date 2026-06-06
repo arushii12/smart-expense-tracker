@@ -74,6 +74,7 @@ const paytmPreviewFileNameEl = document.getElementById("paytmPreviewFileName");
 const paytmPreviewSummaryEl = document.getElementById("paytmPreviewSummary");
 const paytmPreviewMessageEl = document.getElementById("paytmPreviewMessage");
 const paytmPreviewTableBody = document.getElementById("paytmPreviewTableBody");
+const paytmIncomePreviewTableBody = document.getElementById("paytmIncomePreviewTableBody");
 const closePaytmPreviewBtn = document.getElementById("closePaytmPreviewBtn");
 const cancelPaytmImportBtn = document.getElementById("cancelPaytmImportBtn");
 const confirmPaytmImportBtn = document.getElementById("confirmPaytmImportBtn");
@@ -1833,6 +1834,7 @@ async function handlePaytmStatementSelection() {
 function renderPaytmPreview(data, message = "") {
   const summary = data.summary || {};
   const groups = data.groups || [];
+  const incomeTransactions = data.incomeTransactions || [];
 
   if (paytmPreviewFileNameEl) {
     paytmPreviewFileNameEl.textContent = data.fileName || selectedPaytmStatementFile?.name || "";
@@ -1841,11 +1843,14 @@ function renderPaytmPreview(data, message = "") {
   if (paytmPreviewSummaryEl) {
     paytmPreviewSummaryEl.innerHTML = `
       ${getPaytmSummaryItem("Transactions Found", summary.totalTransactionsFound || 0)}
-      ${getPaytmSummaryItem("Ready to Import", summary.importableTransactions || 0)}
+      ${getPaytmSummaryItem("Expenses Ready", summary.importableTransactions || 0)}
       ${getPaytmSummaryItem("Grouped Expenses", summary.groupedExpenses || 0)}
+      ${getPaytmSummaryItem("Income Ready", summary.importableIncomeTransactions || 0)}
       ${getPaytmSummaryItem("Skipped", summary.skippedTransactions || 0)}
-      ${getPaytmSummaryItem("Duplicates", summary.duplicateTransactions || 0)}
-      ${getPaytmSummaryItem("Import Amount", formatPaytmCurrency(summary.totalAmountToImport || 0))}
+      ${getPaytmSummaryItem("Expense Duplicates", summary.duplicateTransactions || 0)}
+      ${getPaytmSummaryItem("Income Duplicates", summary.duplicateIncomeTransactions || 0)}
+      ${getPaytmSummaryItem("Expense Amount", formatPaytmCurrency(summary.totalAmountToImport || 0))}
+      ${getPaytmSummaryItem("Income Amount", formatPaytmCurrency(summary.totalIncomeAmountToImport || 0))}
     `;
   }
 
@@ -1864,17 +1869,36 @@ function renderPaytmPreview(data, message = "") {
       : '<tr><td colspan="6">No new grouped expenses are available to import.</td></tr>';
   }
 
+  if (paytmIncomePreviewTableBody) {
+    paytmIncomePreviewTableBody.innerHTML = incomeTransactions.length
+      ? incomeTransactions.map(transaction => `
+          <tr>
+            <td>${escapeHtml(formatPaytmImportDate(transaction.date))}</td>
+            <td>${escapeHtml(transaction.paytmTag || "Money Received")}</td>
+            <td>${escapeHtml(transaction.remarks)}</td>
+            <td>${formatPaytmCurrency(transaction.amount)}</td>
+          </tr>
+        `).join("")
+      : '<tr><td colspan="4">No new additional income entries are available to import.</td></tr>';
+  }
+
+  const duplicateCount =
+    Number(summary.duplicateTransactions || 0) +
+    Number(summary.duplicateIncomeTransactions || 0);
   showPaytmPreviewMessage(
     message || (
-      summary.duplicateTransactions
-        ? `${summary.duplicateTransactions} duplicate transaction${summary.duplicateTransactions === 1 ? " was" : "s were"} excluded.`
+      duplicateCount
+        ? `${duplicateCount} duplicate transaction${duplicateCount === 1 ? " was" : "s were"} excluded.`
         : ""
     ),
     message ? "error" : "info"
   );
 
   if (confirmPaytmImportBtn) {
-    confirmPaytmImportBtn.disabled = !summary.importableTransactions;
+    confirmPaytmImportBtn.disabled = !(
+      summary.importableTransactions ||
+      summary.importableIncomeTransactions
+    );
   }
 }
 
@@ -1905,7 +1929,11 @@ function formatPaytmCurrency(value) {
 }
 
 async function importPaytmStatement() {
-  if (!selectedPaytmStatementFile || !currentPaytmPreview?.summary?.importableTransactions) {
+  const summary = currentPaytmPreview?.summary || {};
+  const hasImportableRecords =
+    summary.importableTransactions ||
+    summary.importableIncomeTransactions;
+  if (!selectedPaytmStatementFile || !hasImportableRecords) {
     showPaytmPreviewMessage("Choose and preview a Paytm statement before importing.", "error");
     return;
   }
@@ -1921,7 +1949,16 @@ async function importPaytmStatement() {
     const data = await res.json();
 
     if (!res.ok) {
-      throw new Error(data.message || "Unable to import Paytm expenses.");
+      throw new Error(data.message || "Unable to import this Paytm statement.");
+    }
+
+    const importedIncomeMonths = (data.incomes || [])
+      .map(income => income.month)
+      .filter(Boolean)
+      .sort();
+    if (importedIncomeMonths.length) {
+      selectedBudgetMonth = importedIncomeMonths[importedIncomeMonths.length - 1];
+      if (budgetMonthInput) budgetMonthInput.value = selectedBudgetMonth;
     }
 
     const importedDates = (currentPaytmPreview.groups || []).map(group => group.date).sort();
@@ -1933,13 +1970,11 @@ async function importPaytmStatement() {
     closePaytmPreview();
     await fetchExpensesByRange();
     await updateDashboardKpis();
-    showStatus(
-      `${data.importedExpenses} grouped Paytm expense${data.importedExpenses === 1 ? "" : "s"} imported successfully.`,
-      "success"
-    );
+    await loadAdditionalIncome(getSelectedBudgetMonth());
+    showStatus(data.message || "Paytm statement imported successfully.", "success");
   } catch (error) {
     console.error("Paytm statement import error:", error);
-    showPaytmPreviewMessage(error.message || "Unable to import Paytm expenses.", "error");
+    showPaytmPreviewMessage(error.message || "Unable to import this Paytm statement.", "error");
   } finally {
     setPaytmImportLoading(false);
   }
@@ -1962,8 +1997,20 @@ function setPaytmUploadLoading(isLoading) {
   if (!paytmStatementUploadBtn) return;
   paytmStatementUploadBtn.disabled = isLoading;
   paytmStatementUploadBtn.innerHTML = isLoading
-    ? '<span class="button-spinner"></span>Parsing Statement'
-    : '<i data-lucide="file-up"></i>Upload Paytm UPI Statement';
+    ? `
+        <span class="paytm-upload-icon"><span class="button-spinner paytm-card-spinner"></span></span>
+        <span class="paytm-upload-copy">
+          <strong>Parsing Paytm Statement</strong>
+          <small>Please wait while the PDF is processed</small>
+        </span>
+      `
+    : `
+        <span class="paytm-upload-icon"><i data-lucide="circle-arrow-up"></i></span>
+        <span class="paytm-upload-copy">
+          <strong>Upload Paytm UPI Statement</strong>
+          <small>Upload PDF statement</small>
+        </span>
+      `;
   renderIcons();
 }
 
@@ -1972,7 +2019,7 @@ function setPaytmImportLoading(isLoading) {
   confirmPaytmImportBtn.disabled = isLoading;
   confirmPaytmImportBtn.innerHTML = isLoading
     ? '<span class="button-spinner"></span>Importing'
-    : '<i data-lucide="download"></i>Import Expenses';
+    : '<i data-lucide="download"></i>Import Statement';
   renderIcons();
 }
 
@@ -1986,6 +2033,7 @@ function resetPaytmImport() {
   currentPaytmPreview = null;
   if (paytmStatementInput) paytmStatementInput.value = "";
   if (paytmPreviewTableBody) paytmPreviewTableBody.innerHTML = "";
+  if (paytmIncomePreviewTableBody) paytmIncomePreviewTableBody.innerHTML = "";
   if (paytmPreviewSummaryEl) paytmPreviewSummaryEl.innerHTML = "";
   showPaytmPreviewMessage("");
 }

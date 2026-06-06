@@ -48,5 +48,21 @@
     "amount": 10000,
     "date": "2026-05-12T00:00:00.000Z",
     "remarks": "interest"
+  },
+  {
+    "_id": "7826477d-f93b-49c5-b689-4b1c396827c7",
+    "createdAt": "2026-06-06T19:22:47.277Z",
+    "updatedAt": "2026-06-06T19:22:47.277Z",
+    "userId": "c60caa90-5d4d-4aba-9b13-ac71a9395254",
+    "month": "2026-06",
+    "amount": 2000,
+    "date": "2026-06-01T00:00:00.000Z",
+    "remarks": "Paytm UPI - Money Received",
+    "source": "Paytm UPI Statement",
+    "sourceStatementHash": "30897767b9105ea9a34c7183b79a276217206bf71afc311cfbe30ba2c78dfc84",
+    "sourceTransactionHash": "48e9790390da34f2f609b0aa6ad3c9b7bf2995e4477f54ba37f731aa520afe6b",
+    "sourcePaytmTag": "Money Received",
+    "sourceTransactionDetails": "Received from Ajai Kumar Goswami",
+    "sourceReferenceNumber": "607210026903"
   }
 ]

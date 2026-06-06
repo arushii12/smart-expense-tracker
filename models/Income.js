@@ -22,6 +22,30 @@ const incomeSchema = new mongoose.Schema({
   remarks: {
     type: String,
     default: ""
+  },
+  source: {
+    type: String,
+    default: ""
+  },
+  sourceStatementHash: {
+    type: String,
+    default: ""
+  },
+  sourceTransactionHash: {
+    type: String,
+    default: ""
+  },
+  sourcePaytmTag: {
+    type: String,
+    default: ""
+  },
+  sourceTransactionDetails: {
+    type: String,
+    default: ""
+  },
+  sourceReferenceNumber: {
+    type: String,
+    default: ""
   }
 }, {
   timestamps: true
