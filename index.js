@@ -24,6 +24,7 @@ const reportRoutes = require("./routes/report");
 const receiptRoutes = require("./routes/receipts");
 const profileRoutes = require("./routes/profile");
 const financialStatementRoutes = require("./routes/financialStatement");
+const analyticsRoutes = require("./routes/analytics");
 const incomeRoutes = require("./routes/income");
 
 // ==============================
@@ -62,6 +63,7 @@ app.use("/income", incomeRoutes);
 app.use("/forecast", forecastRoutes);
 app.use("/report", reportRoutes);
 app.use("/api/financial-statement", financialStatementRoutes);
+app.use("/api/analytics", analyticsRoutes);
 app.use("/api/receipts", receiptRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/profile", profileRoutes);

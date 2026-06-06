@@ -305,6 +305,27 @@ select:focus {
   border-color: #cbd5e1;
 }
 
+.guide-header-btn {
+  background: #ffffff;
+  border-color: #dbeafe;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+  font-weight: 800;
+  min-height: 42px;
+  padding: 0 16px;
+}
+
+.guide-header-btn svg {
+  color: #1d4ed8;
+}
+
+.guide-header-btn:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.14);
+  transform: translateY(-1px);
+}
+
 .logout-btn {
   background: var(--error-soft);
   color: var(--error);
@@ -2026,6 +2047,63 @@ select:focus {
   font-weight: 800;
 }
 
+.analytics-heading {
+  gap: 18px;
+}
+
+.analytics-heading p:not(.eyebrow) {
+  margin-top: 4px;
+}
+
+.analytics-controls {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.analytics-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.analytics-chart-card {
+  min-height: 390px;
+  padding: 22px;
+}
+
+.analytics-chart-card h3 {
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.analytics-chart-card .analysis-label {
+  margin-bottom: 8px;
+}
+
+.analytics-current-note {
+  background: rgba(37, 99, 235, 0.07);
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  border-radius: 8px;
+  color: var(--muted-strong);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 0 0 14px;
+  padding: 8px 10px;
+}
+
+.analytics-chart-frame {
+  height: 300px;
+}
+
+.analytics-wide-chart {
+  grid-column: 1 / -1;
+}
+
 .budget-actions {
   align-items: end;
   display: flex;
@@ -2705,6 +2783,32 @@ select:focus {
   max-width: 720px;
 }
 
+.guide-back-link {
+  align-items: center;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  color: #0b3d91;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 17px;
+  font-weight: 700;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 0;
+}
+
+.guide-back-link svg {
+  height: 16px;
+  width: 16px;
+}
+
+.guide-back-link:hover {
+  color: #082f75;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .guide-actions {
   align-items: flex-end;
   display: flex;
@@ -3039,6 +3143,30 @@ body.dark-mode .menu-item:hover {
   background: #1e293b;
   border-color: #64748b;
   color: var(--text);
+}
+
+body.dark-mode .guide-header-btn {
+  background: rgba(15, 23, 42, 0.92);
+  border-color: rgba(96, 165, 250, 0.32);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.16);
+}
+
+body.dark-mode .guide-header-btn,
+body.dark-mode .guide-header-btn svg {
+  color: #93c5fd;
+}
+
+body.dark-mode .guide-header-btn:hover {
+  background: rgba(30, 64, 175, 0.22);
+  border-color: rgba(147, 197, 253, 0.44);
+}
+
+body.dark-mode .guide-back-link {
+  color: #93c5fd;
+}
+
+body.dark-mode .guide-back-link:hover {
+  color: #bfdbfe;
 }
 
 body.dark-mode .auth-page {
@@ -3520,6 +3648,7 @@ body.dark-mode .income-history-table::-webkit-scrollbar-thumb:hover {
   .content-grid,
   .guide-hero,
   .guide-grid,
+  .analytics-grid,
   .statement-summary-grid {
     grid-auto-rows: auto;
     grid-template-columns: 1fr;
@@ -3592,6 +3721,7 @@ body.dark-mode .income-history-table::-webkit-scrollbar-thumb:hover {
 
   .topbar-actions,
   .analysis-controls,
+  .analytics-controls,
   .history-controls,
   .expense-actions,
   .statement-controls {
@@ -3624,6 +3754,7 @@ body.dark-mode .income-history-table::-webkit-scrollbar-thumb:hover {
   .profile-form,
   .guide-grid,
   .charts-grid,
+  .analytics-grid,
   .budget-stats,
   .forecast-stats,
   .statement-summary-grid {
@@ -3667,9 +3798,20 @@ body.dark-mode .income-history-table::-webkit-scrollbar-thumb:hover {
   }
 
   .statement-controls .compact-field,
+  .analytics-controls .compact-field,
+  .analytics-controls .primary-btn,
   .statement-controls .primary-btn,
   .statement-controls .ghost-btn {
     width: 100%;
+  }
+
+  .analytics-chart-card {
+    min-height: 340px;
+    padding: 18px;
+  }
+
+  .analytics-chart-frame {
+    height: 260px;
   }
 
   .statement-card {

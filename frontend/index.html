@@ -73,8 +73,8 @@
         <button class="sidebar-link" type="button" data-view="insights" title="Insights"><i data-lucide="sparkles"></i><span class="nav-number">04</span><span class="nav-label">Insights</span></button>
         <button class="sidebar-link" type="button" data-view="forecast" title="Forecast"><i data-lucide="trending-up"></i><span class="nav-number">05</span><span class="nav-label">Forecast</span></button>
         <button class="sidebar-link" type="button" data-view="financial-statement" title="Financial Statement"><i data-lucide="table-2"></i><span class="nav-number">06</span><span class="nav-label">Financial Statement</span></button>
-        <button class="sidebar-link" type="button" data-view="reports" title="Reports"><i data-lucide="file-down"></i><span class="nav-number">07</span><span class="nav-label">Reports</span></button>
-        <button class="sidebar-link" type="button" data-view="workflow-guide" title="User Guide"><i data-lucide="info"></i><span class="nav-number">08</span><span class="nav-label">User Guide</span></button>
+        <button class="sidebar-link" type="button" data-view="analytics" title="Analytics"><i data-lucide="bar-chart-3"></i><span class="nav-number">07</span><span class="nav-label">Analytics</span></button>
+        <button class="sidebar-link" type="button" data-view="reports" title="Reports"><i data-lucide="file-down"></i><span class="nav-number">08</span><span class="nav-label">Reports</span></button>
         <button class="sidebar-link" type="button" data-view="profile" title="Profile"><i data-lucide="circle-user-round"></i><span class="nav-number">09</span><span class="nav-label">Profile</span></button>
       </nav>
 
@@ -92,7 +92,10 @@
           <h1 id="pageTitle">Dashboard</h1>
         </div>
         <div class="topbar-actions">
-          <button id="dashboardGuideBtn" class="icon-btn dashboard-only-action" type="button" data-view-target="workflow-guide" aria-label="Open workflow guide"><i data-lucide="info"></i>Guide</button>
+          <button id="dashboardGuideBtn" class="icon-btn dashboard-only-action guide-header-btn" type="button" data-view-target="workflow-guide" aria-label="Open workflow guide">
+            <i data-lucide="book-open"></i>
+            Guide
+          </button>
           <button id="darkModeToggle" class="icon-btn" type="button" aria-label="Toggle theme"><i data-lucide="moon"></i>Theme</button>
           <button class="primary-btn compact" type="button" data-view-target="expenses"><i data-lucide="plus"></i>Add Expense</button>
           <div class="profile-menu-wrapper">
@@ -742,6 +745,83 @@
         </article>
       </section>
 
+      <section id="view-analytics" class="page-view" data-title="Analytics">
+        <div class="section-heading analytics-heading">
+          <div>
+            <p class="eyebrow">Analytics</p>
+            <h2>Analytics</h2>
+            <p>Analyze month-wise budget, income, expenses, savings, needs, and wants.</p>
+          </div>
+          <div class="analytics-controls">
+            <label class="field compact-field">
+              <span>From Month</span>
+              <input type="month" id="analyticsFromMonth" />
+            </label>
+            <label class="field compact-field">
+              <span>To Month</span>
+              <input type="month" id="analyticsToMonth" />
+            </label>
+            <button id="analyticsApplyBtn" class="primary-btn compact" type="button"><i data-lucide="filter"></i>Apply</button>
+          </div>
+        </div>
+
+        <p id="analyticsEmptyState" class="empty-state hidden">No analytics data is available for this range.</p>
+
+        <div class="analytics-grid">
+          <article class="chart-panel analytics-chart-card">
+            <h3>Budget Trend</h3>
+            <p class="analysis-label">Monthly Available Budget</p>
+            <div class="chart-frame analytics-chart-frame">
+              <canvas id="analyticsBudgetChart"></canvas>
+            </div>
+          </article>
+          <article class="chart-panel analytics-chart-card">
+            <h3>Additional Income Trend</h3>
+            <p class="analysis-label">Additional income received each month</p>
+            <div class="chart-frame analytics-chart-frame">
+              <canvas id="analyticsIncomeChart"></canvas>
+            </div>
+          </article>
+          <article class="chart-panel analytics-chart-card">
+            <h3>Expense Trend</h3>
+            <p class="analysis-label">Total expenses each month</p>
+            <p id="analyticsExpenseCurrentNote" class="analytics-current-note hidden">Current month expenses are recorded only up to today and may increase before month-end.</p>
+            <div class="chart-frame analytics-chart-frame">
+              <canvas id="analyticsExpenseChart"></canvas>
+            </div>
+          </article>
+          <article class="chart-panel analytics-chart-card">
+            <h3>Savings Trend</h3>
+            <p class="analysis-label">Monthly savings after expenses</p>
+            <p id="analyticsSavingsCurrentNote" class="analytics-current-note hidden">Current month savings are provisional and may change as additional expenses are recorded.</p>
+            <div class="chart-frame analytics-chart-frame">
+              <canvas id="analyticsSavingsChart"></canvas>
+            </div>
+          </article>
+          <article class="chart-panel analytics-chart-card">
+            <h3>Needs Expense Trend</h3>
+            <p class="analysis-label">Essential expenses only</p>
+            <div class="chart-frame analytics-chart-frame">
+              <canvas id="analyticsNeedsChart"></canvas>
+            </div>
+          </article>
+          <article class="chart-panel analytics-chart-card">
+            <h3>Wants Expense Trend</h3>
+            <p class="analysis-label">Non-essential expenses only</p>
+            <div class="chart-frame analytics-chart-frame">
+              <canvas id="analyticsWantsChart"></canvas>
+            </div>
+          </article>
+          <article class="chart-panel analytics-chart-card analytics-wide-chart">
+            <h3>Needs and Wants Comparison</h3>
+            <p class="analysis-label">Essential and non-essential expenses month-wise</p>
+            <div class="chart-frame analytics-chart-frame">
+              <canvas id="analyticsNeedsWantsChart"></canvas>
+            </div>
+          </article>
+        </div>
+      </section>
+
       <section id="view-profile" class="page-view" data-title="Profile">
         <article class="card profile-card">
           <div class="card-header">
@@ -782,9 +862,9 @@
             <p class="eyebrow">User Guide</p>
             <h2>Smart Expense Workflow</h2>
             <p>Learn how to track expenses, manage budgets, monitor savings, and understand your financial health.</p>
+            <button class="guide-back-link" type="button" data-view-target="dashboard"><i data-lucide="arrow-left"></i>Back to Dashboard</button>
           </div>
           <div class="guide-actions">
-            <button class="ghost-btn compact" type="button" data-view-target="dashboard"><i data-lucide="arrow-left"></i>Back to Dashboard</button>
             <button class="primary-btn compact" type="button" data-view-target="expenses"><i data-lucide="plus"></i>Start by Adding Expense</button>
             <button class="ghost-btn compact" type="button" data-view-target="budget"><i data-lucide="wallet"></i>Update Budget</button>
           </div>
