@@ -1,9 +1,15 @@
+/*
+ * Model for subcategory suggestions a user has dismissed.
+ * Expense routes consult this MongoDB collection when building personalized
+ * autocomplete suggestions and remove a dismissal when that value is used again.
+ */
 const mongoose = require("mongoose");
-const fallbackDb = require("../fallbackDb");
 
+// Normalized key fields make case-insensitive preference matching predictable;
+// userId ensures one user's dismissals never affect another user.
 const ignoredSubcategorySuggestionSchema = new mongoose.Schema({
   userId: {
-    type: mongoose.Schema.Types.Mixed,
+    type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true
   },
@@ -29,11 +35,8 @@ const ignoredSubcategorySuggestionSchema = new mongoose.Schema({
 
 let IgnoredSubcategorySuggestionModel;
 
+// Reuses the registered model in long-lived and serverless runtimes.
 function getIgnoredSubcategorySuggestionModel() {
-  if (global.__DB_FALLBACK__) {
-    return fallbackDb.collection("ignoredSubcategorySuggestions");
-  }
-
   if (!IgnoredSubcategorySuggestionModel) {
     IgnoredSubcategorySuggestionModel =
       mongoose.models.IgnoredSubcategorySuggestion ||
@@ -43,33 +46,11 @@ function getIgnoredSubcategorySuggestionModel() {
   return IgnoredSubcategorySuggestionModel;
 }
 
-function normalizeUserId(value) {
-  if (global.__DB_FALLBACK__) {
-    return value;
-  }
-
-  if (typeof value === "string" && mongoose.Types.ObjectId.isValid(value)) {
-    return new mongoose.Types.ObjectId(value);
-  }
-
-  return value;
-}
-
-function normalizeUserIdFields(data) {
-  if (!data || data.userId === undefined) {
-    return data;
-  }
-
-  return {
-    ...data,
-    userId: normalizeUserId(data.userId)
-  };
-}
-
+// Small query wrapper used by the expense suggestion endpoints.
 module.exports = {
-  create: data => getIgnoredSubcategorySuggestionModel().create(normalizeUserIdFields(data)),
-  find: query => getIgnoredSubcategorySuggestionModel().find(normalizeUserIdFields(query)),
-  findOne: query => getIgnoredSubcategorySuggestionModel().findOne(normalizeUserIdFields(query)),
+  create: data => getIgnoredSubcategorySuggestionModel().create(data),
+  find: query => getIgnoredSubcategorySuggestionModel().find(query),
+  findOne: query => getIgnoredSubcategorySuggestionModel().findOne(query),
   findOneAndDelete: filter =>
-    getIgnoredSubcategorySuggestionModel().findOneAndDelete(normalizeUserIdFields(filter))
+    getIgnoredSubcategorySuggestionModel().findOneAndDelete(filter)
 };

@@ -1,3 +1,8 @@
+/*
+ * Protected spending forecast API.
+ * Dashboard/forecast cards request one month; this route combines user-owned
+ * expenses, base budget, and income to project month-end spending and risk.
+ */
 const express = require("express");
 const router = express.Router();
 const Expense = require("../models/Expense");
@@ -7,20 +12,24 @@ const auth = require("../middleware/auth");
 
 router.use(auth);
 
+// Formats forecast values for explanatory text returned to the frontend.
 function formatCurrency(amount) {
   return `\u20B9${Math.round(amount || 0).toLocaleString("en-IN")}`;
 }
 
+// Converts a Date into the monthly key used by Budget and Income.
 function getMonthKey(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
+// Rejects malformed month filters before they reach database calculations.
 function isValidMonth(value) {
   if (!/^\d{4}-\d{2}$/.test(String(value || ""))) return false;
   const [, month] = String(value).split("-").map(Number);
   return month >= 1 && month <= 12;
 }
 
+// Maps projected spending versus available budget to a display risk label.
 function getRiskLevel({ budget, projectedMonthEndSpending, isEarlyEstimate }) {
   if (!budget) return "No budget set";
   if (isEarlyEstimate) return "Early estimate";
@@ -31,7 +40,10 @@ function getRiskLevel({ budget, projectedMonthEndSpending, isEarlyEstimate }) {
   return "Low Risk";
 }
 
+// Reads the selected user's base Budget and Income documents.
+// Available budget = base allocation + total additional income.
 async function getAvailableBudget(userId, month) {
+  // Both queries use the same authenticated user and selected month.
   const [budgetDoc, incomes] = await Promise.all([
     Budget.findOne({ userId, month }),
     Income.find({ userId, month })
@@ -42,6 +54,9 @@ async function getAvailableBudget(userId, month) {
   return baseBudget + additionalIncome;
 }
 
+// GET /forecast?month=YYYY-MM
+// Called by dashboard/forecast views. It returns spending pace, projection,
+// remaining budget, risk, and plain-English calculation details.
 router.get("/", async (req, res) => {
   try {
     const now = new Date();
@@ -64,6 +79,7 @@ router.get("/", async (req, res) => {
     const isEarlyEstimate = daysPassed < 7;
     const averageWindowDays = Math.max(daysPassed, 7);
 
+    // Fetch only expenses owned by this user and inside the selected month.
     const expenses = await Expense.find({
       userId: req.user.id,
       date: { $gte: startOfMonth, $lte: endOfToday }
@@ -94,6 +110,8 @@ router.get("/", async (req, res) => {
       });
     }
 
+    // A minimum seven-day averaging window reduces unstable early-month spikes:
+    // projected total = spent so far / averaging days * total days in month.
     const averageDailySpending = Math.round(spentSoFar / averageWindowDays);
     const projectedMonthEndSpending = Math.round(
       (spentSoFar / averageWindowDays) * totalDays

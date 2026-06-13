@@ -1,3 +1,8 @@
+/*
+ * Protected financial-statement API and PDF exporter.
+ * It combines the authenticated user's budgets, income, and expenses into monthly
+ * savings rows, then returns JSON or streams the same calculation as a PDF.
+ */
 const express = require("express");
 const fs = require("fs");
 const PDFDocument = require("pdfkit");
@@ -14,6 +19,7 @@ router.use(auth);
 let fontRegular = "Helvetica";
 let fontBold = "Helvetica-Bold";
 
+// Registers Windows fonts when available and otherwise keeps PDFKit defaults.
 function registerFonts(doc) {
   const regularPath = "C:/Windows/Fonts/arial.ttf";
   const boldPath = "C:/Windows/Fonts/arialbd.ttf";
@@ -29,17 +35,20 @@ function registerFonts(doc) {
   }
 }
 
+// Validates month filters supplied by statement controls.
 function isValidMonth(value) {
   if (!/^\d{4}-\d{2}$/.test(String(value || ""))) return false;
   const [, month] = String(value).split("-").map(Number);
   return month >= 1 && month <= 12;
 }
 
+// Groups an Expense date into a YYYY-MM statement row.
 function getMonthKey(date) {
   const expenseDate = new Date(date);
   return `${expenseDate.getFullYear()}-${String(expenseDate.getMonth() + 1).padStart(2, "0")}`;
 }
 
+// Creates inclusive Date boundaries for statement expense queries.
 function getMonthRange(month) {
   const [year, monthNumber] = month.split("-").map(Number);
   return {
@@ -48,10 +57,12 @@ function getMonthRange(month) {
   };
 }
 
+// Formats rupee values used in the PDF.
 function formatCurrency(amount) {
   return `\u20B9${Math.round(Number(amount) || 0).toLocaleString("en-IN")}`;
 }
 
+// Converts a month key into the table/PDF label.
 function formatMonth(month) {
   const [year, monthNumber] = month.split("-").map(Number);
   return new Date(year, monthNumber - 1, 1).toLocaleString("en-IN", {
@@ -60,6 +71,8 @@ function formatMonth(month) {
   });
 }
 
+// Reads user-owned Budget, Income, and Expense documents, applies optional filters,
+// and returns monthly plus cumulative statement calculations.
 async function buildFinancialStatement(userId, filters = {}) {
   const { fromMonth, toMonth } = filters;
   const budgetQuery = { userId };
@@ -85,6 +98,7 @@ async function buildFinancialStatement(userId, filters = {}) {
     expenseQuery.date = { $lte: getMonthRange(toMonth).end };
   }
 
+  // Parallel MongoDB reads use the same authenticated userId.
   const [budgets, expenses, incomes] = await Promise.all([
     Budget.find(budgetQuery).sort({ month: 1 }),
     Expense.find(expenseQuery).sort({ date: 1 }),
@@ -124,6 +138,8 @@ async function buildFinancialStatement(userId, filters = {}) {
   const rows = Array.from(monthMap.values())
     .sort((a, b) => a.month.localeCompare(b.month))
     .map(row => {
+      // Monthly budget here means money available: base budget + income.
+      // Monthly savings = available money - expenses; cumulative fields are running totals.
       const monthlyBudget = (Number(row.monthlyBudget) || 0) + (Number(row.additionalIncome) || 0);
       const monthlyExpenses = Number(row.monthlyExpenses) || 0;
       const monthlySavings = monthlyBudget - monthlyExpenses;
@@ -161,6 +177,7 @@ async function buildFinancialStatement(userId, filters = {}) {
   };
 }
 
+// Validates from/to query parameters and prevents reversed ranges.
 function normalizeFilters(req, res) {
   const fromMonth = req.query.fromMonth || "";
   const toMonth = req.query.toMonth || "";
@@ -181,6 +198,9 @@ function normalizeFilters(req, res) {
   return { fromMonth, toMonth };
 }
 
+// GET /api/financial-statement
+// Called when the statement view loads or filters change. Returns summary cards
+// and monthly/cumulative rows as JSON.
 router.get("/", async (req, res) => {
   try {
     const filters = normalizeFilters(req, res);
@@ -196,6 +216,9 @@ router.get("/", async (req, res) => {
   }
 });
 
+// GET /api/financial-statement/pdf
+// Called by Export PDF. Reuses the same user-scoped calculation and streams a
+// downloadable landscape PDF without saving report data to MongoDB.
 router.get("/pdf", async (req, res) => {
   try {
     const filters = normalizeFilters(req, res);

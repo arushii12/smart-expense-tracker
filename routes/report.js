@@ -1,3 +1,8 @@
+/*
+ * Protected monthly financial report generator.
+ * The Reports page requests a month; this route reads the user's profile, budget,
+ * income, and expenses, calculates insights/forecast values, and streams a PDF.
+ */
 const express = require("express");
 const fs = require("fs");
 const PDFDocument = require("pdfkit");
@@ -26,10 +31,12 @@ const REPORT_COLORS = {
   warning: "#92400e"
 };
 
+// Converts the chosen line-height ratio into PDFKit line spacing.
 function getReportLineGap(fontSize) {
   return fontSize * (REPORT_LINE_HEIGHT - 1);
 }
 
+// Registers Windows fonts when available and otherwise uses PDFKit defaults.
 function registerFonts(doc) {
   const regularPath = "C:/Windows/Fonts/arial.ttf";
   const boldPath = "C:/Windows/Fonts/arialbd.ttf";
@@ -45,20 +52,24 @@ function registerFonts(doc) {
   }
 }
 
+// Converts a Date to the YYYY-MM key shared with Budget and Income.
 function getMonthKey(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
+// Validates the report month before building database ranges.
 function isValidMonth(value) {
   if (!/^\d{4}-\d{2}$/.test(String(value || ""))) return false;
   const [, month] = String(value).split("-").map(Number);
   return month >= 1 && month <= 12;
 }
 
+// Formats rupee values for report text.
 function formatCurrency(amount) {
   return `\u20B9${Math.round(amount || 0).toLocaleString("en-IN")}`;
 }
 
+// Formats dates consistently throughout the PDF.
 function formatReportDate(date) {
   return date.toLocaleDateString("en-IN", {
     day: "2-digit",
@@ -67,6 +78,7 @@ function formatReportDate(date) {
   });
 }
 
+// Reduces expenses into category totals for report calculations.
 function getCategoryTotals(expenses) {
   return expenses.reduce((totals, expense) => {
     totals[expense.category] =
@@ -75,12 +87,14 @@ function getCategoryTotals(expenses) {
   }, {});
 }
 
+// Returns the largest category/amount pair, or null when there is no spending.
 function getHighestCategory(categoryTotals) {
   const entries = Object.entries(categoryTotals);
   if (!entries.length) return null;
   return entries.sort((a, b) => b[1] - a[1])[0];
 }
 
+// Separates spending into weekday and weekend totals.
 function getDayTypeSpend(expenses) {
   return expenses.reduce((totals, expense) => {
     const day = new Date(expense.date).getDay();
@@ -90,6 +104,8 @@ function getDayTypeSpend(expenses) {
   }, { weekday: 0, weekend: 0 });
 }
 
+// Builds plain-English observations from category share, prior-month change,
+// possible savings, weekday/weekend behavior, and budget availability.
 function buildInsights(currentExpenses, currentTotal, previousTotal, budget) {
   const insights = [];
   const categoryTotals = getCategoryTotals(currentExpenses);
@@ -143,6 +159,7 @@ function buildInsights(currentExpenses, currentTotal, previousTotal, budget) {
   return insights;
 }
 
+// Converts projected spending versus budget into the report's risk label.
 function getRiskLevel({ budget, projectedMonthEndSpending, isEarlyEstimate }) {
   if (!budget) return "No budget set";
   if (isEarlyEstimate) return "Early estimate";
@@ -153,6 +170,7 @@ function getRiskLevel({ budget, projectedMonthEndSpending, isEarlyEstimate }) {
   return "Low Risk";
 }
 
+// Draws a consistently styled heading and divider for each PDF section.
 function drawSectionTitle(doc, title) {
   const fontSize = 13;
   doc.moveDown(0.9);
@@ -164,7 +182,10 @@ function drawSectionTitle(doc, title) {
   doc.moveDown(0.48);
 }
 
+// Queries this user's base Budget and Income for the requested month.
+// Available budget = base allocation + summed additional income.
 async function getAvailableBudget(userId, month) {
+  // Read only the requested user's base allocation and income documents.
   const [budgetDoc, incomes] = await Promise.all([
     Budget.findOne({ userId, month }),
     Income.find({ userId, month })
@@ -175,6 +196,7 @@ async function getAvailableBudget(userId, month) {
   return baseBudget + additionalIncome;
 }
 
+// Draws one aligned label/value pair and returns the next vertical position.
 function drawKeyValue(doc, label, value, options = {}) {
   const lineGap = options.lineGap || 0;
   const fontSize = 10;
@@ -189,6 +211,9 @@ function drawKeyValue(doc, label, value, options = {}) {
   if (lineGap) doc.moveDown(lineGap);
 }
 
+// GET /report/monthly?month=YYYY-MM
+// Called by Export Monthly Report. It fetches current/prior expenses, profile,
+// budget, and income using the JWT owner, then streams a generated PDF response.
 router.get("/monthly", async (req, res) => {
   try {
     const now = new Date();
@@ -208,6 +233,7 @@ router.get("/monthly", async (req, res) => {
     const startOfPreviousMonth = new Date(previousMonthDate.getFullYear(), previousMonthDate.getMonth(), 1);
     const endOfPreviousMonth = new Date(previousMonthDate.getFullYear(), previousMonthDate.getMonth() + 1, 0, 23, 59, 59, 999);
 
+    // These parallel reads all use req.user.id, so report data cannot cross accounts.
     const [userData, currentExpenses, previousExpenses, budget] =
       await Promise.all([
         User.findById(req.user.id),
@@ -242,6 +268,8 @@ router.get("/monthly", async (req, res) => {
     const daysPassed = isCurrentMonth ? now.getDate() : new Date(year, month + 1, 0).getDate();
     const totalDays = new Date(year, month + 1, 0).getDate();
     const isEarlyEstimate = daysPassed < 7;
+    // Forecast mirrors the forecast API:
+    // average = spending / max(days observed, 7); projection = average * month days.
     const averageWindowDays = Math.max(daysPassed, 7);
     const averageDailySpending = totalSpending
       ? Math.round(totalSpending / averageWindowDays)

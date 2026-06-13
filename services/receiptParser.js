@@ -1,3 +1,8 @@
+/*
+ * Receipt text interpretation service.
+ * OCR text from ocrService enters here and is converted into reviewable amount,
+ * date, merchant, category, confidence, and warning fields for the frontend.
+ */
 const FINAL_TOTAL_PATTERNS = [
   /\bgrand\s+total\b/i,
   /\bnet\s+total\b/i,
@@ -36,6 +41,8 @@ const CATEGORY_RULES = [
   }
 ];
 
+// Coordinates independent extraction helpers and returns one frontend-friendly
+// result. This parser reads text only and never writes an Expense to MongoDB.
 function parseReceiptText(rawText = "", confidence = 0) {
   const text = normalizeText(rawText);
   const lines = text.split("\n").map(normalizeLine).filter(Boolean);
@@ -63,6 +70,7 @@ function parseReceiptText(rawText = "", confidence = 0) {
   };
 }
 
+// Removes common OCR spacing/line artifacts while preserving meaningful content.
 function normalizeText(value) {
   return String(value || "")
     .replace(/\r/g, "\n")
@@ -72,6 +80,7 @@ function normalizeText(value) {
     .trim();
 }
 
+// Normalizes currency symbols and mojibake in one OCR line.
 function normalizeLine(line) {
   return String(line || "")
     .replace(/ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¹/g, "Rs ")
@@ -85,6 +94,8 @@ function normalizeLine(line) {
     .trim();
 }
 
+// Chooses the most reliable payable amount: explicit final total first, subtotal
+// second, then a conservative fallback after filtering taxes/items/identifiers.
 function extractFinalAmount(lines) {
   const finalCandidates = [];
   const subtotalCandidates = [];
@@ -153,6 +164,7 @@ function extractFinalAmount(lines) {
   };
 }
 
+// Adds valid numeric candidates from a labeled line to the requested ranking list.
 function collectAmounts(line, index, finalTotal, target, sourceOverride = null) {
   extractAmountsFromLine(line)
     .filter(amount => finalTotal ? isValidFinalAmount(line, amount) : isValidSubtotalAmount(line, amount))
@@ -165,10 +177,12 @@ function collectAmounts(line, index, finalTotal, target, sourceOverride = null) 
     });
 }
 
+// Tests whether a line contains one of the accepted final-total labels.
 function hasFinalTotalKeyword(line) {
   return FINAL_TOTAL_PATTERNS.some(pattern => pattern.test(line));
 }
 
+// Excludes tax/subtotal/item summary lines unless wording clearly means final payment.
 function isIgnoredTotalLine(line) {
   const lower = String(line || "").toLowerCase();
   if (isTotalQtyPayableLine(lower)) return false;
@@ -177,14 +191,17 @@ function isIgnoredTotalLine(line) {
   return IGNORE_TOTAL_LINE.test(lower) || SUBTOTAL_LINE.test(lower);
 }
 
+// Handles receipt layouts that place quantity and payable total on one line.
 function isTotalQtyPayableLine(line) {
   return /\btotal\s+qty\b.*\btotal\b/i.test(line);
 }
 
+// Recognizes subtotal labels without confusing them with taxes or charges.
 function isSubtotalLine(line) {
   return SUBTOTAL_LINE.test(line) && !/\b(cgst|sgst|igst|gst|tax|discount|round\s*off|service\s+charge|tip)\b/i.test(line);
 }
 
+// Extracts positive rupee-like numeric values from one normalized line.
 function extractAmountsFromLine(line) {
   const normalizedLine = normalizeCurrencyArtifacts(line);
   const matches = Array.from(normalizedLine.matchAll(/(?:rs\.?\s*)?([0-9]{1,3}(?:,[0-9]{3})+(?:\.\d{1,2})?|[0-9]+(?:\.\d{1,2})?)/gi));
@@ -195,6 +212,7 @@ function extractAmountsFromLine(line) {
     .map(amount => Number(amount.toFixed(2)));
 }
 
+// Repairs OCR characters that appear immediately before totals.
 function normalizeCurrencyArtifacts(line) {
   const text = String(line || "").replace(/\b(rs\.?|inr)\s*/gi, "Rs ");
   if (!hasFinalTotalKeyword(text)) return text.replace(/\s+/g, " ");
@@ -213,6 +231,7 @@ function normalizeCurrencyArtifacts(line) {
     .replace(/\s+/g, " ");
 }
 
+// Rejects implausible explicit-total candidates such as item rows or identifiers.
 function isValidFinalAmount(line, amount) {
   if (!amount || amount < 20) return false;
   if (!isTotalQtyPayableLine(line) && isLineItem(line)) return false;
@@ -221,18 +240,21 @@ function isValidFinalAmount(line, amount) {
   return true;
 }
 
+// Applies conservative checks to subtotal candidates.
 function isValidSubtotalAmount(line, amount) {
   if (!amount || amount < 20) return false;
   if (isIdentifierLikeAmount(line, amount)) return false;
   return true;
 }
 
+// Applies conservative checks when no labeled total exists.
 function isValidFallbackAmount(line, amount) {
   if (!amount || amount < 20) return false;
   if (isIdentifierLikeAmount(line, amount)) return false;
   return true;
 }
 
+// Detects itemized purchase rows so their prices are not treated as final totals.
 function isLineItem(line) {
   const text = String(line || "").trim();
   const amounts = extractAmountsFromLine(text);
@@ -245,6 +267,7 @@ function isLineItem(line) {
   return false;
 }
 
+// Detects phone numbers, invoice IDs, and other long numbers that are not money.
 function isIdentifierLikeAmount(line, amount) {
   const text = String(line || "");
   const compact = text.replace(/\D/g, "");
@@ -256,6 +279,7 @@ function isIdentifierLikeAmount(line, amount) {
   return false;
 }
 
+// Prefers labeled dates, then scans only the receipt header to avoid false matches.
 function extractReceiptDate(lines) {
   for (let index = 0; index < lines.length; index += 1) {
     if (!DATE_LABEL.test(lines[index])) continue;
@@ -274,6 +298,7 @@ function extractReceiptDate(lines) {
   return "";
 }
 
+// Supports common numeric and month-name receipt date formats.
 function parseDateFromText(text) {
   const cleaned = String(text || "")
     .replace(/[oO](?=\d)/g, "0")
@@ -303,25 +328,30 @@ function parseDateFromText(text) {
   return "";
 }
 
+// Converts two-digit receipt years into the 2000s.
 function normalizeYear(year) {
   return year < 100 ? 2000 + year : year;
 }
 
+// Resolves ambiguous day/month ordering, preferring common day-first receipt dates.
 function buildDateFromTwoPartDate(first, second, year) {
   if (first > 12) return buildDate(year, second, first);
   if (second > 12) return buildDate(year, first, second);
   return buildDate(year, second, first);
 }
 
+// Delegates validated date formatting to one helper.
 function buildDate(year, month, day) {
   return toDateInputValue(year, month, day);
 }
 
+// Converts English month abbreviations to JavaScript month numbers.
 function monthNameToNumber(monthName) {
   const key = String(monthName || "").slice(0, 3).toLowerCase();
   return ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"].indexOf(key) + 1;
 }
 
+// Validates date components and returns YYYY-MM-DD for HTML date controls.
 function toDateInputValue(year, month, day) {
   const date = new Date(year, month - 1, day);
   if (
@@ -336,6 +366,7 @@ function toDateInputValue(year, month, day) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+// Applies keyword rules to suggest an existing application expense category.
 function classifyReceipt(text) {
   const match = CATEGORY_RULES.find(rule => rule.pattern.test(text));
   return match || {
@@ -344,6 +375,7 @@ function classifyReceipt(text) {
   };
 }
 
+// Selects a likely merchant from the first clean, non-metadata header line.
 function extractMerchant(lines) {
   const ignored = /receipt|invoice|tax|gst|cash memo|duplicate|customer|phone|tel|date|time|total|amount|payable|net|bill|table|address|avenue|road|street|near|mode|qty|quantity|contact|e-?mail|cashier|covers?|persons?|guests?|service\s+ch(?:ar)?g|service\s+charge/i;
   const candidate = lines
@@ -353,6 +385,7 @@ function extractMerchant(lines) {
   return candidate ? titleCase(candidate.replace(/[^a-z0-9 &.'-]/gi, "").trim()) : "";
 }
 
+// Explains uncertain or missing OCR fields so the user knows what to review.
 function buildWarnings({ text, amountResult, date }) {
   const warnings = [];
 
@@ -364,6 +397,7 @@ function buildWarnings({ text, amountResult, date }) {
   return warnings;
 }
 
+// Produces readable merchant capitalization for the review panel.
 function titleCase(value) {
   return String(value || "")
     .toLowerCase()

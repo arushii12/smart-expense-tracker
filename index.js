@@ -1,17 +1,21 @@
 
+/*
+ * Main Express application entry point.
+ * Loads local configuration, waits for MongoDB, mounts every backend router, and
+ * serves the frontend/uploads when this process hosts the complete application.
+ */
 const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 
 loadEnvFile();
-migrateLegacyBudgetIncomeFlags();
 
 // ==============================
 // Database connection
 // (must load BEFORE routes)
 // ==============================
-require("./db");
+const { databaseReady } = require("./db");
 
 // ==============================
 // Routes
@@ -46,10 +50,24 @@ const corsOptions = process.env.CORS_ORIGIN
 
 app.use(cors(corsOptions));
 app.use(express.json());
+// Every request waits for the shared MongoDB initialization promise. A failed
+// connection produces a clear 503 instead of allowing routes to query no database.
+app.use(async (req, res, next) => {
+  try {
+    await databaseReady;
+    next();
+  } catch (error) {
+    res.status(503).json({
+      message: "Database connection is unavailable. Please try again shortly."
+    });
+  }
+});
 
 // ==============================
 // Route usage
 // ==============================
+// Lightweight deployment/startup check. Database middleware above ensures that
+// "ok" also means the application completed MongoDB initialization.
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
@@ -82,83 +100,27 @@ if (shouldServeFrontend && fs.existsSync(frontendPath)) {
   });
 }
 
-function migrateLegacyBudgetIncomeFlags() {
-  const budgetsPath = path.join(__dirname, "data", "budgets.json");
-  const incomesPath = path.join(__dirname, "data", "incomes.json");
-
-  if (!fs.existsSync(budgetsPath)) return;
-
-  try {
-    const budgets = JSON.parse(fs.readFileSync(budgetsPath, "utf8") || "[]");
-    const incomes = fs.existsSync(incomesPath)
-      ? JSON.parse(fs.readFileSync(incomesPath, "utf8") || "[]")
-      : [];
-    const incomeTotalsByKey = incomes.reduce((totals, income) => {
-      const key = `${income.userId}|${income.month}`;
-      totals[key] = (totals[key] || 0) + Number(income.amount || 0);
-      return totals;
-    }, {});
-    let changed = false;
-
-    const migratedBudgets = budgets.map(budget => {
-      if (!budget || !Object.prototype.hasOwnProperty.call(budget, "incomeSeparated")) {
-        return budget;
-      }
-
-      changed = true;
-      const key = `${budget.userId}|${budget.month}`;
-      const incomeTotal = incomeTotalsByKey[key] || 0;
-      const budgetUpdatedAt = Date.parse(budget.updatedAt);
-      const hasMatchingIncomeMutation = incomeTotal > 0 && incomes.some(income => {
-        if (income.userId !== budget.userId || income.month !== budget.month) return false;
-
-        const incomeCreatedAt = Date.parse(income.createdAt);
-        const incomeUpdatedAt = Date.parse(income.updatedAt);
-        return [incomeCreatedAt, incomeUpdatedAt].some(timestamp =>
-          !Number.isNaN(timestamp) &&
-          !Number.isNaN(budgetUpdatedAt) &&
-          Math.abs(timestamp - budgetUpdatedAt) <= 60 * 1000
-        );
-      });
-      const correctedAmount = hasMatchingIncomeMutation
-        ? Math.max(Number(budget.amount || 0) - incomeTotal, 0)
-        : Number(budget.amount || 0);
-
-      console.warn(
-        `[Budget migration warning] Removed stale incomeSeparated flag for user ${budget.userId}, month ${budget.month}. ` +
-        (
-          hasMatchingIncomeMutation
-            ? `Auto-separated likely mutated budget ${budget.amount} into original budget ${correctedAmount} plus additional income ${incomeTotal}.`
-            : `Please manually verify the original budget amount (${budget.amount}) if this month was affected by earlier income/budget mutation.`
-        )
-      );
-
-      const { incomeSeparated, ...cleanBudget } = budget;
-      return {
-        ...cleanBudget,
-        amount: correctedAmount
-      };
-    });
-
-    if (changed) {
-      fs.writeFileSync(budgetsPath, JSON.stringify(migratedBudgets, null, 2), "utf8");
-    }
-  } catch (error) {
-    console.warn(`[Budget migration warning] Unable to inspect legacy budget flags: ${error.message}`);
-  }
-}
-
 // ==============================
 // Server start
 // ==============================
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
+  // Listen only after MongoDB and required indexes are ready.
+  databaseReady
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+      });
+    })
+    .catch(error => {
+      console.error("MongoDB initialization failed:", error.message);
+      process.exitCode = 1;
+    });
 }
 
 module.exports = app;
 
+// Reads simple KEY=VALUE entries from the local .env file before database and
+// route modules load. Existing operating-system variables take precedence.
 function loadEnvFile() {
   const envPath = path.join(__dirname, ".env");
 

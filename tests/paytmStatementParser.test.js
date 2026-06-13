@@ -1,10 +1,17 @@
+/*
+ * Unit tests for Paytm PDF parsing, classification, grouping, and fingerprints.
+ * They protect the service contract used by preview/import routes without writing
+ * application data to MongoDB.
+ */
 const assert = require("node:assert/strict");
 const test = require("node:test");
+const PDFDocument = require("pdfkit");
 
 const {
   groupTransactions,
   mapPaytmTag,
   parseIncomeTransactionBlock,
+  parsePaytmStatement,
   parseTransactionBlock
 } = require("../services/paytmStatementParser");
 
@@ -12,6 +19,48 @@ const context = {
   statementYear: 2026,
   statementEndMonth: 6
 };
+
+// Creates an in-memory statement containing one outgoing and one incoming payment.
+function createPaytmPdfBuffer() {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    const doc = new PDFDocument({ margin: 40 });
+    doc.on("data", chunk => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+    [
+      "Paytm App",
+      "Passbook Payments History",
+      "07 Jun",
+      "10:30 AM",
+      "Paid to Test Store",
+      "- Rs. 120.00",
+      "UPI Ref No: TESTEXPENSE001",
+      "Tag:",
+      "#Food",
+      "08 Jun",
+      "09:15 AM",
+      "Received from Test Client",
+      "+ Rs. 500.00",
+      "UPI Ref No: TESTINCOME001",
+      "Tag:",
+      "#Money Transfer"
+    ].forEach(line => doc.text(line));
+    doc.end();
+  });
+}
+
+test("parses an in-memory Paytm PDF consistently", async () => {
+  const buffer = await createPaytmPdfBuffer();
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const result = await parsePaytmStatement(
+      buffer,
+      "Paytm_Payments_History_01_Jun_26_30_Jun_26.pdf"
+    );
+    assert.equal(result.validTransactions.length, 1);
+    assert.equal(result.incomeTransactions.length, 1);
+  }
+});
 
 test("maps supported Paytm tags to app categories", () => {
   assert.deepEqual(mapPaytmTag("Groceries"), {

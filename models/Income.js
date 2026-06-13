@@ -1,9 +1,15 @@
+/*
+ * Income model for additional monthly income stored in MongoDB.
+ * Income routes manage manual entries, while Paytm imports may create received
+ * payments; budget, forecast, analytics, statements, and reports sum them.
+ */
 const mongoose = require("mongoose");
-const fallbackDb = require("../fallbackDb");
 
+// Each document belongs to one User ObjectId. month supports efficient monthly
+// totals, date supports history, and source fields trace Paytm imports.
 const incomeSchema = new mongoose.Schema({
   userId: {
-    type: mongoose.Schema.Types.Mixed,
+    type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true
   },
@@ -53,49 +59,21 @@ const incomeSchema = new mongoose.Schema({
 
 let IncomeModel;
 
+// Lazily registers and reuses the Mongoose model.
 function getIncomeModel() {
-  if (global.__DB_FALLBACK__) {
-    return fallbackDb.collection("incomes");
-  }
   if (!IncomeModel) {
     IncomeModel = mongoose.models.Income || mongoose.model("Income", incomeSchema);
   }
   return IncomeModel;
 }
 
-function normalizeUserId(value) {
-  if (global.__DB_FALLBACK__) {
-    return value;
-  }
-
-  if (typeof value === "string" && mongoose.Types.ObjectId.isValid(value)) {
-    return new mongoose.Types.ObjectId(value);
-  }
-
-  return value;
-}
-
-function normalizeUserIdFields(data) {
-  if (!data || data.userId === undefined) {
-    return data;
-  }
-
-  return {
-    ...data,
-    userId: normalizeUserId(data.userId)
-  };
-}
-
+// Provides the CRUD operations required by income and calculation routes.
 module.exports = {
-  create: data => getIncomeModel().create(normalizeUserIdFields(data)),
-  find: query => getIncomeModel().find(normalizeUserIdFields(query)),
-  findOne: query => getIncomeModel().findOne(normalizeUserIdFields(query)),
+  create: data => getIncomeModel().create(data),
+  find: query => getIncomeModel().find(query),
+  findOne: query => getIncomeModel().findOne(query),
   findOneAndUpdate: (filter, update, options) =>
-    getIncomeModel().findOneAndUpdate(
-      normalizeUserIdFields(filter),
-      update,
-      options
-    ),
+    getIncomeModel().findOneAndUpdate(filter, update, options),
   findOneAndDelete: filter =>
-    getIncomeModel().findOneAndDelete(normalizeUserIdFields(filter))
+    getIncomeModel().findOneAndDelete(filter)
 };

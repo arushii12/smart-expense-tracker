@@ -1,9 +1,15 @@
+/*
+ * Budget model for monthly base allocations in MongoDB.
+ * Budget, forecast, analytics, insight, statement, and report routes combine
+ * these records with Income and Expense data for one authenticated user.
+ */
 const mongoose = require("mongoose");
-const fallbackDb = require("../fallbackDb");
 
+// One document stores one user's base budget for one YYYY-MM month.
+// Additional income remains in the Income collection and is added during reads.
 const budgetSchema = new mongoose.Schema({
   userId: {
-    type: mongoose.Schema.Types.Mixed,
+    type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true
   },
@@ -17,47 +23,22 @@ const budgetSchema = new mongoose.Schema({
   }
 });
 
+// Prevents duplicate monthly budgets for the same user while allowing different
+// users to save a budget for the same month.
 budgetSchema.index({ userId: 1, month: 1 }, { unique: true });
 
 let BudgetModel;
+// Reuses an existing registration in tests and serverless warm processes.
 function getBudgetModel() {
-  if (global.__DB_FALLBACK__) {
-    return fallbackDb.collection("budgets");
-  }
   if (!BudgetModel) {
     BudgetModel = mongoose.models.Budget || mongoose.model("Budget", budgetSchema);
   }
   return BudgetModel;
 }
 
-function normalizeUserId(value) {
-  if (global.__DB_FALLBACK__) {
-    return value;
-  }
-
-  if (typeof value === "string" && mongoose.Types.ObjectId.isValid(value)) {
-    return new mongoose.Types.ObjectId(value);
-  }
-
-  return value;
-}
-
-function normalizeUserIdFields(data) {
-  if (!data || data.userId === undefined) {
-    return data;
-  }
-
-  return {
-    ...data,
-    userId: normalizeUserId(data.userId)
-  };
-}
-
+// Removes an obsolete month-only index, then enforces ownership-aware uniqueness.
+// Called during database startup before requests are accepted.
 async function ensureMongoIndexes() {
-  if (global.__DB_FALLBACK__) {
-    return;
-  }
-
   const model = getBudgetModel();
 
   try {
@@ -75,22 +56,20 @@ async function ensureMongoIndexes() {
     }
   }
 
+  // Create the intended compound index directly in MongoDB.
   await model.collection.createIndex(
     { userId: 1, month: 1 },
     { unique: true, name: "userId_1_month_1" }
   );
 }
 
+// Model wrapper used by route modules for user-scoped queries and updates.
 module.exports = {
-  find: query => getBudgetModel().find(normalizeUserIdFields(query)),
-  findOne: async query => getBudgetModel().findOne(normalizeUserIdFields(query)),
+  find: query => getBudgetModel().find(query),
+  findOne: async query => getBudgetModel().findOne(query),
   findOneAndUpdate: async (filter, update, options) =>
-    getBudgetModel().findOneAndUpdate(
-      normalizeUserIdFields(filter),
-      normalizeUserIdFields(update),
-      options
-    ),
+    getBudgetModel().findOneAndUpdate(filter, update, options),
   findOneAndDelete: async filter =>
-    getBudgetModel().findOneAndDelete(normalizeUserIdFields(filter)),
+    getBudgetModel().findOneAndDelete(filter),
   ensureMongoIndexes
 };

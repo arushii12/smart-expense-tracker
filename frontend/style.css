@@ -1,3 +1,11 @@
+/*
+ * Shared presentation layer for the Smart Expense Tracker frontend.
+ * Styles the authentication screen, application shell, feature pages, charts,
+ * dialogs, responsive layouts, and dark theme defined in index.html.
+ * JavaScript changes classes and inline chart values; this file controls only appearance.
+ */
+
+/* Design tokens keep colors, spacing, shadows, and layout dimensions consistent. */
 :root {
   --bg: #f5f7fb;
   --surface: #ffffff;
@@ -35,6 +43,7 @@
   --dashboard-second-card-height: 252px;
 }
 
+/* Global reset and typography establish the baseline used by every page view. */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -120,6 +129,7 @@ small,
   font-size: 13px;
 }
 
+/* Authentication layout is independent from the signed-in application shell. */
 .auth-page {
   align-items: center;
   background:
@@ -357,6 +367,7 @@ select:focus {
   font-weight: 800;
 }
 
+/* The application shell places the persistent sidebar beside the active content view. */
 .app-shell {
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
@@ -671,6 +682,7 @@ select:focus {
   }
 }
 
+/* JavaScript gives only the selected feature page the active class. */
 .page-view {
   display: none;
   margin: 0 auto;
@@ -693,6 +705,7 @@ select:focus {
   }
 }
 
+/* Dashboard summary area presents the selected month's financial health at a glance. */
 .dashboard-hero {
   align-items: start;
   background:
@@ -1463,6 +1476,7 @@ select:focus {
   padding: 10px;
 }
 
+/* Receipt controls support image preview, OCR progress, review, and correction before saving. */
 .receipt-scan-panel {
   border-top: 1px solid var(--border);
   display: grid;
@@ -1471,6 +1485,7 @@ select:focus {
   padding-top: 18px;
 }
 
+/* Paytm upload and preview styles separate temporary statement review from confirmed import actions. */
 .paytm-upload-action input {
   display: none;
 }
@@ -2137,6 +2152,7 @@ select:focus {
   font-weight: 800;
 }
 
+/* Analytics cards and charts display aggregates returned by the analytics API. */
 .analytics-page-header,
 .analytics-summary-section,
 .analytics-insights-card {
@@ -2561,6 +2577,7 @@ select:focus {
   width: 14px;
 }
 
+/* Shared modal layout is used by additional-income editing and Paytm import confirmation. */
 .modal-backdrop {
   align-items: center;
   background: rgba(15, 23, 42, 0.46);
@@ -3113,6 +3130,7 @@ select:focus {
   }
 }
 
+/* Respect operating-system accessibility preferences by suppressing nonessential animation. */
 @media (prefers-reduced-motion: reduce) {
   .forecast-stat-box {
     animation: none;
@@ -3415,6 +3433,7 @@ select:focus {
   justify-items: start;
 }
 
+/* Dark mode overrides the same components without changing their layout or behavior. */
 body.dark-mode {
   --bg: #0b1220;
   --surface: #111827;
@@ -4029,6 +4048,7 @@ body.dark-mode .income-history-table::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
 
+/* Tablet layouts reduce columns and adapt the persistent navigation. */
 @media (max-width: 1120px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -4157,6 +4177,7 @@ body.dark-mode .income-history-table::-webkit-scrollbar-thumb:hover {
   }
 }
 
+/* Mobile layouts stack controls and cards for narrow screens. */
 @media (max-width: 760px) {
   .content-shell,
   .sidebar {

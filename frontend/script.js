@@ -1,7 +1,15 @@
+/*
+ * Main browser controller for Smart Expense Tracker.
+ * Connects controls in index.html to the Express API, stores the JWT locally,
+ * renders MongoDB-backed expenses/budgets/income, and builds dashboard charts.
+ * Preview-only receipt and Paytm state remains in memory until the user saves/imports it.
+ */
+
 // ==============================
 // GLOBAL STATE
 // ==============================
 
+// Cached API results and current editing/upload state are shared by the active page views.
 let expenses = [];
 let analysisExpenses = [];
 let currentReceiptScan = null;
@@ -27,6 +35,7 @@ const API_BASE_URL =
     ""
   ).replace(/\/$/, "");
 const TOKEN_KEY = "expenseTrackerToken";
+const PAYTM_IMPORT_VIEW_KEY = "expenseTrackerPaytmImportView";
 const EXPENSE_CATEGORIES = [
   "Home",
   "Food & Groceries",
@@ -255,6 +264,7 @@ const pathViewMap = {
   "/user-guide": "workflow-guide"
 };
 
+// Converts supported browser paths into the internal page-view name used by the SPA.
 function getRouteView() {
   return pathViewMap[window.location.pathname] || "dashboard";
 }
@@ -277,6 +287,7 @@ const sidebarCollapseToggle = document.getElementById("sidebarCollapseToggle");
 // AUTH HELPERS
 // ==============================
 
+// The JWT is the frontend session credential and is attached to protected API requests.
 function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -289,6 +300,75 @@ function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
 }
 
+// Reads only the user identifier from the JWT payload so browser-only view context
+// cannot leak between two users who sign in on the same device.
+function getTokenUserId() {
+  try {
+    const payload = getToken()?.split(".")[1];
+    if (!payload) return "";
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = JSON.parse(atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=")));
+    return String(decoded.id || decoded.userId || "");
+  } catch (error) {
+    return "";
+  }
+}
+
+// Returns the last imported Paytm date range for this user. The records themselves
+// are not stored here: confirmed expenses and income are persisted by MongoDB APIs.
+function getPaytmImportViewContext() {
+  try {
+    const context = JSON.parse(localStorage.getItem(PAYTM_IMPORT_VIEW_KEY) || "null");
+    if (!context || context.userId !== getTokenUserId()) return null;
+    if (!isValidIsoDate(context.from) || !isValidIsoDate(context.to)) return null;
+    if (!/^\d{4}-\d{2}$/.test(context.month || "")) return null;
+    return context;
+  } catch (error) {
+    return null;
+  }
+}
+
+// Remembers which dates/month should be displayed after an import or later navigation.
+function savePaytmImportViewContext(expensesToSave, incomesToSave) {
+  const dates = [...expensesToSave, ...incomesToSave]
+    .map(record => new Date(record.date).toISOString().split("T")[0])
+    .filter(isValidIsoDate)
+    .sort();
+  if (!dates.length) return null;
+
+  const context = {
+    userId: getTokenUserId(),
+    from: dates[0],
+    to: dates[dates.length - 1],
+    month: dates[dates.length - 1].slice(0, 7)
+  };
+  localStorage.setItem(PAYTM_IMPORT_VIEW_KEY, JSON.stringify(context));
+  return context;
+}
+
+// Restores display context from the server when local storage has been cleared.
+// GET /api/paytm-statements/context returns dates derived from persisted imports.
+async function restorePaytmImportViewContext() {
+  if (getPaytmImportViewContext()) return;
+
+  try {
+    const res = await authFetch("/api/paytm-statements/context");
+    if (!res.ok) return;
+    const data = await res.json();
+    const context = data.context;
+    if (!context || !isValidIsoDate(context.from) || !isValidIsoDate(context.to)) return;
+    localStorage.setItem(PAYTM_IMPORT_VIEW_KEY, JSON.stringify({
+      userId: getTokenUserId(),
+      from: context.from,
+      to: context.to,
+      month: context.month
+    }));
+  } catch (error) {
+    console.error("Paytm import context error:", error);
+  }
+}
+
+// Switches between login and signup panels while keeping the application hidden.
 function showAuth(view = "login") {
   authPage.classList.remove("hidden");
   dashboardPage.classList.add("hidden");
@@ -304,16 +384,20 @@ function showAuth(view = "login") {
   }
 }
 
-function showDashboard() {
+// Enters the authenticated shell and starts loading user-owned data for the initial view.
+async function showDashboard() {
   authPage.classList.add("hidden");
   dashboardPage.classList.remove("hidden");
-  setActiveView(getRouteView(), { syncRoute: false });
+  await restorePaytmImportViewContext();
   initializeDateFilters();
+  setActiveView(getRouteView(), { syncRoute: false });
   loadProfile();
   loadSubcategorySuggestions();
   fetchExpensesByRange();
 }
 
+// Handles client-side navigation. It activates one page section, updates browser
+// history, and loads the API data needed by that feature.
 function setActiveView(viewName, options = {}) {
   const { syncRoute = true } = options;
   const requestedView = document.getElementById(`view-${viewName}`) ? viewName : "dashboard";
@@ -353,6 +437,14 @@ function setActiveView(viewName, options = {}) {
     loadForecast(getSelectedDashboardMonth());
   }
 
+  if (requestedView === "expenses") {
+    fetchExpensesByRange();
+  }
+
+  if (requestedView === "budget") {
+    loadCurrentBudget();
+  }
+
   if (requestedView === "insights") {
     updateAiInsights(getSelectedInsightMonth());
   }
@@ -376,6 +468,7 @@ function setActiveView(viewName, options = {}) {
   }, 50);
 }
 
+// Shows or hides the shared loading indicator used during longer API operations.
 function setLoading(isLoading, message = "Loading your finance data...") {
   if (!loadingStateEl) return;
 
@@ -384,6 +477,7 @@ function setLoading(isLoading, message = "Loading your finance data...") {
   if (textEl) textEl.textContent = message;
 }
 
+// Creates a short-lived status message without interrupting the current workflow.
 function createToast(message, type = "info") {
   if (!toastContainer) return;
 
@@ -420,10 +514,12 @@ function showStatus(message, type = "info") {
   createToast(message, type);
 }
 
+// Formats numeric API values as Indian rupees for cards, tables, and charts.
 function formatCurrency(amount) {
   return `\u20B9${Math.round(Number(amount) || 0).toLocaleString("en-IN")}`;
 }
 
+// Date helpers keep HTML input values and API query parameters in YYYY-MM-DD/YYYY-MM form.
 function getTodayInputValue() {
   const now = new Date();
   const year = now.getFullYear();
@@ -544,12 +640,15 @@ function formatDisplayText(value, fallback = "Not specified") {
     .join(" ");
 }
 
+// Replaces Lucide placeholders after dynamic HTML has been inserted.
 function renderIcons() {
   if (window.lucide) {
     window.lucide.createIcons();
   }
 }
 
+// Shared protected-request wrapper.
+// It adds the JWT Authorization header and returns the user to login on a 401 response.
 async function authFetch(path, options = {}) {
   const token = getToken();
   const headers = {
@@ -574,6 +673,7 @@ async function authFetch(path, options = {}) {
   return res;
 }
 
+// Parses endpoints that may return a non-JSON server error into a readable UI error.
 async function parseJsonResponse(res) {
   const text = await res.text();
   try {
@@ -583,6 +683,7 @@ async function parseJsonResponse(res) {
   }
 }
 
+// Parses a normal JSON API response and throws its backend message for failed status codes.
 async function parseApiJsonResponse(res, fallbackMessage = "Request failed.") {
   const text = await res.text();
   let data = {};
@@ -604,6 +705,8 @@ async function parseApiJsonResponse(res, fallbackMessage = "Request failed.") {
   return data;
 }
 
+// Called by the Login button or Enter key.
+// POST /auth/login sends credentials and expects a JWT used by all protected requests.
 async function login() {
   const email = loginEmailInput.value.trim();
   const password = loginPasswordInput.value;
@@ -638,6 +741,8 @@ async function login() {
   }
 }
 
+// Called by the Signup button.
+// POST /auth/signup creates the account; the user then signs in to obtain a JWT.
 async function signup() {
   const name = signupNameInput.value.trim();
   const email = signupEmailInput.value.trim();
@@ -674,6 +779,7 @@ async function signup() {
   }
 }
 
+// Logout removes the local credential and clears user-specific browser state.
 function logout() {
   clearToken();
   expenses = [];
@@ -682,6 +788,7 @@ function logout() {
   showAuth("login");
 }
 
+// Copies profile API data into the header, profile card, and editable fields.
 function updateProfileUI(user) {
   if (!user) return;
 
@@ -721,6 +828,8 @@ async function loadProfile() {
   }
 }
 
+// Called by Save Profile.
+// PUT /api/profile sends editable account fields and returns the updated user.
 async function saveProfile() {
   const name = profileNameInput?.value.trim();
   const email = profileEmailInput?.value.trim();
@@ -757,6 +866,7 @@ async function saveProfile() {
   }
 }
 
+// Escapes user/API text before inserting it into generated HTML templates.
 function escapeHtml(value) {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -790,6 +900,7 @@ function getCategoryColorClass(category) {
   return categoryColorMap[normalized] || "category-default";
 }
 
+// GET /expenses/subcategories loads recent per-category values used by the suggestion menus.
 async function loadSubcategorySuggestions() {
   if (!subcategoryInput && !expenseList) return;
 
@@ -831,6 +942,7 @@ function getVisibleSubcategorySuggestions(category, typedValue = "") {
     .slice(0, 5);
 }
 
+// Builds the visible suggestion dropdown from cached server results and current input text.
 function renderSubcategorySuggestionMenu(menuEl, category, inputEl) {
   if (!menuEl || !inputEl) return;
 
@@ -886,6 +998,8 @@ function bindSubcategorySuggestionMenu(inputEl, categoryEl, menuEl) {
   });
 }
 
+// POST /expenses/subcategories/ignore records that this authenticated user no longer
+// wants a particular learned suggestion, then refreshes the menu from MongoDB-backed data.
 async function removeSubcategorySuggestion(category, subcategory, menuEl, inputEl) {
   const selectedCategory = String(category || "").trim();
   const value = String(subcategory || "").trim();
@@ -966,6 +1080,7 @@ function getReceiptMetadataForExpense() {
 // FETCH TODAY'S EXPENSES ON LOAD
 // ==============================
 
+// GET /expenses/today retrieves today's authenticated-user records and redraws expense UI.
 async function fetchTodayExpenses() {
   try {
     setLoading(true, "Loading today's expenses...");
@@ -992,6 +1107,7 @@ async function fetchTodayExpenses() {
 // FETCH EXPENSES BY DATE
 // ==============================
 
+// GET /expenses/by-date supplies one selected day's expense history.
 async function fetchExpensesByDate(date) {
   try {
     setLoading(true, "Loading expenses for the selected date...");
@@ -1021,29 +1137,44 @@ async function fetchExpensesByDate(date) {
 function initializeDateFilters() {
   const today = getTodayInputValue();
   const currentMonthRange = getMonthDateRange(getCurrentMonthInputValue());
-  if (fromDateInput && !fromDateInput.dataset.isoValue) setFilterDateInput(fromDateInput, currentMonthRange.start);
-  if (toDateInput && !toDateInput.dataset.isoValue) setFilterDateInput(toDateInput, today);
+  const paytmContext = getPaytmImportViewContext();
+  if (fromDateInput && !fromDateInput.dataset.isoValue) {
+    setFilterDateInput(fromDateInput, paytmContext?.from || currentMonthRange.start);
+  }
+  if (toDateInput && !toDateInput.dataset.isoValue) {
+    setFilterDateInput(toDateInput, paytmContext?.to || today);
+  }
   if (dateInput && !dateInput.value) dateInput.value = today;
   if (analysisDateInput && !analysisDateInput.value) analysisDateInput.value = today;
-  if (analysisMonthInput && !analysisMonthInput.value) analysisMonthInput.value = getCurrentMonthInputValue();
-  if (dashboardMonthInput && !dashboardMonthInput.value) dashboardMonthInput.value = getCurrentMonthInputValue();
-  if (insightMonthInput && !insightMonthInput.value) insightMonthInput.value = getCurrentMonthInputValue();
-  if (!selectedBudgetMonth) selectedBudgetMonth = getCurrentMonthInputValue();
+  if (analysisMonthInput && !analysisMonthInput.value) analysisMonthInput.value = paytmContext?.month || getCurrentMonthInputValue();
+  if (dashboardMonthInput && !dashboardMonthInput.value) dashboardMonthInput.value = paytmContext?.month || getCurrentMonthInputValue();
+  if (insightMonthInput && !insightMonthInput.value) insightMonthInput.value = paytmContext?.month || getCurrentMonthInputValue();
+  if (!selectedBudgetMonth) selectedBudgetMonth = paytmContext?.month || getCurrentMonthInputValue();
   if (budgetMonthInput && !budgetMonthInput.value) budgetMonthInput.value = selectedBudgetMonth;
-  if (reportMonthInput && !reportMonthInput.value) reportMonthInput.value = getCurrentMonthInputValue();
-  if (statementToMonthInput && !statementToMonthInput.value) statementToMonthInput.value = getCurrentMonthInputValue();
+  if (reportMonthInput && !reportMonthInput.value) reportMonthInput.value = paytmContext?.month || getCurrentMonthInputValue();
+  if (statementToMonthInput && !statementToMonthInput.value) statementToMonthInput.value = paytmContext?.month || getCurrentMonthInputValue();
   if (statementFromMonthInput && !statementFromMonthInput.value) {
     const now = new Date();
     const startMonth = new Date(now.getFullYear(), Math.max(now.getMonth() - 5, 0), 1);
-    statementFromMonthInput.value =
+    const defaultStartMonth =
       `${startMonth.getFullYear()}-${String(startMonth.getMonth() + 1).padStart(2, "0")}`;
+    statementFromMonthInput.value = paytmContext?.month
+      ? [defaultStartMonth, paytmContext.month].sort()[0]
+      : defaultStartMonth;
   }
-  if (analyticsToMonthInput && !analyticsToMonthInput.value) analyticsToMonthInput.value = getCurrentMonthInputValue();
+  if (analyticsToMonthInput && !analyticsToMonthInput.value) {
+    analyticsToMonthInput.value = paytmContext?.month || getCurrentMonthInputValue();
+  }
   if (analyticsFromMonthInput && !analyticsFromMonthInput.value) {
-    analyticsFromMonthInput.value = shiftMonthInputValue(getCurrentMonthInputValue(), -3);
+    const defaultStartMonth = shiftMonthInputValue(getCurrentMonthInputValue(), -3);
+    analyticsFromMonthInput.value = paytmContext?.month
+      ? [defaultStartMonth, paytmContext.month].sort()[0]
+      : defaultStartMonth;
   }
 }
 
+// GET /expenses/range is the main Expenses-page loader.
+// The returned MongoDB records replace the local cache before lists and totals rerender.
 async function fetchExpensesByRange() {
   initializeDateFilters();
 
@@ -1099,6 +1230,8 @@ function syncAnalysisControls() {
   analysisMonthControl?.classList.toggle("hidden", mode !== "month");
 }
 
+// Loads the selected expense range and its monthly budget in parallel, then feeds
+// those results into the category pie chart and cumulative budget-progress chart.
 async function loadAnalysisExpenses() {
   initializeDateFilters();
   syncAnalysisControls();
@@ -1290,6 +1423,9 @@ document.addEventListener("click", event => {
 // ADD EXPENSE
 // ==============================
 
+// Called by the expense form.
+// POST /expenses sends amount/category/type/date plus optional receipt metadata;
+// after MongoDB saves it, the visible range is fetched again from the backend.
 async function addExpense() {
   const amount = amountInput.value;
   const category = categoryInput.value;
@@ -1348,6 +1484,8 @@ async function addExpense() {
 // DELETE EXPENSE
 // ==============================
 
+// Called by a rendered row's Delete button.
+// DELETE /expenses/:id removes only an authenticated-user-owned record.
 async function deleteExpense(id) {
   try {
     setLoading(true, "Deleting expense...");
@@ -1387,6 +1525,8 @@ function cancelEditExpense() {
   renderExpenses();
 }
 
+// Called by an expense row's Save button.
+// PUT /expenses/:id persists edited fields and then reloads the authoritative list.
 async function updateExpense(id) {
   const amount = document.getElementById(`editAmount-${id}`).value;
   const category = document.getElementById(`editCategory-${id}`).value;
@@ -1437,6 +1577,8 @@ async function updateExpense(id) {
 // UI REFRESH
 // ==============================
 
+// Fans a changed expense set out to every dependent list, total, chart, budget,
+// insight, and forecast so all views describe the same saved data.
 function refreshUI() {
   renderExpenses();
   renderDashboardRecentExpenses();
@@ -1454,6 +1596,8 @@ function refreshUI() {
 // RENDER EXPENSE LIST
 // ==============================
 
+// Converts the cached expense response into editable list rows.
+// Dynamic values are escaped before insertion to prevent markup injection.
 function renderExpenses() {
   expenseList.innerHTML = "";
 
@@ -1551,6 +1695,7 @@ function renderExpenses() {
   renderIcons();
 }
 
+// Shows a small subset of the same records on the Dashboard recent-activity card.
 function renderDashboardRecentExpenses() {
   if (!dashboardRecentExpensesEl) return;
 
@@ -1647,6 +1792,9 @@ function handleReceiptFileChange() {
   renderIcons();
 }
 
+// Called after the user chooses a receipt image.
+// POST /api/receipts/scan uploads multipart image data and expects OCR text plus
+// suggested expense fields; scanning does not create an expense by itself.
 async function scanReceipt() {
   if (!selectedReceiptFile) {
     showReceiptStatus("Choose a receipt image first.", "error");
@@ -1683,6 +1831,7 @@ async function scanReceipt() {
   }
 }
 
+// Places OCR results into an editable review panel so uncertain fields can be corrected.
 function populateReceiptReview(data) {
   if (receiptAmountInput) receiptAmountInput.value = data.amount || "";
   if (receiptCategoryInput) receiptCategoryInput.value = data.categorySuggestion || "Miscellaneous";
@@ -1727,6 +1876,8 @@ function applyReceiptToExpenseForm() {
   showReceiptStatus("Extracted details copied into the expense form.", "success");
 }
 
+// Copies reviewed OCR fields into the normal expense form, then uses addExpense()
+// to perform the actual MongoDB-backed POST /expenses save.
 async function saveReceiptExpense() {
   if (!currentReceiptScan) {
     showReceiptStatus("Scan a receipt before saving.", "error");
@@ -1798,6 +1949,8 @@ function getReceiptQualityText(confidence) {
 // PAYTM STATEMENT IMPORT
 // ==============================
 
+// Triggered when a Paytm PDF is selected.
+// POST /api/paytm-statements/preview parses and checks duplicates without saving rows.
 async function handlePaytmStatementSelection() {
   const file = paytmStatementInput?.files?.[0];
   if (!file) return;
@@ -1832,6 +1985,8 @@ async function handlePaytmStatementSelection() {
   }
 }
 
+// Renders temporary grouped expenses, income, skipped rows, and duplicate counts
+// returned by the preview endpoint inside the confirmation dialog.
 function renderPaytmPreview(data, message = "") {
   const summary = data.summary || {};
   const groups = data.groups || [];
@@ -1929,6 +2084,9 @@ function formatPaytmCurrency(value) {
   })}`;
 }
 
+// Called only by Confirm Import.
+// POST /api/paytm-statements/import reparses the PDF, performs MongoDB duplicate
+// checks, and permanently saves new expenses/income for the authenticated user.
 async function importPaytmStatement() {
   const summary = currentPaytmPreview?.summary || {};
   const hasImportableRecords =
@@ -1953,19 +2111,20 @@ async function importPaytmStatement() {
       throw new Error(data.message || "Unable to import this Paytm statement.");
     }
 
-    const importedIncomeMonths = (data.incomes || [])
-      .map(income => income.month)
-      .filter(Boolean)
-      .sort();
-    if (importedIncomeMonths.length) {
-      selectedBudgetMonth = importedIncomeMonths[importedIncomeMonths.length - 1];
-      if (budgetMonthInput) budgetMonthInput.value = selectedBudgetMonth;
-    }
-
-    const importedDates = (currentPaytmPreview.groups || []).map(group => group.date).sort();
-    if (importedDates.length) {
-      setFilterDateInput(fromDateInput, importedDates[0]);
-      setFilterDateInput(toDateInput, importedDates[importedDates.length - 1]);
+    const importContext = savePaytmImportViewContext(data.expenses || [], data.incomes || []);
+    if (importContext) {
+      selectedBudgetMonth = importContext.month;
+      setFilterDateInput(fromDateInput, importContext.from);
+      setFilterDateInput(toDateInput, importContext.to);
+      if (analysisMonthInput) analysisMonthInput.value = importContext.month;
+      if (dashboardMonthInput) dashboardMonthInput.value = importContext.month;
+      if (insightMonthInput) insightMonthInput.value = importContext.month;
+      if (budgetMonthInput) budgetMonthInput.value = importContext.month;
+      if (reportMonthInput) reportMonthInput.value = importContext.month;
+      if (statementFromMonthInput) statementFromMonthInput.value = importContext.month;
+      if (statementToMonthInput) statementToMonthInput.value = importContext.month;
+      if (analyticsFromMonthInput) analyticsFromMonthInput.value = importContext.month;
+      if (analyticsToMonthInput) analyticsToMonthInput.value = importContext.month;
     }
 
     closePaytmPreview();
@@ -2060,6 +2219,9 @@ async function updateTotal() {
   return updateDashboardKpis();
 }
 
+// Loads monthly aggregates, the selected budget, and individual expenses in parallel.
+// Spending, remaining budget, savings, health score, and top category are calculated
+// from those responses and written into Dashboard cards.
 async function updateDashboardKpis() {
   if (!totalEl) return;
 
@@ -2149,6 +2311,7 @@ function getMonthTrendText(currentTotal, previousTotal) {
   return "Flat from last month";
 }
 
+// Finds the largest category and its share of total monthly spending.
 function updateDashboardTopCategory(byCategory, currentTotal) {
   const entries = Object.entries(byCategory || {})
     .map(([category, amount]) => [category, Number(amount) || 0])
@@ -2169,6 +2332,8 @@ function updateDashboardTopCategory(byCategory, currentTotal) {
   return { category, amount, percent };
 }
 
+// Produces the 0-100 dashboard health score from budget utilization, projected
+// savings, forecast confidence, and whether the month has spending activity.
 function updateDashboardPulse({ month, budget, currentTotal, remaining, usedPercent, topCategory }) {
   const forecastText = dashboardForecastChipEl?.textContent || "";
   const isLowForecastConfidence = /low confidence|early/i.test(forecastText);
@@ -2245,6 +2410,7 @@ function updateDashboardPulse({ month, budget, currentTotal, remaining, usedPerc
 // PIE CHART 
 // ==============================
 
+// Groups analysis expenses by category and recreates the Chart.js pie chart.
 function updatePieChart() {
   const canvas = document.getElementById("expenseChart");
   if (!canvas) return;
@@ -2346,6 +2512,7 @@ function updatePieChart() {
 // BAR CHART 
 // ==============================
 
+// Uses the same category totals as the pie chart to show absolute spending amounts.
  function updateBarChart() {
   const canvas = document.getElementById("barChart");
   if (!canvas) return;
@@ -2438,6 +2605,8 @@ function updatePieChart() {
 // MONTHLY EXPENSE PROGRESS CHART
 // ==============================
 
+// Converts dated expenses into daily totals and then a cumulative spending line.
+// A constant budget line makes the first budget-crossing day visible.
 function updateMonthlyExpenseProgressChart(monthValue, monthExpenses = [], monthlyBudget = 0) {
   const canvas = document.getElementById("monthlyExpenseProgressChart");
   if (!canvas) return;
@@ -2656,6 +2825,8 @@ function updateTopCategory() {
 // MONTHLY TREND AND CATEGORY ANALYSIS
 // ==============================
 
+// GET /expenses/monthly and GET /budget/monthly provide historical aggregates
+// used by the dashboard trend and category-comparison charts.
 async function loadMonthlyTrend() {
   try {
     const [expensesRes, budgetsRes] = await Promise.all([
@@ -2891,6 +3062,7 @@ function createMonthlyTrendLabelPlugin({ momChanges }) {
   };
 }
 
+// Normalizes the latest months into grouped category bars for Chart.js.
 function renderMonthlyCategoryChart(monthlyData) {
   const canvas = document.getElementById("monthlyCategoryChart");
   if (!canvas) return;
@@ -3136,6 +3308,8 @@ function getSelectedBudgetMonth() {
   return selectedBudgetMonth || getCurrentMonthInputValue();
 }
 
+// GET /budget/current returns base budget, additional income, spending, and the
+// effective available budget for the selected month.
  async function loadCurrentBudget() {
   try {
     const month = getSelectedBudgetMonth();
@@ -3205,6 +3379,7 @@ budgetBarFill.style.background =
   }
 }
 
+// GET /income loads MongoDB income entries for one month and their backend total.
 async function loadAdditionalIncome(month = getSelectedBudgetMonth()) {
   if (!incomeHistoryList && !incomeTotalThisMonthEl && !budgetIncomeHelperEl) return;
 
@@ -3219,6 +3394,7 @@ async function loadAdditionalIncome(month = getSelectedBudgetMonth()) {
   }
 }
 
+// Renders the income total and editable history rows returned by the income API.
 function renderAdditionalIncome(incomes, total) {
   if (budgetIncomeHelperEl) {
     budgetIncomeHelperEl.textContent = `${formatCurrency(total)} additional income`;
@@ -3320,6 +3496,7 @@ function closeIncomeModal() {
   if (incomeModalStatusEl) incomeModalStatusEl.textContent = "";
 }
 
+// Recomputes every view affected by an income create, edit, or delete operation.
 async function refreshAfterIncomeChange(month = getSelectedBudgetMonth()) {
   await loadCurrentBudget();
   await loadBudgetAllocations();
@@ -3332,6 +3509,8 @@ async function refreshAfterIncomeChange(month = getSelectedBudgetMonth()) {
   }
 }
 
+// Called by the income modal.
+// POST /income creates a record; PUT /income/:id updates one using the same form.
 async function saveIncome() {
   const amount = Number(incomeAmountInput?.value || 0);
   const date = incomeDateInput?.value || "";
@@ -3372,6 +3551,7 @@ async function saveIncome() {
   }
 }
 
+// DELETE /income/:id removes a confirmed entry and refreshes all dependent totals.
 async function deleteIncome(id) {
   if (!id || !confirm("Delete this additional income entry?")) return;
 
@@ -3390,6 +3570,7 @@ async function deleteIncome(id) {
   }
 }
 
+// GET /budget/monthly populates the saved allocation history for this user.
 async function loadBudgetAllocations() {
   if (!budgetAllocationList) return;
 
@@ -3447,6 +3628,7 @@ async function editBudgetAllocation(month, amount) {
   await loadCurrentBudget();
 }
 
+// DELETE /budget/:month removes the selected monthly allocation after confirmation.
 async function deleteBudgetAllocation(month) {
   if (!month || !confirm(`Delete the budget for ${formatMonth(month)}? Additional income entries for this month will also be deleted.`)) return;
 
@@ -3487,6 +3669,8 @@ async function deleteBudgetAllocation(month) {
 // EXPORT MONTHLY REPORT
 // ==============================
 
+// GET /report/monthly returns a PDF blob generated by the backend.
+// A temporary object URL lets the browser download it without navigating away.
 async function exportMonthlyReport() {
   try {
     const month = reportMonthInput?.value || getCurrentMonthInputValue();
@@ -3612,6 +3796,8 @@ function setAnalyticsPeriodDefaults(period = getAnalyticsPeriod()) {
   if (analyticsFromMonthInput) analyticsFromMonthInput.value = shiftMonthInputValue(currentMonth, -3);
 }
 
+// GET /api/analytics requests backend monthly aggregates for the selected range.
+// Client helpers can then regroup those rows into quarter or year comparisons.
 async function loadAnalytics() {
   if (!analyticsGridEl) return;
 
@@ -3700,6 +3886,7 @@ function mergeAnalyticsBreakdown(target = {}, source = {}) {
   return target;
 }
 
+// Adds monthly rows into quarter totals while preserving category breakdowns.
 function aggregateAnalyticsRowsByQuarter(rows) {
   const quarterMap = new Map();
 
@@ -3723,6 +3910,7 @@ function aggregateAnalyticsRowsByQuarter(rows) {
   return Array.from(quarterMap.values());
 }
 
+// Pairs each displayed month with the same month one year earlier for YoY analysis.
 function buildAnalyticsYearOverYearRows(rows, fromMonth, toMonth) {
   const rowMap = new Map(rows.map(row => [row.month, row]));
 
@@ -3790,6 +3978,7 @@ function getAnalyticsMetricChange(rows, key, positiveIsGood = true) {
   );
 }
 
+// Calculates percentage direction and whether that movement is financially favorable.
 function calculateAnalyticsPercentChange(currentValue, previousValue, positiveIsGood = true, requirePrevious = false) {
   if (previousValue === null || previousValue === undefined) {
     return requirePrevious ? { label: "Insufficient data", tone: "neutral", insufficient: true } : null;
@@ -3924,6 +4113,8 @@ function updateAnalyticsInsights(rows) {
   analyticsInsightsCardEl.classList.toggle("hidden", !rows.length);
 }
 
+// Chooses the visible period rows, updates summary/insight panels, and delegates
+// each metric to the appropriate Chart.js renderer.
 function renderAnalytics(rows) {
   destroyAnalyticsCharts();
 
@@ -4178,6 +4369,7 @@ function getAnalyticsQuarterMonths(label) {
   return `Months: ${monthsByQuarter[quarterMatch[1]]}`;
 }
 
+// Builds a standard metric chart, including period-over-period labels and current-month context.
 function renderAnalyticsTrendChart(chartKey, canvasId, labels, rows, config) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
@@ -4240,6 +4432,7 @@ function getAnalyticsBarColorForIndex(colorConfig, index, fallback) {
   return Array.isArray(colorConfig) ? colorConfig[index] || fallback : colorConfig || fallback;
 }
 
+// For yearly mode, places current and previous-year bars beside each other.
 function renderAnalyticsYearlyGroupedChart(chartKey, canvasId, labels, rows, config) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
@@ -4484,6 +4677,7 @@ function getAnalyticsYearlyChartOptions(bounds, yoyChanges = null, tooltipConfig
   };
 }
 
+// Compares essential needs and non-essential wants across the chosen periods.
 function renderAnalyticsNeedsWantsChart(labels, rows) {
   const canvas = document.getElementById("analyticsNeedsWantsChart");
   if (!canvas) return;
@@ -4539,6 +4733,8 @@ function getFinancialStatementQuery() {
   return params.toString();
 }
 
+// GET /api/financial-statement retrieves monthly and cumulative budget,
+// expense, and savings rows for the selected range.
 async function loadFinancialStatement() {
   if (!statementTableBody) return;
 
@@ -4574,6 +4770,7 @@ function renderStatementAmount(amount) {
   return `<span class="${className}">${formatCurrency(value)}</span>`;
 }
 
+// Fills statement summary cards and the month-by-month table from the API response.
 function renderFinancialStatement(data) {
   const rows = data.rows || [];
   const summary = data.summary || {};
@@ -4606,6 +4803,7 @@ function renderFinancialStatement(data) {
   }
 }
 
+// GET /api/financial-statement/pdf returns the same statement as a downloadable PDF blob.
 async function exportFinancialStatementPdf() {
   try {
     const query = getFinancialStatementQuery();
@@ -4650,6 +4848,8 @@ async function exportFinancialStatementPdf() {
 // SMART INSIGHTS LOGIC
 // ==============================
 
+// GET /expenses/insights returns backend-calculated explanations for the chosen month.
+// The frontend formats important numbers and places each explanation in its card.
 async function updateAiInsights(month = getSelectedInsightMonth()) {
   try {
     const selectedMonth = month || getCurrentMonthInputValue();
@@ -4688,6 +4888,7 @@ async function updateAiInsights(month = getSelectedInsightMonth()) {
   }
 }
 
+// Inserts insight text safely while wrapping currency and percentage values for emphasis.
 function renderInsightText(element, text, options = {}) {
   if (!element) return;
 
@@ -4813,6 +5014,7 @@ function updatePatternInsight(allExpenses) {
   }
 }
 
+// Maps the calculated score to the label, status, and color shown in the dashboard pulse.
 function getFinancialHealthGrade(score) {
   if (score >= 90) {
     return {
@@ -4909,6 +5111,8 @@ function formatFullDate(dateStr) {
 // MONTHLY FORECAST (AI-LIKE LOGIC)
 // ==============================
 
+// GET /forecast asks the backend to project month-end spending from daily pace,
+// budget, and days tracked, then updates both Forecast and Dashboard summaries.
 async function loadForecast(month = getCurrentMonthInputValue()) {
   try {
     const res = await authFetch(`/forecast?month=${encodeURIComponent(month)}`);
@@ -4970,6 +5174,8 @@ async function loadForecast(month = getCurrentMonthInputValue()) {
   }
 }
 
+// Called by the budget form.
+// POST /budget creates or updates the authenticated user's allocation for one month.
 async function setBudget() {
   const month = getSelectedBudgetMonth();
   const amount = Number(document.getElementById("budgetValue")?.value || 0);
@@ -5014,6 +5220,11 @@ async function saveBudgetAllocations() {
 
 const toggleBtn = document.getElementById("darkModeToggle");
 
+// ==============================
+// USER ACTION BINDINGS
+// ==============================
+// These listeners connect static HTML controls to the functions above. Page changes
+// remain client-side; data-changing actions still go through authenticated APIs.
 sidebarLinks.forEach(link => {
   link.addEventListener("click", () => {
     setActiveView(link.dataset.view);
@@ -5141,6 +5352,9 @@ paytmPreviewModal?.addEventListener("click", event => {
   if (event.target === paytmPreviewModal) closePaytmPreview();
 });
 
+// Initial boot: an existing JWT opens the app and loads protected data; otherwise
+// only the authentication screen is shown. The backend remains responsible for
+// deciding whether the stored token is valid when the first protected request runs.
 if (getToken()) {
   showDashboard();
 } else {

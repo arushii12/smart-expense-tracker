@@ -63,7 +63,6 @@ The application includes JWT-based authentication, MongoDB-backed user data, bud
 ### Database
 - MongoDB
 - Mongoose
-- Local JSON fallback for development only
 
 ### Authentication
 - JWT Authentication
@@ -178,10 +177,9 @@ smart-expense-tracker/
 |-- api/              # Vercel serverless entry point
 |-- frontend/         # Static UI: HTML, CSS, JavaScript and client config
 |-- routes/           # Express routes for auth, expenses, budgets, insights, forecast, receipts, profile and reports
-|-- models/           # Mongoose models for users, expenses, budgets and monthly summaries
+|-- models/           # Mongoose models for users, expenses, budgets and income
 |-- middleware/       # JWT authentication middleware
 |-- services/         # OCR and receipt parsing services
-|-- data/             # Local development JSON fallback data
 |-- uploads/          # Local receipt uploads for development
 |-- db.js             # MongoDB connection and production database guard
 |-- index.js          # Express application setup
@@ -199,7 +197,7 @@ Production requires:
 - `NODE_ENV=production`
 - `SERVE_FRONTEND=true`
 
-MongoDB Atlas is required in production. The local JSON fallback is intended only for development.
+MongoDB Atlas is required in all environments.
 
 Receipt uploads use temporary serverless storage on Vercel. For persistent receipt image storage, integrate a durable service such as Cloudinary, S3, or Vercel Blob.
 

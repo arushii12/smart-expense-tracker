@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!--
+  Main single-page frontend for Smart Expense Tracker.
+  This file defines the page structure and reusable controls; script.js supplies
+  behavior and API data, while style.css controls presentation and responsiveness.
+-->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -10,6 +15,7 @@
 </head>
 
 <body>
+  <!-- Authentication screen shown when no valid JWT is available. -->
   <div id="authPage" class="auth-page">
     <div class="auth-card">
       <div class="auth-brand">
@@ -53,7 +59,9 @@
     </div>
   </div>
 
+  <!-- Authenticated application shell. JavaScript switches its page-view sections without a full reload. -->
   <div class="app-shell hidden" id="dashboardPage">
+    <!-- Primary navigation. Each data-view value maps to a page section managed by setActiveView(). -->
     <aside class="sidebar">
       <div class="sidebar-brand">
         <span class="brand-mark">SE</span>
@@ -119,6 +127,7 @@
         <p>Loading your finance data...</p>
       </div>
 
+      <!-- Dashboard combines monthly expense, budget, forecast, and category API data into summary cards and charts. -->
       <section id="view-dashboard" class="page-view active" data-title="Dashboard">
         <section class="dashboard-hero">
           <div class="hero-copy">
@@ -236,6 +245,7 @@
         </div>
       </section>
 
+      <!-- Expense view supports manual CRUD, date filtering, receipt OCR, and Paytm statement preview/import. -->
       <section id="view-expenses" class="page-view" data-title="Expenses">
         <div class="content-grid">
           <article class="card expense-card">
@@ -479,6 +489,7 @@
           </div>
         </article>
 
+        <!-- Preview is temporary; only the Import Statement action sends confirmed rows to MongoDB. -->
         <div id="paytmPreviewModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="paytmPreviewTitle">
           <div class="modal-card paytm-preview-modal-card">
             <div class="modal-header">
@@ -486,6 +497,7 @@
                 <p class="eyebrow">Paytm Import</p>
                 <h3 id="paytmPreviewTitle">Review Statement Import</h3>
                 <p id="paytmPreviewFileName" class="helper-text"></p>
+                <p class="helper-text">This preview is temporary. Import Statement saves confirmed expenses and income to your account.</p>
               </div>
               <button id="closePaytmPreviewBtn" class="icon-btn" type="button" aria-label="Close Paytm statement preview">
                 <i data-lucide="x"></i>
@@ -542,6 +554,7 @@
         </div>
       </section>
 
+      <!-- Budget view combines the monthly base budget, additional income, spending, and remaining amount. -->
       <section id="view-budget" class="page-view" data-title="Budget">
         <article class="card budget-card">
           <div class="card-header">
@@ -611,6 +624,7 @@
           </div>
         </article>
 
+        <!-- Additional-income dialog is reused for both creating and editing an income record. -->
         <div id="incomeModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="incomeModalTitle">
           <div class="modal-card income-modal-card">
             <div class="modal-header">
@@ -643,6 +657,7 @@
         </div>
       </section>
 
+      <!-- Insights view displays backend-generated explanations based on expenses, budget, and income. -->
       <section id="view-insights" class="page-view" data-title="Insights">
         <div class="section-heading">
           <div>
@@ -694,6 +709,7 @@
         </div>
       </section>
 
+      <!-- Forecast view presents projected month-end spending and risk returned by the forecast API. -->
       <section id="view-forecast" class="page-view" data-title="Forecast">
         <article class="card forecast-card-pro">
           <div class="card-header">
@@ -727,6 +743,7 @@
         </article>
       </section>
 
+      <!-- Reports view requests a server-generated monthly PDF for the selected month. -->
       <section id="view-reports" class="page-view" data-title="Reports">
         <article class="card report-card">
           <div class="card-header">
@@ -747,6 +764,7 @@
         </article>
       </section>
 
+      <!-- Financial statement view supports both an on-page table and a downloadable server-generated PDF. -->
       <section id="view-financial-statement" class="page-view" data-title="Financial Statement">
         <div class="section-heading financial-statement-heading">
           <div>
@@ -818,6 +836,7 @@
         </article>
       </section>
 
+      <!-- Analytics view converts monthly API aggregates into monthly, quarterly, or yearly comparisons. -->
       <section id="view-analytics" class="page-view" data-title="Analytics">
         <div class="analytics-page-header">
           <div class="section-heading analytics-heading">
@@ -953,6 +972,7 @@
         </div>
       </section>
 
+      <!-- Profile view reads and updates the authenticated user's name and email. -->
       <section id="view-profile" class="page-view" data-title="Profile">
         <article class="card profile-card">
           <div class="card-header">
@@ -987,6 +1007,7 @@
         </article>
       </section>
 
+      <!-- Static study/workflow guide; its buttons navigate to the corresponding interactive views. -->
       <section id="view-workflow-guide" class="page-view" data-title="User Guide">
         <section class="guide-hero">
           <div>
@@ -1154,6 +1175,7 @@
     </main>
   </div>
 
+  <!-- Libraries load before application code so charts and icons are available during initial rendering. -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="config.js"></script>

@@ -1,3 +1,8 @@
+/*
+ * Paytm UPI statement parsing service.
+ * The Paytm routes pass a PDF Buffer here; the service extracts normalized outgoing
+ * expenses, received income, grouping metadata, and stable duplicate hashes.
+ */
 const crypto = require("crypto");
 const pdfParse = require("pdf-parse");
 
@@ -36,8 +41,10 @@ const MONTH_INDEX = {
   dec: 12
 };
 
+// Parses PDF text into outgoing, incoming, and skipped transactions.
+// It has no database side effects; routes decide whether previewed records are saved.
 async function parsePaytmStatement(buffer, fileName = "") {
-  const parsedPdf = await pdfParse(buffer);
+  const parsedPdf = await parsePdfWithCompatibilityRetry(buffer);
   const text = normalizeText(parsedPdf.text);
   if (!/Paytm App|Passbook Payments History/i.test(text)) {
     const error = new Error("This PDF does not appear to be a Paytm UPI statement.");
@@ -97,6 +104,30 @@ async function parsePaytmStatement(buffer, fileName = "") {
   };
 }
 
+// Retries only transient format errors from the older PDF.js used by pdf-parse.
+// Other errors fail immediately, and attempts remain bounded.
+async function parsePdfWithCompatibilityRetry(buffer) {
+  const maxAttempts = 5;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await pdfParse(Buffer.from(buffer));
+    } catch (error) {
+      const isPdfJsFormatError =
+        error?.name === "FormatError" ||
+        error?.name === "UnknownErrorException" ||
+        String(error?.details || "").startsWith("FormatError:");
+
+      if (!isPdfJsFormatError || attempt === maxAttempts) {
+        throw error;
+      }
+    }
+  }
+
+  throw new Error("Unable to parse Paytm statement PDF.");
+}
+
+// Normalizes Unicode and line endings before regular-expression parsing.
 function normalizeText(value) {
   return String(value || "")
     .normalize("NFKC")
@@ -104,6 +135,7 @@ function normalizeText(value) {
     .replace(/\u00a0/g, " ");
 }
 
+// Splits statement text at date/time transaction headers.
 function splitTransactionBlocks(text) {
   const matches = Array.from(
     text.matchAll(/(?:^|\n)([^\n]+)\n(?=\d{1,2}:\d{2}\s+(?:AM|PM)\s*\n)/gi)
@@ -117,6 +149,8 @@ function splitTransactionBlocks(text) {
   });
 }
 
+// Parses one outgoing block. Returns either a normalized expense transaction or
+// a reason explaining why the block was skipped.
 function parseTransactionBlock(block, context) {
   const dateMatch = block.match(/^(\d{2})\s+([A-Za-z]{3})/);
 
@@ -181,6 +215,7 @@ function parseTransactionBlock(block, context) {
   };
 }
 
+// Parses a positive transaction as additional income, excluding self transfers.
 function parseIncomeTransactionBlock(block, context) {
   const dateMatch = block.match(/^(\d{2})\s+([A-Za-z]{3})/);
   if (!dateMatch) {
@@ -238,6 +273,7 @@ function parseIncomeTransactionBlock(block, context) {
   };
 }
 
+// Extracts the Paytm #Tag used for category mapping.
 function extractTag(block) {
   const match = block.match(/Tag:\s*\n?\s*#([^\n]*)/i);
   if (!match) return "";
@@ -248,6 +284,7 @@ function extractTag(block) {
     .trim();
 }
 
+// Keeps the human-readable payee/payer text before Paytm metadata fields begin.
 function extractTransactionDetails(block) {
   const withoutDateAndTime = block
     .replace(/^\d{2}\s+[A-Za-z]{3}\s*\n/, "")
@@ -260,6 +297,7 @@ function extractTransactionDetails(block) {
   return detailText.replace(/\s+/g, " ").trim();
 }
 
+// Maps known Paytm tags to application categories and supplies safe fallbacks.
 function mapPaytmTag(tag) {
   const normalized = normalizeTag(tag);
   const category = TAG_CATEGORY_MAP.get(normalized);
@@ -284,6 +322,7 @@ function mapPaytmTag(tag) {
   };
 }
 
+// Produces a case/punctuation-insensitive tag key.
 function normalizeTag(tag) {
   return String(tag || "")
     .normalize("NFKC")
@@ -292,6 +331,8 @@ function normalizeTag(tag) {
     .toLowerCase();
 }
 
+// Combines outgoing transactions sharing date and final category into one Expense,
+// while retaining all source hashes, references, tags, and details for traceability.
 function groupTransactions(transactions) {
   const groups = new Map();
 
@@ -335,6 +376,7 @@ function groupTransactions(transactions) {
     .sort((a, b) => b.date.localeCompare(a.date) || a.category.localeCompare(b.category));
 }
 
+// Selects a meaningful subcategory for a grouped expense.
 function getGroupedSubcategory(subcategories) {
   const unique = subcategories.filter(Boolean);
   if (unique.length === 1) return unique[0];
@@ -342,12 +384,15 @@ function getGroupedSubcategory(subcategories) {
   return "Multiple UPI Tags";
 }
 
+// Adds a non-empty value once to metadata arrays.
 function addUnique(list, value) {
   if (value && !list.includes(value)) {
     list.push(value);
   }
 }
 
+// Builds a stable outgoing-transaction fingerprint. Paytm reference numbers take
+// priority; visible transaction fields provide a deterministic fallback.
 function buildTransactionHash(transaction) {
   const stableValue = transaction.referenceNumber
     ? `paytm-ref|${transaction.referenceNumber}`
@@ -362,6 +407,8 @@ function buildTransactionHash(transaction) {
   return crypto.createHash("sha256").update(stableValue).digest("hex");
 }
 
+// Uses a separate namespace so received and paid entries with the same reference
+// cannot be mistaken for each other.
 function buildIncomeTransactionHash(transaction) {
   const stableValue = transaction.referenceNumber
     ? `paytm-income-ref|${transaction.referenceNumber}`
@@ -376,6 +423,7 @@ function buildIncomeTransactionHash(transaction) {
   return crypto.createHash("sha256").update(stableValue).digest("hex");
 }
 
+// Infers the statement year from its filename, then PDF metadata, then current year.
 function inferStatementYear(fileName, info = {}) {
   const fileYears = Array.from(String(fileName || "").matchAll(/(?:'|\b)(\d{2}|\d{4})(?=\D|$)/g))
     .map(match => normalizeYear(match[1]))
@@ -386,12 +434,14 @@ function inferStatementYear(fileName, info = {}) {
   return metadataYear ? Number(metadataYear) : new Date().getFullYear();
 }
 
+// Infers the final month represented by a Paytm filename for year rollover logic.
 function inferStatementEndMonth(fileName) {
   const matches = Array.from(String(fileName || "").matchAll(/(\d{1,2})[\s_-]+([A-Za-z]{3})/g));
   if (!matches.length) return null;
   return MONTH_INDEX[matches[matches.length - 1][2].toLowerCase()] || null;
 }
 
+// Converts two-digit years and rejects implausible full years.
 function normalizeYear(value) {
   const year = Number(value);
   if (!Number.isInteger(year)) return null;
@@ -399,6 +449,7 @@ function normalizeYear(value) {
   return year >= 2000 && year <= 2200 ? year : null;
 }
 
+// Assigns late-year transactions to the previous year when a statement crosses New Year.
 function resolveTransactionYear(month, statementYear, statementEndMonth) {
   if (statementEndMonth && month > statementEndMonth) {
     return statementYear - 1;
@@ -406,6 +457,7 @@ function resolveTransactionYear(month, statementYear, statementEndMonth) {
   return statementYear;
 }
 
+// Validates date components through UTC and returns the API's YYYY-MM-DD format.
 function toIsoDate(year, month, day) {
   const date = new Date(Date.UTC(year, month - 1, day));
   if (

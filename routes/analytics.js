@@ -1,3 +1,8 @@
+/*
+ * Protected analytics API.
+ * The Analytics page requests a month range; this module combines MongoDB Budget,
+ * Income, and Expense records into normalized monthly rows for frontend charts.
+ */
 const express = require("express");
 
 const auth = require("../middleware/auth");
@@ -9,17 +14,20 @@ const router = express.Router();
 
 router.use(auth);
 
+// Validates optional YYYY-MM filter values.
 function isValidMonth(value) {
   if (!/^\d{4}-\d{2}$/.test(String(value || ""))) return false;
   const [, month] = String(value).split("-").map(Number);
   return month >= 1 && month <= 12;
 }
 
+// Converts expense dates into the same month key used by budgets and income.
 function getMonthKey(date) {
   const value = new Date(date);
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}`;
 }
 
+// Creates inclusive Date boundaries for a month-based expense query.
 function getMonthRange(month) {
   const [year, monthNumber] = month.split("-").map(Number);
   return {
@@ -28,6 +36,7 @@ function getMonthRange(month) {
   };
 }
 
+// Produces the short human-readable label displayed on charts.
 function getMonthLabel(month) {
   const [year, monthNumber] = month.split("-").map(Number);
   return new Date(year, monthNumber - 1, 1).toLocaleString("en-IN", {
@@ -36,12 +45,15 @@ function getMonthLabel(month) {
   });
 }
 
+// Advances a YYYY-MM key by one month, including year rollover.
 function addMonth(month) {
   const [year, monthNumber] = month.split("-").map(Number);
   const nextDate = new Date(year, monthNumber, 1);
   return `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, "0")}`;
 }
 
+// Builds every month between two inclusive filters so zero-activity months can
+// still appear in analytics charts.
 function getMonthSpan(fromMonth, toMonth) {
   const months = [];
   let cursor = fromMonth;
@@ -54,6 +66,7 @@ function getMonthSpan(fromMonth, toMonth) {
   return months;
 }
 
+// Creates a zero-filled monthly accumulator once and returns it for later totals.
 function ensureMonth(monthMap, month) {
   if (!monthMap.has(month)) {
     monthMap.set(month, {
@@ -73,6 +86,7 @@ function ensureMonth(monthMap, month) {
   return monthMap.get(month);
 }
 
+// Reads and validates query-string filters, writing a 400 response on invalid input.
 function normalizeFilters(req, res) {
   const fromMonth = req.query.fromMonth || "";
   const toMonth = req.query.toMonth || "";
@@ -95,6 +109,7 @@ function normalizeFilters(req, res) {
   return { fromMonth, toMonth };
 }
 
+// Converts optional month bounds into a MongoDB range for string month fields.
 function buildMonthQuery(fromMonth, toMonth) {
   if (!fromMonth && !toMonth) return null;
 
@@ -104,6 +119,7 @@ function buildMonthQuery(fromMonth, toMonth) {
   return monthQuery;
 }
 
+// Converts month filters into Date bounds for Expense.date.
 function buildExpenseDateQuery(fromMonth, toMonth) {
   if (fromMonth && toMonth) {
     return {
@@ -123,6 +139,8 @@ function buildExpenseDateQuery(fromMonth, toMonth) {
   return null;
 }
 
+// Fetches the authenticated user's three financial data sources and reduces them
+// into monthly budget, income, expense, needs, wants, and savings values.
 async function buildAnalytics(userId, filters) {
   const { fromMonth, toMonth } = filters;
   const budgetQuery = { userId };
@@ -140,6 +158,7 @@ async function buildAnalytics(userId, filters) {
     expenseQuery.date = expenseDateQuery;
   }
 
+  // All queries include the verified owner before optional range filters.
   const [budgets, incomes, expenses] = await Promise.all([
     Budget.find(budgetQuery).sort({ month: 1 }),
     Income.find(incomeQuery).sort({ month: 1 }),
@@ -168,6 +187,8 @@ async function buildAnalytics(userId, filters) {
     const amount = Number(expense.amount) || 0;
 
     row.expenses += amount;
+    // Essential expenses count as needs; explicitly non-essential expenses count
+    // as wants and retain category totals for chart breakdowns.
     if (expense.isEssential === false) {
       row.wants += amount;
       const category = String(expense.category || "Uncategorized").trim() || "Uncategorized";
@@ -180,6 +201,8 @@ async function buildAnalytics(userId, filters) {
   const rows = Array.from(monthMap.values())
     .sort((a, b) => a.month.localeCompare(b.month))
     .map(row => {
+      // available budget = original budget + additional income
+      // savings = available budget - expenses
       const availableBudget = row.originalBudget + row.additionalIncome;
       return {
         ...row,
@@ -197,6 +220,9 @@ async function buildAnalytics(userId, filters) {
   };
 }
 
+// GET /api/analytics?fromMonth=YYYY-MM&toMonth=YYYY-MM
+// Called by Analytics filters. Returns monthly rows that the browser can regroup
+// into monthly, quarterly, or yearly visualizations.
 router.get("/", async (req, res) => {
   try {
     const filters = normalizeFilters(req, res);
