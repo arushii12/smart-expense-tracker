@@ -1,13 +1,13 @@
 # Smart Expense Tracker
 
-Smart Expense Tracker is a full-stack personal finance and household budgeting application. It helps users track expenses, manage monthly budgets, monitor savings, analyze spending habits, forecast future expenses, and generate monthly financial reports from a clean dashboard interface.
+Smart Expense Tracker is a full-stack personal finance and household budgeting application. It helps users track expenses, manage monthly budgets, monitor savings, analyse spending habits, forecast future expenses, and generate monthly financial reports from a clean dashboard interface.
 
 The application includes JWT-based authentication, MongoDB-backed user data, budget and expense workflows, spending insights, receipt OCR support, forecasting, and PDF report export.
 
 ## Key Features
 
 ### Dashboard
-- Financial overview for the selected month
+- Financial data for the selected month
 - Budget, expense, savings, and spending summaries
 - Financial Score with status indicators
 - Charts for monthly and category-level spending
@@ -211,4 +211,4 @@ Receipt uploads use temporary serverless storage on Vercel. For persistent recei
 
 ## Author
 
-Developed by **Arushi** as a full-stack personal finance project focused on budgeting workflows, financial insights, forecasting, and production-ready deployment practices.
+Developed by **Arushi** as a full stack personal finance project focused on budgeting workflows, financial insights, forecasting, and production-ready deployment practices.
