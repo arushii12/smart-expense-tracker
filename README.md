@@ -211,4 +211,4 @@ Receipt uploads use temporary serverless storage on Vercel. For persistent recei
 
 ## Author
 
-Developed by **Arushii** as a full-stack personal finance project focused on budgeting workflows, financial insights, forecasting, and production-ready deployment practices.
+Developed by **Arushi** as a full-stack personal finance project focused on budgeting workflows, financial insights, forecasting, and production-ready deployment practices.
