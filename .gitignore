@@ -2,6 +2,11 @@ node_modules/
 .env
 uploads/
 data/
+codex-temp/
+codex-server/
+.codex-temp/
+.codex-server/
+.codex-server*
 
 # Windows system files
 ntuser.*
