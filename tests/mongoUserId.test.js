@@ -13,7 +13,6 @@ process.env.JWT_SECRET = "mongo-user-id-test-secret";
 const auth = require("../middleware/auth");
 const Budget = require("../models/Budget");
 const Expense = require("../models/Expense");
-const IgnoredSubcategorySuggestion = require("../models/IgnoredSubcategorySuggestion");
 const Income = require("../models/Income");
 
 // Executes auth middleware with a small mock request/response and reports whether
@@ -79,7 +78,6 @@ test("all user-owned models cast the same ObjectId ownership value", () => {
   const queries = [
     Budget.find({ userId }),
     Expense.find({ userId }),
-    IgnoredSubcategorySuggestion.find({ userId }),
     Income.find({ userId })
   ];
 

@@ -25,7 +25,6 @@ let analyticsCharts = {};
 let editingExpenseId = null;
 let selectedBudgetMonth = "";
 let editingIncomeId = null;
-let subcategorySuggestionsByCategory = {};
 let showAllBudgetAllocations = false;
 
 const API_BASE_URL =
@@ -56,7 +55,6 @@ const EXPENSE_CATEGORIES = [
 const amountInput = document.getElementById("amount");
 const categoryInput = document.getElementById("category");
 const subcategoryInput = document.getElementById("subcategory");
-const subcategorySuggestionsEl = document.getElementById("subcategorySuggestions");
 const essentialCheck = document.getElementById("essentialCheck");
 const nonEssentialCheck = document.getElementById("nonEssentialCheck");
 const dateInput = document.getElementById("date");
@@ -256,6 +254,9 @@ const dashboardPulseStatusEl = document.getElementById("dashboardPulseStatus");
 const dashboardInsightBudgetEl = document.getElementById("dashboardInsightBudget");
 const dashboardInsightLargestEl = document.getElementById("dashboardInsightLargest");
 const dashboardInsightForecastEl = document.getElementById("dashboardInsightForecast");
+const dashboardHealthProgressEl = document.getElementById("dashboardHealthProgress");
+// Ring version kept for later:
+// const dashboardHealthRingEl = document.getElementById("dashboardHealthRing");
 
 const pathViewMap = {
   "/financial-statement": "financial-statement",
@@ -392,7 +393,6 @@ async function showDashboard() {
   initializeDateFilters();
   setActiveView(getRouteView(), { syncRoute: false });
   loadProfile();
-  loadSubcategorySuggestions();
   fetchExpensesByRange();
 }
 
@@ -783,8 +783,6 @@ async function signup() {
 function logout() {
   clearToken();
   expenses = [];
-  subcategorySuggestionsByCategory = {};
-  syncSubcategorySuggestions();
   showAuth("login");
 }
 
@@ -898,161 +896,6 @@ function getCategoryColorClass(category) {
   };
 
   return categoryColorMap[normalized] || "category-default";
-}
-
-// GET /expenses/subcategories loads recent per-category values used by the suggestion menus.
-async function loadSubcategorySuggestions() {
-  if (!subcategoryInput && !expenseList) return;
-
-  try {
-    const res = await authFetch("/expenses/subcategories");
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.message || "Failed to load subcategory suggestions");
-    }
-
-    subcategorySuggestionsByCategory = data.suggestions || {};
-    syncSubcategorySuggestions();
-  } catch (error) {
-    console.error("Subcategory suggestions error:", error);
-    subcategorySuggestionsByCategory = {};
-    syncSubcategorySuggestions();
-  }
-}
-
-function getSubcategorySuggestions(category) {
-  const selectedCategory = String(category || "").trim();
-  if (!selectedCategory) return [];
-
-  const exactSuggestions = subcategorySuggestionsByCategory[selectedCategory];
-  if (exactSuggestions) return exactSuggestions;
-
-  const normalizedCategory = selectedCategory.toLowerCase();
-  const matchedCategory = Object.keys(subcategorySuggestionsByCategory)
-    .find(key => key.toLowerCase() === normalizedCategory);
-
-  return matchedCategory ? subcategorySuggestionsByCategory[matchedCategory] : [];
-}
-
-function getVisibleSubcategorySuggestions(category, typedValue = "") {
-  const query = String(typedValue || "").trim().toLowerCase();
-  return getSubcategorySuggestions(category)
-    .filter(subcategory => !query || subcategory.toLowerCase().includes(query))
-    .slice(0, 5);
-}
-
-// Builds the visible suggestion dropdown from cached server results and current input text.
-function renderSubcategorySuggestionMenu(menuEl, category, inputEl) {
-  if (!menuEl || !inputEl) return;
-
-  const suggestions = getVisibleSubcategorySuggestions(category, inputEl.value);
-
-  if (!suggestions.length) {
-    menuEl.innerHTML = "";
-    menuEl.classList.add("hidden");
-    return;
-  }
-
-  menuEl.innerHTML = suggestions
-    .map(subcategory => `
-      <button class="subcategory-suggestion-option" type="button" data-value="${escapeHtml(subcategory)}">
-        <span>${escapeHtml(subcategory)}</span>
-        <span class="subcategory-suggestion-remove" data-remove-value="${escapeHtml(subcategory)}" role="button" aria-label="Remove ${escapeHtml(subcategory)} suggestion">&times;</span>
-      </button>
-    `)
-    .join("");
-  menuEl.classList.remove("hidden");
-}
-
-function hideSubcategorySuggestionMenu(menuEl) {
-  menuEl?.classList.add("hidden");
-}
-
-function bindSubcategorySuggestionMenu(inputEl, categoryEl, menuEl) {
-  if (!inputEl || !categoryEl || !menuEl) return;
-
-  const showSuggestions = () => {
-    renderSubcategorySuggestionMenu(menuEl, categoryEl.value, inputEl);
-  };
-
-  inputEl.addEventListener("focus", showSuggestions);
-  inputEl.addEventListener("input", showSuggestions);
-  categoryEl.addEventListener("change", showSuggestions);
-
-  menuEl.addEventListener("click", async event => {
-    const removeButton = event.target.closest(".subcategory-suggestion-remove");
-    if (removeButton) {
-      event.preventDefault();
-      event.stopPropagation();
-      await removeSubcategorySuggestion(categoryEl.value, removeButton.dataset.removeValue || "", menuEl, inputEl);
-      return;
-    }
-
-    const option = event.target.closest(".subcategory-suggestion-option");
-    if (!option) return;
-
-    inputEl.value = option.dataset.value || "";
-    hideSubcategorySuggestionMenu(menuEl);
-    inputEl.focus();
-  });
-}
-
-// POST /expenses/subcategories/ignore records that this authenticated user no longer
-// wants a particular learned suggestion, then refreshes the menu from MongoDB-backed data.
-async function removeSubcategorySuggestion(category, subcategory, menuEl, inputEl) {
-  const selectedCategory = String(category || "").trim();
-  const value = String(subcategory || "").trim();
-
-  if (!selectedCategory || !value) return;
-
-  try {
-    const res = await authFetch("/expenses/subcategories/ignore", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        category: selectedCategory,
-        subcategory: value
-      })
-    });
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.message || "Failed to remove suggestion");
-    }
-
-    await loadSubcategorySuggestions();
-    renderSubcategorySuggestionMenu(menuEl, selectedCategory, inputEl);
-  } catch (error) {
-    console.error("Subcategory suggestion remove error:", error);
-    showStatus("Unable to remove that suggestion right now.", "error");
-  }
-}
-
-function syncSubcategorySuggestions() {
-  if (document.activeElement === subcategoryInput || document.activeElement === categoryInput) {
-    renderSubcategorySuggestionMenu(subcategorySuggestionsEl, categoryInput?.value, subcategoryInput);
-  }
-}
-
-function rememberSubcategorySuggestion(category, subcategory) {
-  const selectedCategory = String(category || "").trim();
-  const value = String(subcategory || "").trim();
-
-  if (!selectedCategory || !value) return;
-
-  if (!subcategorySuggestionsByCategory[selectedCategory]) {
-    subcategorySuggestionsByCategory[selectedCategory] = [];
-  }
-
-  subcategorySuggestionsByCategory[selectedCategory] = subcategorySuggestionsByCategory[selectedCategory]
-    .filter(item => item.toLowerCase() !== value.toLowerCase());
-
-  subcategorySuggestionsByCategory[selectedCategory].unshift(value);
-  subcategorySuggestionsByCategory[selectedCategory] =
-    subcategorySuggestionsByCategory[selectedCategory].slice(0, 5);
-
-  syncSubcategorySuggestions();
 }
 
 function getSelectedExpenseType() {
@@ -1407,18 +1250,6 @@ if (incomeRemarksInput) {
 
 bindExclusiveChecks(essentialCheck, nonEssentialCheck);
 
-if (categoryInput) {
-  bindSubcategorySuggestionMenu(subcategoryInput, categoryInput, subcategorySuggestionsEl);
-}
-
-document.addEventListener("click", event => {
-  if (event.target.closest(".subcategory-input-wrap")) return;
-
-  document.querySelectorAll(".subcategory-suggestion-menu").forEach(menu => {
-    hideSubcategorySuggestionMenu(menu);
-  });
-});
-
 // ==============================
 // ADD EXPENSE
 // ==============================
@@ -1459,13 +1290,11 @@ async function addExpense() {
       throw new Error(data.message || "Failed to add expense");
     }
 
-    rememberSubcategorySuggestion(data.expense?.category || category, data.expense?.subcategory || subcategory);
     await fetchExpensesByRange();
 
     amountInput.value = "";
     categoryInput.value = "Home";
     subcategoryInput.value = "";
-    syncSubcategorySuggestions();
     if (essentialCheck) essentialCheck.checked = true;
     if (nonEssentialCheck) nonEssentialCheck.checked = false;
     dateInput.value = "";
@@ -1500,7 +1329,6 @@ async function deleteExpense(id) {
     }
 
     expenses = expenses.filter(exp => exp._id !== id);
-    await loadSubcategorySuggestions();
     refreshUI();
     showStatus("Expense deleted.", "success");
   } catch (error) {
@@ -1561,8 +1389,6 @@ async function updateExpense(id) {
     }
 
     editingExpenseId = null;
-    rememberSubcategorySuggestion(data.expense?.category || category, data.expense?.subcategory || subcategory);
-
     await fetchExpensesByRange();
     showStatus("Expense updated successfully.", "success");
   } catch (error) {
@@ -1619,10 +1445,7 @@ function renderExpenses() {
       li.innerHTML = `
         <input type="number" id="editAmount-${exp._id}" value="${exp.amount}" />
         ${getCategorySelectMarkup(`editCategory-${exp._id}`, exp.category)}
-        <div class="subcategory-input-wrap">
-          <input type="text" id="editSubcategory-${exp._id}" value="${escapeHtml(exp.subcategory || "")}" placeholder="Subcategory" autocomplete="off" />
-          <div id="editSubcategorySuggestions-${exp._id}" class="subcategory-suggestion-menu hidden"></div>
-        </div>
+        <input type="text" id="editSubcategory-${exp._id}" value="${escapeHtml(exp.subcategory || "")}" placeholder="Subcategory" autocomplete="off" />
         <input type="date" id="editDate-${exp._id}" value="${inputDate}" />
         <div class="edit-type-controls">
           <label class="check-option">
@@ -1644,11 +1467,6 @@ function renderExpenses() {
         document.getElementById(`editEssential-${exp._id}`),
         document.getElementById(`editNonEssential-${exp._id}`)
       );
-
-      const editCategoryInput = document.getElementById(`editCategory-${exp._id}`);
-      const editSubcategoryInput = document.getElementById(`editSubcategory-${exp._id}`);
-      const editSubcategorySuggestionsEl = document.getElementById(`editSubcategorySuggestions-${exp._id}`);
-      bindSubcategorySuggestionMenu(editSubcategoryInput, editCategoryInput, editSubcategorySuggestionsEl);
 
       li.querySelector(".save-btn").addEventListener("click", () => {
         updateExpense(exp._id);
@@ -1868,7 +1686,6 @@ function applyReceiptToExpenseForm() {
   if (amountInput) amountInput.value = receiptAmountInput?.value || "";
   if (categoryInput) categoryInput.value = receiptCategoryInput?.value || "Miscellaneous";
   if (subcategoryInput) subcategoryInput.value = "Not specified";
-  syncSubcategorySuggestions();
   if (dateInput) dateInput.value = receiptDateInput?.value || "";
   if (essentialCheck) essentialCheck.checked = true;
   if (nonEssentialCheck) nonEssentialCheck.checked = false;
@@ -2348,6 +2165,7 @@ function updateDashboardPulse({ month, budget, currentTotal, remaining, usedPerc
       dashboardHealthGradeEl.textContent = "Budget Required";
       dashboardHealthGradeEl.dataset.gradeColor = "amber";
     }
+    updateDashboardHealthProgress(0, "amber");
     if (dashboardHealthStatusEl) dashboardHealthStatusEl.textContent = "Set a monthly budget to calculate financial health.";
     if (dashboardPulseBudgetUsedEl) dashboardPulseBudgetUsedEl.textContent = "No budget";
     if (dashboardPulseStatusEl) dashboardPulseStatusEl.textContent = "No Budget";
@@ -2375,13 +2193,14 @@ function updateDashboardPulse({ month, budget, currentTotal, remaining, usedPerc
   const healthGrade = getFinancialHealthGrade(score);
 
   if (dashboardHealthScoreEl) {
-    dashboardHealthScoreEl.textContent = `${score} / 100`;
+    dashboardHealthScoreEl.innerHTML = `<span class="score-main">${score}</span><span class="score-slash">/</span><span class="score-total">100</span>`;
     dashboardHealthScoreEl.classList.remove("no-score");
   }
   if (dashboardHealthGradeEl) {
     dashboardHealthGradeEl.textContent = healthGrade.grade;
     dashboardHealthGradeEl.dataset.gradeColor = healthGrade.color;
   }
+  updateDashboardHealthProgress(score, healthGrade.color);
   if (dashboardHealthStatusEl) dashboardHealthStatusEl.textContent = healthGrade.status;
   if (dashboardPulseBudgetUsedEl) dashboardPulseBudgetUsedEl.textContent = budget ? `${usedPercent}%` : "No budget";
   if (dashboardPulseStatusEl) dashboardPulseStatusEl.textContent = status;
@@ -2405,6 +2224,33 @@ function updateDashboardPulse({ month, budget, currentTotal, remaining, usedPerc
       : "Forecast confidence normal";
   }
 }
+
+function updateDashboardHealthProgress(score, color = "blue") {
+  if (!dashboardHealthProgressEl) return;
+  const normalizedScore = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
+  const colorMap = {
+    green: "#16a34a",
+    teal: "#0f766e",
+    blue: "#2563eb",
+    amber: "#d97706",
+    orange: "#ea580c",
+    red: "#dc2626"
+  };
+
+  dashboardHealthProgressEl.style.setProperty("--score-progress", `${normalizedScore}%`);
+  dashboardHealthProgressEl.style.setProperty("--score-bar-color", colorMap[color] || colorMap.blue);
+}
+
+/*
+ * Ring version kept for later:
+ *
+function updateDashboardHealthRing(score, color = "blue") {
+  if (!dashboardHealthRingEl) return;
+  const normalizedScore = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
+  dashboardHealthRingEl.style.setProperty("--score-progress", normalizedScore);
+  dashboardHealthRingEl.dataset.ringColor = color;
+}
+*/
 
 // ==============================
 // PIE CHART 
@@ -3410,7 +3256,7 @@ function renderAdditionalIncome(incomes, total) {
   if (!incomeHistoryList) return;
 
   if (!incomes.length) {
-    incomeHistoryList.innerHTML = `<p class="helper-text">No additional income recorded for this month.</p>`;
+    incomeHistoryList.innerHTML = `<p class="income-history-empty">No additional income recorded for this month.</p>`;
     return;
   }
 
@@ -3425,9 +3271,9 @@ function renderAdditionalIncome(incomes, total) {
       const dateValue = new Date(income.date).toISOString().split("T")[0];
       return `
         <div class="income-history-row">
-          <span>${formatFullDate(dateValue)}</span>
+          <span class="income-date-cell"><i data-lucide="calendar-days"></i>${formatFullDate(dateValue)}</span>
           <strong>${formatCurrency(income.amount)}</strong>
-          <span>${escapeHtml(income.remarks || "No remarks")}</span>
+          <span class="income-remarks-cell">${escapeHtml(income.remarks || "No remarks")}</span>
           <div class="income-history-actions">
             <button class="ghost-btn compact" type="button" onclick="openIncomeModal('${income._id}', ${Number(income.amount) || 0}, '${dateValue}', '${escapeJsString(income.remarks || "")}')">
               <i data-lucide="pencil"></i>Edit

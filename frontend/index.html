@@ -113,7 +113,6 @@
             </button>
             <div id="profileMenu" class="profile-menu" role="menu">
               <button class="menu-item" type="button" data-view-target="profile"><i data-lucide="circle-user-round"></i>Profile</button>
-              <button class="menu-item" type="button" data-view-target="reports"><i data-lucide="file-text"></i>Reports</button>
               <button class="menu-item" type="button" data-logout-action="logout"><i data-lucide="log-out"></i>Logout</button>
             </div>
           </div>
@@ -139,11 +138,28 @@
                 <input type="month" id="dashboardMonth" />
               </label>
             </div>
-            <div class="pulse-score">
-              <span>Financial Score</span>
-              <strong id="dashboardHealthScore">0 / 100</strong>
-              <em id="dashboardHealthGrade" class="pulse-grade">Good</em>
-              <small id="dashboardHealthStatus" class="pulse-status">On Track</small>
+            <div class="pulse-score financial-score-card">
+              <div class="pulse-score-copy score-left">
+                <span class="score-label">Financial Score</span>
+                <strong id="dashboardHealthScore" class="score-value">
+                  <span class="score-main">0</span>
+                  <span class="score-slash">/</span>
+                  <span class="score-total">100</span>
+                </strong>
+                <div class="health-score-progress score-progress" aria-hidden="true">
+                  <span id="dashboardHealthProgress"></span>
+                </div>
+              </div>
+              <div class="pulse-score-divider score-divider" aria-hidden="true"></div>
+              <div class="pulse-score-summary score-right">
+                <em id="dashboardHealthGrade" class="pulse-grade score-rating">Good</em>
+                <small id="dashboardHealthStatus" class="pulse-status score-remark">On Track</small>
+              </div>
+              <!-- Ring version kept for later:
+              <div id="dashboardHealthRing" class="health-score-ring" aria-hidden="true">
+                <span></span>
+              </div>
+              -->
             </div>
             <div class="pulse-metrics">
               <div>
@@ -277,10 +293,7 @@
               </label>
               <label>
                 <span>Subcategory</span>
-                <div class="subcategory-input-wrap">
-                  <input type="text" id="subcategory" placeholder="Yogurt, rent, fuel, medicine" autocomplete="off" />
-                  <div id="subcategorySuggestions" class="subcategory-suggestion-menu hidden"></div>
-                </div>
+                <input type="text" id="subcategory" placeholder="Yogurt, rent, fuel, medicine" autocomplete="off" />
               </label>
               <label>
                 <span>Date</span>
@@ -571,7 +584,6 @@
                 <span>Budget Amount</span>
                 <input type="number" id="budgetValue" min="0" step="1" placeholder="Monthly budget" />
               </label>
-              <button id="addIncomeBtn" class="ghost-btn budget-btn" type="button"><i data-lucide="plus"></i>Add Income</button>
               <button class="primary-btn budget-btn" type="button" onclick="setBudget()"><i data-lucide="save"></i>Save Allocation</button>
             </div>
           </div>
@@ -598,18 +610,22 @@
           <div class="budget-status" id="budgetStatus"></div>
 
           <div class="income-panel">
-            <div class="income-summary">
-              <p class="eyebrow">Additional Income This Month</p>
-              <strong id="incomeTotalThisMonth">&#8377;0</strong>
-              <small id="incomeEntryCount">No income entries yet</small>
-            </div>
-            <div class="income-history">
-              <div class="income-history-header">
-                <h3>Additional Income History</h3>
-                <button id="incomePanelAddBtn" class="ghost-btn compact" type="button"><i data-lucide="plus"></i>Add Income</button>
+            <div class="income-history-header">
+              <div class="income-history-title">
+                <span class="income-history-icon"><i data-lucide="wallet-cards"></i></span>
+                <div>
+                  <h3>Additional Income History</h3>
+                  <p class="income-history-summary">
+                    <strong id="incomeTotalThisMonth">&#8377;0</strong>
+                    <span>this month</span>
+                    <span class="income-summary-separator" aria-hidden="true">|</span>
+                    <small id="incomeEntryCount">No income entries yet</small>
+                  </p>
+                </div>
               </div>
-              <div class="income-history-table" id="incomeHistoryList"></div>
+              <button id="incomePanelAddBtn" class="primary-btn compact income-add-btn" type="button"><i data-lucide="plus"></i>Add Income</button>
             </div>
+            <div class="income-history-table" id="incomeHistoryList"></div>
           </div>
 
           <div class="budget-allocation-panel">

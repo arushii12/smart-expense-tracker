@@ -10,8 +10,7 @@ const MONGO_URI = process.env.MONGO_URI;
 const USER_OWNED_COLLECTIONS = [
   "expenses",
   "budgets",
-  "incomes",
-  "ignoredsubcategorysuggestions"
+  "incomes"
 ];
 
 // Converts only valid 24-character string user IDs to ObjectId.
